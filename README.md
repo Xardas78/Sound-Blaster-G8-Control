@@ -20,7 +20,18 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 
 ## Status
 
-Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md)) – manche Funktionen (Gerät-Presets speichern, Firmware-Anzeige, Energiesparen, Logo-LED) sind noch nicht reverse-engineert und im UI vorbereitet, aber ohne Wirkung. Der physische Kopfhörer/Lautsprecher-Schalter am Gerät lässt sich auslesen, aber nicht per Software fernsteuern (reine Hardware-Funktion).
+Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md) für die vollständigen Hex-Funde und Analyse).
+
+**Funktioniert:** Acoustic Engine, Equalizer, CrystalVoice, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, Kopfhörer/Lautsprecher-Statusanzeige (Auslesen), virtueller HRTF-Surround, Lautstärkeknopf-Livesync, Volume Sync.
+
+**Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
+- Sound-Modus-Presets im Gerät speichern/laden
+- Firmware-Versionsanzeige/-Update-Check
+- Energiesparen, Logo-LED, Gerät zurücksetzen
+- Smart Volume auf der Mikrofonseite (CrystalVoice)
+- Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
+
+**Bekannte Hardware-Grenze:** Der physische Kopfhörer/Lautsprecher-Schalter am Gerät ist ein mechanisches Relais – auslesbar, aber nicht per Software fernsteuerbar (mehrfach am echten Gerät verifiziert).
 
 ## Voraussetzungen
 

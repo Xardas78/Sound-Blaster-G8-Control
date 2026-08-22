@@ -106,14 +106,84 @@ Scout ein löst zusätzlich den generischen SBX-Sync-Befehl aus (siehe unten).
 - **Mic-Jack-Sensing**: UAC2 Interrupt Data Message auf EP 0x84, komplett
   automatisch, keine eigene Implementierung nötig
 
+## Weitere Capture-Funde (Session 2)
+
+Aus einem zweiten, gezielteren Windows-Capture ("g8 neu.pcapng", G8
+eingesteckt, danach Software gestartet) und Live-Tests direkt am Gerät.
+
+### Anfrage/Antwort-Mechanismus (GET)
+
+Zusätzlich zum bekannten SET_REPORT-Kanal (`5a 12 07 01 ...`) gibt es
+GET-artige Anfragen: Host schickt einen kurzen Report, Gerät antwortet
+umgehend über den Interrupt-IN-Kanal (Endpoint 0x85, Interface 4).
+Beobachtete Anfrage/Antwort-Paare (jeweils Anfrage → Antwort):
+
+```
+5a 07 01 02                                   → 5a 07 10 "1.2.250819.0903"  (Firmware-Version, ASCII)
+5a 2c 01 01                                   → 5a 2c 05 01 <02|04>         (Kopfhörer/Lautsprecher-Status)
+5a 2c 01 02                                   → 5a 2c 0a 02 82 02 00 00 00 04
+5a 26 01 05                                   → 5a 26 0a 05 00 03 00 01 00 02 00 11
+5a 39 01 02                                   → 5a 39 09 02 20 64 02 14
+5a 6c 01 02                                   → 5a 6c 0e 02 05 85 00 01 00 02 00 03 00 04 00 05
+5a 10 00                                      → 5a 10 08 ef 67 74
+```
+
+`query_output_target()` in `protocol.rs` nutzt das erste Paar, um den
+physischen Kopfhörer/Lautsprecher-Schalter live abzufragen (siehe
+`main.rs`, Poll-Thread im Sekundentakt – der Schalter selbst sendet
+KEINE Push-Benachrichtigung bei Wechsel). Die anderen Paare (0x26, 0x39,
+0x6c, 0x10) sind noch nicht entschlüsselt – wirken wie weitere
+Geräte-Statusabfragen (evtl. Firmware-Zustand, Profilslot, o.ä.).
+
+**Wichtig:** Der Kopfhörer/Lautsprecher-Schalter selbst ist rein
+hardwareseitig (mechanisches Relais) – per USB nur auslesbar, NICHT
+fernsteuerbar. Mehrfach am echten Gerät getestet: Senden von
+`5a 2c 05 01 <02|04>` als Befehl (in der Annahme, es sei ein SET) löst
+keinerlei Reaktion aus (kein Klick, keine LED-Änderung, kein
+Klangunterschied).
+
+### Periodischer Status-Heartbeat (Fehlinterpretation korrigiert)
+
+`5a 2c 05 01 <02|04>` taucht auch unaufgefordert auf dem Interrupt-IN-
+Kanal auf – wurde zunächst fälschlich als Push-Benachrichtigung des
+physischen Schalters interpretiert. Tatsächlich sendet das Gerät einen
+kompletten Status-Heartbeat (Acoustic Engine/CrystalVoice/EQ-Werte,
+inkl. dieses Blocks) ca. alle 1,5–2,5s, sobald es durch irgendeinen
+Befehl "aktiv" wurde – unabhängig vom Schalter. Deshalb: für den
+Schalterstand aktiv per `query_output_target()` pollen, nicht auf
+diesen Heartbeat verlassen.
+
+### SBX-Masterschalter (Direct Mode)
+
+Windows schaltet beim Direct-Mode/SBX-Toggle 6 Acoustic-Engine-Parameter
+gemeinsam um (alle auf `0.0` bzw. `1.0`), statt eines einzelnen
+Masterschalter-Bytes:
+
+```
+Surround (0x00), Dialog+ (0x02), Smart Volume (0x04),
+Crystalizer (0x07), Equalizer (0x09), Bass (0x18)
+```
+
+Bestätigt per Capture UND Live-Test (Batch-Reports `5a 11 2c 07 00 ...`
+bzw. `5a 11 26 06 00 ...`). In `main.rs` als 6 einzelne
+`build_toggle_report()`-Aufrufe nachgebildet (funktional identisch,
+nicht Byte-für-Byte das Original-Batch-Format).
+
 ## Offene Punkte
 
 - Smart Volume (Mic-Seite) eigener Toggle-Parameter noch nicht isoliert
-- Direct Mode: vermutlich reines Audio-Routing/Bypass, noch nicht per Capture
-  bestätigt ob und welcher `5a`-Report dabei gesendet wird
 - Abtastrate/Sample-Rate-Wechsel (Clock Source) noch nicht direkt beobachtet
-- Gerät-Seite (Sound-Modus-Presets speichern/laden, Firmware-Update, Volume
-  Sync, Energiesparen, Logo-LED) noch nicht untersucht
+- Gerät-Seite: Sound-Modus-Presets speichern/laden weiterhin unbekannt (Tab
+  deshalb entfernt), ebenso Firmware-Update-Check, Energiesparen, Logo-LED,
+  Gerät-zurücksetzen – Controls existieren im UI, lösen aber keinen
+  (geratenen) Befehl aus
+- Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-vorbereitet, kein echter
+  globaler Tastatur-Hook angebunden
+- Die vier neuen GET-Anfrage-Familien (0x26, 0x39, 0x6c, 0x10 – siehe oben)
+  sind unentschlüsselt; könnten weitere auslesbare Gerätezustände sein
+- Voice-Morph-/Mikrofon-Equalizer-Profillisten in crystal-voice-tab.slint
+  sind teilweise geraten (nur "Roboter"/"Pitch-Reduzierung" aus Screenshot
+  bestätigt)
 
 ## Gerüst-Struktur
 
