@@ -111,6 +111,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mixer::set_level(entity_id, value);
     });
 
+    ui.on_mute_changed(move |entity_id, muted| {
+        mixer::set_mute(entity_id, muted);
+    });
+
     ui.on_capture_source_changed(move |index| {
         mixer::set_capture_source(index);
     });

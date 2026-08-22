@@ -32,6 +32,7 @@ export component AppWindow inherits Window {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback mute-changed(int, bool);
     callback capture-source-changed(int);
     callback reset-clicked();
     callback volume-sync-toggled(bool);
@@ -76,6 +77,7 @@ export component AppWindow inherits Window {
 
         QuickControlsBar {
             level-changed(id, v) => { mixer-level-changed(id, v); }
+            mute-changed(id, m) => { mute-changed(id, m); }
         }
 
         if !device-connected: VerticalLayout {

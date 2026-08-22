@@ -29,6 +29,18 @@ pub fn set_level(entity_id: i32, percent: f32) {
     run_amixer(&["sset", name, "--", &format!("{percent}%")]);
 }
 
+/// Jeder Pegel-Control aus CONTROLS hat eine gleichnamige "...Switch"-Control
+/// für Stummschaltung (z.B. "Speaker Playback Volume" -> "Speaker Playback
+/// Switch"), per `amixer -c USB1 controls` verifiziert.
+pub fn set_mute(entity_id: i32, muted: bool) {
+    let Some(&name) = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i)) else {
+        eprintln!("Unbekannte Mixer-Entity-ID {entity_id}");
+        return;
+    };
+    let switch_name = name.replace("Volume", "Switch");
+    run_amixer(&["sset", &switch_name, if muted { "off" } else { "on" }]);
+}
+
 /// Index = Zeilenindex im "Aufnahme"-Tab (ui/tabs/recording-settings-tab.slint).
 /// Entspricht der ALSA-Enum-Control "PCM Capture Source" (per `amixer -c USB1
 /// sget 'PCM Capture Source'` verifiziert), die exakt den "Standard
