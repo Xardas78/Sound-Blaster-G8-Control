@@ -3,7 +3,7 @@ import { SoundModeTab } from "sound-mode-tab.slint";
 import { AcousticEngineTab } from "acoustic-engine-tab.slint";
 import { EqualizerTab } from "equalizer-tab.slint";
 import { CrystalVoiceTab } from "crystal-voice-tab.slint";
-import { ScoutModeTab, DirectModeTab, DecoderTab } from "misc-tabs.slint";
+import { ModiDecoderTab } from "misc-tabs.slint";
 import { MixerTab } from "mixer-tab.slint";
 
 // Im Original ist "Gerät" der Haupt-Hub: eine Kachel-Übersicht, aus der
@@ -45,21 +45,11 @@ export component DeviceHubTab inherits TabWidget {
         }
     }
     Tab {
-        title: "Direct Mode";
-        DirectModeTab {
-            toggled(on) => { direct-mode-toggled(on); }
-        }
-    }
-    Tab {
-        title: "Scout Mode";
-        ScoutModeTab {
-            toggled(on) => { scout-toggled(on); }
-        }
-    }
-    Tab {
-        title: "Decoder";
-        DecoderTab {
-            mode-changed(m) => { decoder-mode-changed(m); }
+        title: "Modi & Decoder";
+        ModiDecoderTab {
+            direct-mode-toggled(on) => { direct-mode-toggled(on); }
+            scout-toggled(on) => { scout-toggled(on); }
+            decoder-mode-changed(m) => { decoder-mode-changed(m); }
         }
     }
     Tab {
