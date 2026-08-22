@@ -35,4 +35,23 @@ impl G8Device {
         buf[1..].copy_from_slice(report);
         self.handle.write(&buf).map(|_| ()).map_err(|e| e.to_string())
     }
+
+    /// Liest einen eingehenden Report vom Interrupt-IN-Endpoint 0x85 auf
+    /// Interface 4 (derselbe Interface-Handle wie send_report – hidapi
+    /// liest darüber automatisch von diesem Endpoint). Antworten auf
+    /// Anfrage-Reports (z.B. protocol::special::query_output_target())
+    /// kommen hierüber; außerdem sendet das Gerät unaufgefordert einen
+    /// periodischen Status-Heartbeat, sobald es durch irgendeinen Befehl
+    /// "aktiv" wurde (kompletter Acoustic-Engine/CrystalVoice/EQ-
+    /// Parametersatz, alle ca. 1,5-2,5s) – dieser Heartbeat ist NICHT an
+    /// den physischen Kopfhörer/Lautsprecher-Schalter gekoppelt, der
+    /// Schalterstand selbst muss aktiv abgefragt werden (kein Push dafür).
+    pub fn read_report(&self, timeout_ms: i32) -> Result<Option<[u8; 64]>, String> {
+        let mut buf = [0u8; 64];
+        let n = self.handle.read_timeout(&mut buf, timeout_ms).map_err(|e| e.to_string())?;
+        if n == 0 {
+            return Ok(None);
+        }
+        Ok(Some(buf))
+    }
 }

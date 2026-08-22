@@ -1,11 +1,37 @@
-import { ComboBox } from "std-widgets.slint";
-
-// Entspricht der "Wiedergabe"-Seite im Original: Audioqualität (Bit-Tiefe/
-// Abtastrate) und Ausgabegerät-Wahl (Kopfhörer/Lautsprecher). Beides sind
-// Standard-USB-Audio-Class-Mechanismen (Alt-Setting bzw. reines UI-/Routing-
-// Konzept), noch nicht an Rust angebunden – siehe HANDOFF.md Punkt 5.
+// Entspricht der "Wiedergabe"-Seite im Original. Die Audioqualität
+// (Bit-Tiefe/Abtastrate) wurde bewusst wieder entfernt: das ist im
+// Original vermutlich Alt-Setting-Auswahl der USB-Audio-Class, PipeWire
+// wählt auf Linux selbst die beste Qualität – ein Dropdown ohne echte
+// Wirkung wäre irreführend.
+//
+// Die Kreisgrafik zeigt die 8 virtuellen 7.1-Positionen (Zeichnung vom
+// Nutzer, siehe ui/assets/virtual-sound.svg) und ist klickbar: jede
+// Position spielt einen kurzen Testton auf genau diesem Kanal ab (siehe
+// speaker_test.rs). Kopfhörer/Lautsprecher ist jetzt eine echte
+// Umschaltung – gemeinsamer Zustand mit dem Schalter auf der
+// Acoustic-Engine-Seite (siehe app-window.slint), steuert den virtuellen
+// HRTF-Surround-Sink (virtual_surround.rs).
 export component PlaybackSettingsTab inherits VerticalLayout {
-    in-out property <int> output-device: 0; // 0=Kopfhörer, 1=Lautsprecher
+    in property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
+
+    callback output-target-changed(int);
+    callback speaker-test-clicked(int);
+    callback speaker-test-cycle-clicked();
+
+    // Reihenfolge/Positionen exakt aus der SVG-Zeichnung vermessen
+    // (Inkscape --query-id je Element, umgerechnet auf Sekundäranteile
+    // der 344x327-ViewBox). Kanalindex entspricht audio.position in der
+    // Filter-Chain-Config: FL FR FC LFE RL RR SL SR.
+    property <[{ x: float, y: float, ch: int, label: string }]> speaker-positions: [
+        { x: 0.205, y: 0.294, ch: 0, label: "Front Links" },
+        { x: 0.774, y: 0.295, ch: 1, label: "Front Rechts" },
+        { x: 0.488, y: 0.159, ch: 2, label: "Center" },
+        { x: 0.889, y: 0.155, ch: 3, label: "Subwoofer" },
+        { x: 0.202, y: 0.895, ch: 4, label: "Hinten Links" },
+        { x: 0.773, y: 0.894, ch: 5, label: "Hinten Rechts" },
+        { x: 0.083, y: 0.593, ch: 6, label: "Seite Links" },
+        { x: 0.894, y: 0.593, ch: 7, label: "Seite Rechts" },
+    ];
 
     padding: 16px;
     spacing: 16px;
@@ -14,32 +40,93 @@ export component PlaybackSettingsTab inherits VerticalLayout {
     Text { text: "Wiedergabe"; font-size: 20px; font-weight: 700; }
 
     HorizontalLayout {
-        spacing: 12px;
+        spacing: 32px;
         alignment: start;
-        Text { text: "Audioqualität (Lautsprecher):"; vertical-alignment: center; }
-        ComboBox {
-            model: ["16 bit, 96000 Hz", "24 bit, 96000 Hz", "32 bit, 192000 Hz"];
-            current-index: 0;
-            width: 220px;
-        }
-    }
 
-    for entry[i] in [
-        { label: "Kopfhörer", detail: "Virtual 7.1 Surround" },
-        { label: "Lautsprecher (Line Out)", detail: "7.1 Surround" },
-    ]: HorizontalLayout {
-        spacing: 8px;
-        Rectangle {
-            width: 16px; height: 16px;
-            border-radius: 8px;
-            border-width: 2px;
-            border-color: output-device == i ? orange : gray;
-            background: output-device == i ? orange : transparent;
-            TouchArea { clicked => { output-device = i; } }
-        }
         VerticalLayout {
-            Text { text: entry.label; font-weight: 600; }
-            Text { text: entry.detail; color: gray; }
+            spacing: 12px;
+            width: 360px;
+            alignment: start;
+
+            for entry[i] in [
+                { label: "Kopfhörer", detail: "Virtueller HRTF-Surround (7.1)" },
+                { label: "Lautsprecher (Line Out)", detail: "Stereo, direkt über die G8-Hardware" },
+            ]: HorizontalLayout {
+                spacing: 8px;
+                Rectangle {
+                    width: 16px; height: 16px;
+                    border-radius: 8px;
+                    border-width: 2px;
+                    border-color: output-target == i ? orange : gray;
+                    background: output-target == i ? orange : transparent;
+                    TouchArea { clicked => { output-target-changed(i); } }
+                }
+                VerticalLayout {
+                    Text { text: entry.label; font-weight: 600; }
+                    Text { text: entry.detail; color: gray; wrap: word-wrap; }
+                }
+            }
+
+            Rectangle { height: 1px; background: #e0e0e0; }
+
+            Text {
+                text: "Klicke auf eine Position im Kreis, um einen Testton von dort zu hören. Im Kopfhörer-Modus klingt jede Position dank HRTF-Faltung räumlich unterschiedlich.";
+                wrap: word-wrap;
+                font-size: 14px;
+                color: gray;
+            }
+        }
+
+        VerticalLayout {
+            spacing: 16px;
+            alignment: start;
+
+            Rectangle {
+                width: 344px;
+                height: 327px;
+
+                Image {
+                    source: @image-url("../assets/virtual-sound.svg");
+                    width: 344px;
+                    height: 327px;
+                }
+
+                for pos in speaker-positions: Rectangle {
+                    x: pos.x * parent.width - self.width / 2;
+                    y: pos.y * parent.height - self.height / 2;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    background: hotspot.has-hover ? #3d7fd933 : transparent;
+                    border-width: hotspot.has-hover ? 2px : 0px;
+                    border-color: #3d7fd9;
+
+                    hotspot := TouchArea {
+                        clicked => { speaker-test-clicked(pos.ch); }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 140px;
+                    height: 36px;
+                    border-radius: 6px;
+                    background: test-touch.pressed ? #c96a1e : #e07b2a;
+
+                    test-touch := TouchArea {
+                        clicked => { speaker-test-cycle-clicked(); }
+                    }
+                    Text {
+                        text: "Testen";
+                        color: white;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
         }
     }
 }

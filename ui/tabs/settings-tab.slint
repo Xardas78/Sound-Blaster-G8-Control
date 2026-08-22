@@ -2,16 +2,25 @@ import { Button, Switch, Palette } from "std-widgets.slint";
 
 // Entspricht der "Einstellungen"-Seite im Original, aber ohne die
 // Gerät/Anwendung-Unterreiter des Originals – auf Wunsch flach in einem
-// Reiter zusammengefasst. Reset, Firmware/Treiber-Check, Volume Sync,
-// Energieeinsparung und Logo-LED sind über den proprietären Kanal noch
-// nicht reverse-engineert (kein Capture vorhanden) – die Controls sind
-// vorbereitet, lösen aber noch keinen echten Befehl aus, siehe HANDOFF.md.
+// Reiter zusammengefasst. Reset, Firmware/Treiber-Check, Energieeinsparung
+// und Logo-LED sind über den proprietären Kanal noch nicht reverse-
+// engineert (kein Capture vorhanden) – die Controls sind vorbereitet,
+// lösen aber noch keinen echten Befehl aus, siehe HANDOFF.md.
+// Volume Sync IST implementiert (siehe main.rs): spiegelt den
+// Lautstärkeknopf-Prozentwert live auf die PipeWire-Sink-Lautstärke.
 // Dark Mode ist reiner UI-Zustand (Slint-Standard-Widgets über die
 // eingebaute Palette-Umschaltung), braucht keine Rust-Anbindung.
 export component SettingsTab inherits HorizontalLayout {
     in property <bool> device-connected: false;
+    // Live vom Poll-Thread in main.rs gefüllt (derselbe Wert, der auch den
+    // Fußleisten-Regler mitlaufen lässt) – damit kann der Bestätigungs-
+    // Dialog unten die tatsächliche Reglerposition anzeigen, statt den
+    // Nutzer blind auf 50% stellen zu lassen.
+    in property <float> footer-speaker-level: 49;
 
-    in-out property <bool> volume-sync-on: true;
+    // Standardmäßig aus: sonst würde beim ersten App-Start sofort die
+    // PC-Lautstärke auf den aktuellen (unbekannten) Reglerstand springen.
+    in-out property <bool> volume-sync-on: false;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
     in-out property <bool> dark-mode-on: false;
@@ -42,7 +51,20 @@ export component SettingsTab inherits HorizontalLayout {
         alignment: start;
         HorizontalLayout {
             spacing: 8px;
-            Switch { checked: volume-sync-on; toggled => { volume-sync-on = self.checked; volume-sync-toggled(self.checked); } }
+            Switch {
+                checked: volume-sync-on;
+                toggled => {
+                    if self.checked {
+                        // Nicht sofort aktivieren: erst per Dialog
+                        // bestätigen lassen, dass der Regler auf 50%
+                        // steht (verhindert einen Lautstärke-Sprung).
+                        volume-sync-confirm.show();
+                    } else {
+                        volume-sync-on = false;
+                        volume-sync-toggled(false);
+                    }
+                }
+            }
             VerticalLayout {
                 Text { text: "Volume Sync"; font-weight: 600; }
                 Text {
@@ -50,6 +72,64 @@ export component SettingsTab inherits HorizontalLayout {
                     width: 260px;
                     text: "Der Lautstärkeknopf steuert Geräte- und PC-Lautstärke gemeinsam.";
                     color: gray;
+                }
+            }
+        }
+        volume-sync-confirm := PopupWindow {
+            x: 0px;
+            y: 0px;
+            width: root.width;
+            height: root.height;
+
+            Rectangle {
+                background: #00000066;
+
+                Rectangle {
+                    width: 380px;
+                    height: 240px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : white;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #cccccc;
+                    drop-shadow-blur: 16px;
+                    drop-shadow-color: #00000055;
+
+                    VerticalLayout {
+                        padding: 20px;
+                        spacing: 12px;
+                        alignment: start;
+
+                        Text { text: "Volume Sync aktivieren"; font-weight: 700; font-size: 17px; }
+                        Text {
+                            wrap: word-wrap;
+                            text: "Stelle den Lautstärkeknopf am Gerät auf 50%, bevor du bestätigst – sonst springt die PC-Lautstärke sofort auf den aktuellen Reglerstand.";
+                            font-size: 14px;
+                            color: gray;
+                        }
+                        Text {
+                            text: "Aktueller Reglerstand: " + round(footer-speaker-level) + "%";
+                            font-weight: 700;
+                            color: abs(footer-speaker-level - 50) < 3 ? #2ecc71 : #e07b2a;
+                        }
+
+                        Rectangle { height: 4px; }
+
+                        HorizontalLayout {
+                            spacing: 12px;
+                            alignment: end;
+                            Button { text: "Abbrechen"; clicked => { volume-sync-confirm.close(); } }
+                            Button {
+                                text: "OK, aktivieren";
+                                clicked => {
+                                    volume-sync-on = true;
+                                    volume-sync-toggled(true);
+                                    volume-sync-confirm.close();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

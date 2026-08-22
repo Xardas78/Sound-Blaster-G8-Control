@@ -14,7 +14,10 @@ import { MixerTab } from "mixer-tab.slint";
 export component DeviceHubTab inherits TabWidget {
     current-index: 0;
 
+    in property <int> output-target: 0;
+
     callback playback-param-changed(int, float);
+    callback output-target-changed(int);
     callback recording-param-changed(int, float);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
@@ -29,7 +32,9 @@ export component DeviceHubTab inherits TabWidget {
     Tab {
         title: "Acoustic Engine";
         AcousticEngineTab {
+            output-target: output-target;
             param-changed(id, v) => { playback-param-changed(id, v); }
+            output-target-changed(t) => { output-target-changed(t); }
         }
     }
     Tab {

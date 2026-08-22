@@ -23,9 +23,26 @@ export component AppWindow inherits Window {
     in-out property <bool> device-connected: false;
     in-out property <string> device-status: "Suche Gerät …";
 
+    // Gemeinsamer Kopfhörer/Lautsprecher-Zustand für Acoustic-Engine- und
+    // Wiedergabe-Seite (0=Kopfhörer, 1=Lautsprecher). Steuert den
+    // virtuellen HRTF-Surround-Sink, siehe virtual_surround.rs.
+    in-out property <int> output-target: 0;
+
+    // Bloße Eigenschaftsreferenz beim Binden unten (QuickControlsBar {
+    // speaker-level: footer-speaker-level; }) erzeugt in Slint automatisch
+    // eine Zwei-Wege-Bindung: Rust kann hier per set_footer_speaker_level()
+    // reinschreiben (z.B. wenn der Regler am Gerät gedreht wurde, siehe
+    // main.rs Poll-Thread), UND der Slider im UI schreibt beim Ziehen
+    // weiterhin automatisch zurück.
+    in-out property <float> footer-speaker-level: 49;
+    in-out property <float> footer-mic-level: 63;
+
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
     callback playback-param-changed(int, float);
+    callback output-target-changed(int);
+    callback speaker-test-clicked(int);
+    callback speaker-test-cycle-clicked();
     callback recording-param-changed(int, float);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
@@ -44,7 +61,9 @@ export component AppWindow inherits Window {
             Tab {
                 title: "Gerät";
                 DeviceHubTab {
+                    output-target: output-target;
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
+                    output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }
                     eq-param-changed(id, v) => { eq-param-changed(id, v); }
                     scout-toggled(on) => { scout-toggled(on); }
@@ -55,7 +74,12 @@ export component AppWindow inherits Window {
             }
             Tab {
                 title: "Wiedergabe";
-                PlaybackSettingsTab { }
+                PlaybackSettingsTab {
+                    output-target: output-target;
+                    output-target-changed(t) => { output-target = t; output-target-changed(t); }
+                    speaker-test-clicked(ch) => { speaker-test-clicked(ch); }
+                    speaker-test-cycle-clicked() => { speaker-test-cycle-clicked(); }
+                }
             }
             Tab {
                 title: "Aufnahme";
@@ -67,6 +91,7 @@ export component AppWindow inherits Window {
                 title: "Einstellungen";
                 SettingsTab {
                     device-connected: device-connected;
+                    footer-speaker-level: footer-speaker-level;
                     reset-clicked => { reset-clicked(); }
                     volume-sync-toggled(on) => { volume-sync-toggled(on); }
                     power-saving-toggled(on) => { power-saving-toggled(on); }
@@ -76,6 +101,8 @@ export component AppWindow inherits Window {
         }
 
         QuickControlsBar {
+            speaker-level: footer-speaker-level;
+            mic-level: footer-mic-level;
             level-changed(id, v) => { mixer-level-changed(id, v); }
             mute-changed(id, m) => { mute-changed(id, m); }
         }

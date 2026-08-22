@@ -1,10 +1,16 @@
 mod device;
 mod mixer;
 mod protocol;
+mod speaker_test;
+mod virtual_surround;
 
 use device::G8Device;
-use protocol::{build_level_report, build_report, decoder, special, Namespace};
+use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, decoder, equalizer, special, Namespace};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 slint::include_modules!();
 
@@ -77,15 +83,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let device = device.clone();
-        ui.on_direct_mode_toggled(move |_on| {
+        ui.on_direct_mode_toggled(move |on| {
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
-            // Direct Mode und SBX sind laut Zeichnung/Anleitung derselbe
-            // zugrundeliegende Zustand (invers/exklusiv) – bislang einzig
-            // bekannter Report dafür ist der gemeinsame SBX-Sync-Toggle.
-            // Noch nicht per Capture bestätigt, siehe HANDOFF.md
-            // "Offene Punkte".
-            if let Err(e) = dev.send_report(&special::sbx_sync()) {
-                eprintln!("Senden fehlgeschlagen: {e}");
+            // Direct Mode und SBX sind derselbe zugrundeliegende Zustand,
+            // invers zueinander (Direct Mode an = SBX-Effekte aus). Per
+            // USB-Capture "g8 neu.pcapng" UND Live-Test bestätigt: die
+            // Original-Software schaltet dabei 6 Acoustic-Engine-Toggles
+            // gemeinsam um (Surround, Dialog+, Smart Volume, Crystalizer,
+            // Equalizer, Bass) statt eines einzelnen Masterschalter-Bytes.
+            let sbx_on = !on;
+            let toggles = [
+                acoustic_engine::SURROUND_TOGGLE,
+                acoustic_engine::DIALOG_PLUS_TOGGLE,
+                acoustic_engine::SMART_VOLUME_TOGGLE,
+                acoustic_engine::CRYSTALIZER_TOGGLE,
+                acoustic_engine::BASS_TOGGLE,
+                equalizer::TOGGLE,
+            ];
+            for toggle in toggles {
+                if let Err(e) = dev.send_report(&build_toggle_report(toggle, sbx_on)) {
+                    eprintln!("Senden fehlgeschlagen: {e}");
+                }
             }
         });
     }
@@ -119,15 +137,127 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mixer::set_capture_source(index);
     });
 
-    // Reset, Volume Sync, Energieeinsparung und Logo-LED sind über den
-    // proprietären Kanal noch nicht reverse-engineert (kein Capture
-    // vorhanden) – siehe HANDOFF.md "Offene Punkte". Controls existieren
-    // im UI, lösen aber bewusst noch keinen (geratenen) Befehl aus.
+    // Kopfhörer/Lautsprecher ist NICHT per USB steuerbar (der physische
+    // Schalter lässt sich nicht fernauslösen), aber per gezielter Anfrage
+    // auslesbar – siehe protocol.rs::special::query_output_target(). Der
+    // Klick hier steuert deshalb nur unseren eigenen virtuellen
+    // HRTF-Surround, siehe virtual_surround.rs.
+    ui.on_output_target_changed(move |target| {
+        if target == 0 {
+            virtual_surround::enable();
+        } else {
+            virtual_surround::disable();
+        }
+    });
+
+    // Live-Anzeige des tatsächlichen physischen Schalterstands: es gibt
+    // keine Push-Benachrichtigung dafür (siehe device.rs::read_report),
+    // deshalb aktiv im Sekundentakt abfragen. Eigenes, drittes Geräte-
+    // Handle aus demselben Grund wie beim Lautstärke-Poller: ein
+    // geteiltes Handle würde die UI beim Schreiben blockieren.
+    if device.is_some() {
+        let weak = ui.as_weak();
+        thread::spawn(move || {
+            let dev = match G8Device::open() {
+                Ok(d) => d,
+                Err(e) => return eprintln!("Schalter-Abfrage: Gerät nicht geöffnet: {e}"),
+            };
+            let mut last_target: Option<i32> = None;
+            loop {
+                // Erst liegen gebliebene Reports verwerfen (z.B. vom
+                // periodischen Status-Heartbeat, der zufällig dieselbe
+                // "5a 2c 05 01 xx"-Form hat) – sonst wird eine alte,
+                // ungültige Antwort mit der frischen Anfrage verwechselt.
+                while dev.read_report(20).ok().flatten().is_some() {}
+
+                if dev.send_report(&special::query_output_target()).is_ok() {
+                    if let Ok(Some(buf)) = dev.read_report(300) {
+                        if let Some(target) = special::output_target_from_reply(&buf) {
+                            if last_target != Some(target) {
+                                last_target = Some(target);
+                                let weak = weak.clone();
+                                let _ = weak.upgrade_in_event_loop(move |ui| ui.set_output_target(target));
+                            }
+                        }
+                    }
+                }
+                thread::sleep(Duration::from_secs(1));
+            }
+        });
+    }
+
+    // Volume Sync (Einstellungen-Reiter): spiegelt den Lautstärkeknopf
+    // zusätzlich auf die PipeWire-Sink-Lautstärke (die separate
+    // Software-Pegelstufe oberhalb der ALSA-Hardwarelautstärke, die
+    // set_level/get_level ansprechen – vergleichbar mit "PC-Lautstärke"
+    // unter Windows). Original-Software verlangt vor dem Einschalten den
+    // Regler auf 50%, sonst springt die PC-Lautstärke beim Aktivieren
+    // sofort auf den aktuellen Reglerstand – das bilden wir hier 1:1 nach.
+    let volume_sync_enabled = Arc::new(AtomicBool::new(false));
+    {
+        let flag = volume_sync_enabled.clone();
+        ui.on_volume_sync_toggled(move |on| {
+            flag.store(on, Ordering::SeqCst);
+            if on {
+                if let Some(v) = mixer::get_level(0) {
+                    mixer::set_pipewire_sink_volume(v);
+                }
+            }
+        });
+    }
+
+    // Der Lautstärkeknopf am Gerät schreibt direkt in dasselbe ALSA-
+    // Feature-Unit-Register wie unser Slider (per USB-Capture bestätigt,
+    // siehe HANDOFF.md) – es gibt aber keine Push-Benachrichtigung dafür,
+    // nur Polling macht den Regler live mitlaufen.
+    {
+        let weak = ui.as_weak();
+        let volume_sync_enabled = volume_sync_enabled.clone();
+        thread::spawn(move || {
+            let mut last_speaker: Option<f32> = None;
+            let mut last_mic: Option<f32> = None;
+            loop {
+                thread::sleep(Duration::from_millis(120));
+
+                if let Some(v) = mixer::get_level(0) {
+                    let changed = last_speaker.map(|prev| (prev - v).abs() > 0.5).unwrap_or(true);
+                    if changed {
+                        last_speaker = Some(v);
+                        if volume_sync_enabled.load(Ordering::SeqCst) {
+                            mixer::set_pipewire_sink_volume(v);
+                        }
+                        let weak = weak.clone();
+                        let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));
+                    }
+                }
+
+                if let Some(v) = mixer::get_level(6) {
+                    let changed = last_mic.map(|prev| (prev - v).abs() > 0.5).unwrap_or(true);
+                    if changed {
+                        last_mic = Some(v);
+                        let weak = weak.clone();
+                        let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_mic_level(v));
+                    }
+                }
+            }
+        });
+    }
+
+    ui.on_speaker_test_clicked(move |channel| {
+        speaker_test::test_position(channel as usize);
+    });
+
+    ui.on_speaker_test_cycle_clicked(move || {
+        speaker_test::test_cycle();
+    });
+
+    // Reset, Energieeinsparung und Logo-LED sind über den proprietären
+    // Kanal noch nicht reverse-engineert (kein Capture vorhanden) – siehe
+    // HANDOFF.md "Offene Punkte". Controls existieren im UI, lösen aber
+    // bewusst noch keinen (geratenen) Befehl aus. Volume Sync ist weiter
+    // oben echt angebunden (PipeWire-Sink-Lautstärke).
     ui.on_reset_clicked(move || {
         eprintln!("Gerät zurücksetzen: Report-Format noch nicht reverse-engineert");
-    });
-    ui.on_volume_sync_toggled(move |_on| {
-        eprintln!("Volume Sync: Report-Format noch nicht reverse-engineert");
     });
     ui.on_power_saving_toggled(move |_on| {
         eprintln!("Energieeinsparung: Report-Format noch nicht reverse-engineert");

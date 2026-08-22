@@ -14,7 +14,10 @@ import { Slider, Switch } from "std-widgets.slint";
 // gefixt. Toggle-Parameter (0.0/0.5/1.0 o.ä.) und Smart-Volume-Modus
 // (0.0=Normal/1.0=Laut/2.0=Nacht) sind laut Capture unverändert korrekt.
 export component AcousticEngineTab inherits VerticalLayout {
-    in-out property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
+    // Gemeinsamer Zustand mit der Wiedergabe-Seite, AppWindow hält den
+    // eigentlichen Wert (siehe app-window.slint) – hier nur Anzeige +
+    // Klick-Weiterleitung, kein lokaler Zustand mehr.
+    in property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
 
     in-out property <bool> surround-on: true;
     in-out property <float> surround-level: 48;
@@ -34,6 +37,9 @@ export component AcousticEngineTab inherits VerticalLayout {
 
     // param-id, value – Rust ordnet über acoustic_engine::* Konstanten zu
     callback param-changed(int, float);
+    // 0=Kopfhörer, 1=Lautsprecher – schaltet den virtuellen HRTF-Surround
+    // (siehe virtual_surround.rs) ein bzw. aus.
+    callback output-target-changed(int);
 
     padding: 16px;
     spacing: 16px;
@@ -54,7 +60,7 @@ export component AcousticEngineTab inherits VerticalLayout {
             HorizontalLayout {
                 Rectangle {
                     background: output-target == 0 ? #3d7fd9 : transparent;
-                    TouchArea { clicked => { output-target = 0; } }
+                    TouchArea { clicked => { output-target-changed(0); } }
                     Text {
                         text: "Kopfhörer";
                         color: output-target == 0 ? white : #333333;
@@ -64,7 +70,7 @@ export component AcousticEngineTab inherits VerticalLayout {
                 }
                 Rectangle {
                     background: output-target == 1 ? #3d7fd9 : transparent;
-                    TouchArea { clicked => { output-target = 1; } }
+                    TouchArea { clicked => { output-target-changed(1); } }
                     Text {
                         text: "Lautsprecher";
                         color: output-target == 1 ? white : #333333;
@@ -74,6 +80,14 @@ export component AcousticEngineTab inherits VerticalLayout {
                 }
             }
         }
+    }
+    Text {
+        text: output-target == 0
+            ? "Kopfhörer aktiviert virtuellen HRTF-Surround (SBX) – PipeWire startet dafür kurz neu."
+            : "Lautsprecher gibt direkt über die G8-Hardware aus, ohne virtuellen Surround.";
+        horizontal-alignment: center;
+        font-size: 13px;
+        color: gray;
     }
 
     HorizontalLayout {

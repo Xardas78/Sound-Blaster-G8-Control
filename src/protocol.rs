@@ -139,6 +139,20 @@ pub mod equalizer {
     pub fn band(index: usize) -> LevelParam {
         LevelParam { namespace: Namespace::Playback, param_id: BAND_IDS[index] }
     }
+
+    /// ACHTUNG – vermutlich Fehlinterpretation, nicht verwenden: ursprünglich
+    /// aus dem USB-Capture "hp-spk ein-aus.pcapng" als "Kopfhörer- bzw.
+    /// Lautsprecher-EQ-Profil" abgeleitet. Live-Tests am echten Gerät haben
+    /// aber gezeigt, dass die dortigen "5a 2c 05 01 <02|04>"-Blöcke Teil
+    /// eines periodischen Status-Heartbeats sind (alle ca. 1,5-2,5s, sobald
+    /// das Gerät aktiv ist), NICHT an den physischen Schalter gekoppelt –
+    /// die beiden Werte hier sind vermutlich nur zwei Momentaufnahmen
+    /// desselben Heartbeats, keine echten Kopfhörer/Lautsprecher-Profile.
+    /// Siehe HANDOFF.md.
+    pub const HEADPHONE_PREAMP: f32 = 0.0;
+    pub const HEADPHONE_BANDS: [f32; 10] = [3.0, 4.0, -1.0, -2.0, 0.0, 2.0, 2.0, -5.0, 2.0, 0.0];
+    pub const SPEAKER_PREAMP: f32 = 0.0;
+    pub const SPEAKER_BANDS: [f32; 10] = [0.0; 10];
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +233,35 @@ pub mod special {
         buf[4] = 0xff;
         buf[5] = 0xff;
         buf
+    }
+
+    /// Fragt den aktuellen Kopfhörer/Lautsprecher-Schalterstand ab (GET,
+    /// kein SET – der Schalter selbst ist rein hardwareseitig und nicht
+    /// per USB steuerbar). Per Windows-Capture "g8 neu.pcapng" UND
+    /// eigenem Live-Test am echten Gerät exakt bestätigt: das Senden
+    /// dieses Reports löst umgehend eine Antwort auf dem Interrupt-IN-
+    /// Kanal aus, Format "5a 2c 05 01 <02|04>" – 0x04 vermutlich
+    /// Kopfhörer, 0x02 Lautsprecher (siehe output_target_from_reply).
+    /// Muss aktiv gepollt werden, es gibt keine Push-Benachrichtigung bei
+    /// Schalterwechsel.
+    pub fn query_output_target() -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x2c;
+        buf[2] = 0x01;
+        buf[3] = 0x01;
+        buf
+    }
+
+    /// Liest aus der Antwort auf query_output_target() den Zielwert
+    /// (analog zum output-target-Property: 0=Kopfhörer, 1=Lautsprecher).
+    /// None, falls der Report kein Treffer auf "5a 2c 05 01 xx" ist.
+    pub fn output_target_from_reply(buf: &[u8; 64]) -> Option<i32> {
+        if buf[0] == 0x5a && buf[1] == 0x2c && buf[2] == 0x05 && buf[3] == 0x01 {
+            Some(if buf[4] == 0x04 { 0 } else { 1 })
+        } else {
+            None
+        }
     }
 }
 
