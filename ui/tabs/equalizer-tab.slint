@@ -1,5 +1,5 @@
 import { EffectToggle } from "../effect-slider.slint";
-import { Slider } from "std-widgets.slint";
+import { Slider, SpinBox } from "std-widgets.slint";
 
 export component EqualizerTab inherits VerticalLayout {
     in-out property <bool> eq-on: true;
@@ -125,6 +125,7 @@ export component EqualizerTab inherits VerticalLayout {
                 padding-left: 26px;
                 for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
                     width: 64px;
+                    spacing: 4px;
                     Slider {
                         orientation: vertical;
                         minimum: -12; maximum: 12;
@@ -132,6 +133,13 @@ export component EqualizerTab inherits VerticalLayout {
                         enabled: eq-on;
                         height: 160px;
                         changed(v) => { bands[i] = v; param-changed(11 + i, v); }
+                    }
+                    SpinBox {
+                        minimum: -12; maximum: 12;
+                        value: round(bands[i]);
+                        enabled: eq-on;
+                        height: 26px;
+                        edited(v) => { bands[i] = v; param-changed(11 + i, v); }
                     }
                     Text { text: freq; horizontal-alignment: center; }
                 }
@@ -149,6 +157,7 @@ export component EqualizerTab inherits VerticalLayout {
             spacing: 12px;
             VerticalLayout {
                 width: 64px;
+                spacing: 4px;
                 Slider {
                     orientation: vertical;
                     minimum: -12; maximum: 12;
@@ -157,10 +166,18 @@ export component EqualizerTab inherits VerticalLayout {
                     height: 160px;
                     changed(v) => { preamp = v; param-changed(10, v); }
                 }
+                SpinBox {
+                    minimum: -12; maximum: 12;
+                    value: round(preamp);
+                    enabled: eq-on;
+                    height: 26px;
+                    edited(v) => { preamp = v; param-changed(10, v); }
+                }
                 Text { text: "Vorver."; horizontal-alignment: center; }
             }
             VerticalLayout {
                 width: 64px;
+                spacing: 4px;
                 Slider {
                     orientation: vertical;
                     minimum: -12; maximum: 12;
@@ -169,10 +186,18 @@ export component EqualizerTab inherits VerticalLayout {
                     height: 160px;
                     changed(v) => { bands[0] = v; param-changed(11, v); }
                 }
+                SpinBox {
+                    minimum: -12; maximum: 12;
+                    value: round(bands[0]);
+                    enabled: eq-on;
+                    height: 26px;
+                    edited(v) => { bands[0] = v; param-changed(11, v); }
+                }
                 Text { text: "Bass"; horizontal-alignment: center; }
             }
             VerticalLayout {
                 width: 64px;
+                spacing: 4px;
                 Slider {
                     orientation: vertical;
                     minimum: -12; maximum: 12;
@@ -180,6 +205,13 @@ export component EqualizerTab inherits VerticalLayout {
                     enabled: eq-on;
                     height: 160px;
                     changed(v) => { bands[8] = v; param-changed(19, v); }
+                }
+                SpinBox {
+                    minimum: -12; maximum: 12;
+                    value: round(bands[8]);
+                    enabled: eq-on;
+                    height: 26px;
+                    edited(v) => { bands[8] = v; param-changed(19, v); }
                 }
                 Text { text: "Höhen"; horizontal-alignment: center; }
             }
