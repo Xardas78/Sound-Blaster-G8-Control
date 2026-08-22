@@ -21,10 +21,11 @@ export component CrystalVoiceTab inherits VerticalLayout {
     in-out property <[string]> mic-eq-profiles: ["Pitch-Reduzierung", "Pitch-Erhöhung", "Nah", "Fern"];
     in-out property <int> mic-eq-profile-index: 0;
 
-    // Breite/Einrückung für Voice-Morph- und Mikrofon-Equalizer-Zeile:
-    // gleiche Label-Breite, damit beide Auswahlfelder exakt übereinander
-    // stehen, unabhängig von der (unterschiedlich langen) Beschriftung.
-    property <length> profile-label-width: 220px;
+    // Breite/Einrückung für Noise-Reduction-, Voice-Morph- und Mikrofon-
+    // Equalizer-Zeile: gleiche Label-Breite, damit Slider und beide
+    // Auswahlfelder exakt übereinander stehen und gleich lang sind,
+    // unabhängig von der (unterschiedlich langen) Beschriftung.
+    property <length> profile-label-width: 250px;
     property <length> profile-box-width: 200px;
 
     // param-id (0x95-Namespace angenommen), value
@@ -37,12 +38,13 @@ export component CrystalVoiceTab inherits VerticalLayout {
 
     HorizontalLayout {
         EffectToggle {
+            width: profile-label-width;
             label: "Noise Reduction";
             checked: noise-reduction-on;
             toggled(on) => { noise-reduction-on = on; param-changed(4, on ? 1.0 : 0.0); }
         }
         Slider {
-            width: 200px;
+            width: profile-box-width;
             minimum: 0; maximum: 100;
             value: noise-reduction-level;
             enabled: noise-reduction-on;

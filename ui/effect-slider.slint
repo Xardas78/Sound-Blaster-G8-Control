@@ -14,7 +14,7 @@ export component EffectSlider inherits VerticalLayout {
     callback value-changed(float);
 
     spacing: 8px;
-    alignment: center;
+    alignment: start;
     width: 230px;
 
     Text {
@@ -191,10 +191,12 @@ export component CompactComboBox inherits Rectangle {
             vertical-alignment: center;
             horizontal-alignment: left;
             overflow: elide;
+            horizontal-stretch: 1;
         }
         Text {
             text: "⌄";
-            font-size: 10px;
+            font-size: item-font-size;
+            horizontal-alignment: right;
             vertical-alignment: center;
             color: #666666;
         }
