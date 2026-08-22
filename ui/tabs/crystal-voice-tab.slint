@@ -38,17 +38,35 @@ export component CrystalVoiceTab inherits VerticalLayout {
             changed(v) => { noise-reduction-level = v; param-changed(5, v); }
         }
     }
+    Text {
+        text: "Reduzieren Sie statische Hintergrundgeräusche bei ausgehendem Audio während Telefonkonferenzen.";
+        wrap: word-wrap;
+        font-size: 12px;
+        color: gray;
+    }
 
     EffectToggle {
         label: "Acoustic Echo Cancellation";
         checked: aec-on;
         toggled(on) => { aec-on = on; param-changed(0, on ? 1.0 : 0.0); }
     }
+    Text {
+        text: "Beseitigen Sie Echos, die Ihre Konversation stören.";
+        wrap: word-wrap;
+        font-size: 12px;
+        color: gray;
+    }
 
     EffectToggle {
         label: "Smart Volume";
         checked: smart-volume-on;
         toggled(on) => { smart-volume-on = on; /* Param-ID noch nicht bestätigt */ }
+    }
+    Text {
+        text: "Gut verstanden werden, ohne rufen oder flüstern zu müssen.";
+        wrap: word-wrap;
+        font-size: 12px;
+        color: gray;
     }
 
     HorizontalLayout {
@@ -67,6 +85,12 @@ export component CrystalVoiceTab inherits VerticalLayout {
             }
         }
     }
+    Text {
+        text: "Morphen Sie Ihre Stimme in verschiedene Charaktere und Akzente.";
+        wrap: word-wrap;
+        font-size: 12px;
+        color: gray;
+    }
 
     HorizontalLayout {
         EffectToggle {
@@ -83,5 +107,11 @@ export component CrystalVoiceTab inherits VerticalLayout {
                 mic-eq-profile-changed(self.current-index);
             }
         }
+    }
+    Text {
+        text: "Verbessern Sie die Mikrofonleistung und die Qualität Ihrer Stimme.";
+        wrap: word-wrap;
+        font-size: 12px;
+        color: gray;
     }
 }

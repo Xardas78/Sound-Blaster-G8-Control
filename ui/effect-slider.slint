@@ -14,7 +14,7 @@ export component EffectSlider inherits VerticalLayout {
     callback value-changed(float);
 
     spacing: 8px;
-    alignment: start;
+    alignment: center;
     width: 230px;
 
     Text {
@@ -38,9 +38,12 @@ export component EffectSlider inherits VerticalLayout {
         changed(v) => { value-changed(v); }
     }
 
-    Switch {
-        checked: effect-enabled;
-        toggled => { toggled(self.checked); }
+    HorizontalLayout {
+        alignment: center;
+        Switch {
+            checked: effect-enabled;
+            toggled => { toggled(self.checked); }
+        }
     }
 
     Text {

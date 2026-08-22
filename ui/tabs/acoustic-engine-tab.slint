@@ -112,7 +112,7 @@ export component AcousticEngineTab inherits VerticalLayout {
         // nicht daneben.
         VerticalLayout {
             spacing: 8px;
-            alignment: start;
+            alignment: center;
             width: 230px;
 
             Text { text: "Smart Volume"; horizontal-alignment: center; font-weight: 600; }
@@ -127,9 +127,12 @@ export component AcousticEngineTab inherits VerticalLayout {
                 changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
             }
 
-            Switch {
-                checked: smart-volume-on;
-                toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+            HorizontalLayout {
+                alignment: center;
+                Switch {
+                    checked: smart-volume-on;
+                    toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+                }
             }
 
             Rectangle {
