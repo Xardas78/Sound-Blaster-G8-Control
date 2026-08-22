@@ -63,6 +63,8 @@ export component AppWindow inherits Window {
                 title: "Gerät";
                 DeviceHubTab {
                     output-target: output-target;
+                    footer-speaker-level: footer-speaker-level;
+                    footer-mic-level: footer-mic-level;
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }

@@ -22,7 +22,14 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 
 Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md) für die vollständigen Hex-Funde und Analyse).
 
-**Funktioniert:** Acoustic Engine, Equalizer, CrystalVoice, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, Kopfhörer/Lautsprecher-Statusanzeige (Auslesen), virtueller HRTF-Surround, Lautstärkeknopf-Livesync, Volume Sync.
+**Funktioniert:** Acoustic Engine, Equalizer, CrystalVoice, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, Kopfhörer/Lautsprecher-Statusanzeige (Auslesen), virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich jetzt denselben Wert für Lautsprecher/Mikrofon).
+
+**Baustelle – Lautstärke-Synchronisierung:** Es gibt mehrere Stellen, an denen Lautstärke geändert werden kann (ALSA-Hardwareregister, PipeWire-Sink-Lautstärke, unsere eigenen UI-Regler), die nicht vollständig miteinander verknüpft sind. Bekannte Probleme:
+- Volume Sync (Einstellungen) spiegelt aktuell nur in eine Richtung (ALSA → PipeWire); Änderungen an der PC-Lautstärke über andere Wege (System-Lautstärkeregler, Medientasten) fließen nicht zurück
+- Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber nachvollziehbar
+- Die übrigen Mixer-Regler (Line In, SPDIF, What U Hear) sind noch nicht live synchronisiert, nur Lautsprecher und externes Mikrofon
+
+Wird noch untersucht (weiterer USB-Capture-Vergleich mit dem Original unter Windows geplant).
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
 - Sound-Modus-Presets im Gerät speichern/laden
