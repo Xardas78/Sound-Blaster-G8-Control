@@ -95,19 +95,49 @@ export component CompactSpinBox inherits Rectangle {
             color: enabled ? #333333 : #999999;
         }
 
+        // Echte gefüllte Dreiecke statt Unicode-Pfeilzeichen (⌃/⌄) – die
+        // rendern je nach Font oft viel dünner/kleiner als die Font-Size
+        // vermuten lässt und waren dadurch schlecht erkennbar. Jedes
+        // Dreieck nimmt die halbe Box-Höhe ein (15px von 30px).
         VerticalLayout {
             width: 18px;
             TouchArea {
-                height: 14px;
+                height: 15px;
                 enabled: root.enabled && value < maximum;
                 clicked => { value += 1; edited(value); }
-                Text { text: "⌃"; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+                Path {
+                    x: 4px;
+                    y: 4.5px;
+                    width: 10px;
+                    height: 6px;
+                    viewbox-width: 10;
+                    viewbox-height: 6;
+                    fill: #555555;
+                    opacity: root.enabled && value < maximum ? 1.0 : 0.4;
+                    MoveTo { x: 5; y: 0; }
+                    LineTo { x: 10; y: 6; }
+                    LineTo { x: 0; y: 6; }
+                    Close { }
+                }
             }
             TouchArea {
-                height: 14px;
+                height: 15px;
                 enabled: root.enabled && value > minimum;
                 clicked => { value -= 1; edited(value); }
-                Text { text: "⌄"; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+                Path {
+                    x: 4px;
+                    y: 4.5px;
+                    width: 10px;
+                    height: 6px;
+                    viewbox-width: 10;
+                    viewbox-height: 6;
+                    fill: #555555;
+                    opacity: root.enabled && value > minimum ? 1.0 : 0.4;
+                    MoveTo { x: 0; y: 0; }
+                    LineTo { x: 10; y: 0; }
+                    LineTo { x: 5; y: 6; }
+                    Close { }
+                }
             }
         }
     }
