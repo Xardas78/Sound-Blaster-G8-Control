@@ -1,0 +1,87 @@
+import { EffectToggle } from "../effect-slider.slint";
+import { Slider, ComboBox } from "std-widgets.slint";
+
+export component CrystalVoiceTab inherits VerticalLayout {
+    in-out property <bool> noise-reduction-on: false;
+    in-out property <float> noise-reduction-level: 0;
+
+    in-out property <bool> aec-on: true;
+
+    in-out property <bool> smart-volume-on: false;
+
+    in-out property <bool> voice-morph-on: false;
+    in-out property <[string]> voice-morph-profiles: ["Roboter", "Alien", "Weiblich", "Männlich"];
+    in-out property <int> voice-morph-profile-index: 0;
+
+    in-out property <bool> mic-eq-on: false;
+    in-out property <[string]> mic-eq-profiles: ["Pitch-Reduzierung", "Pitch-Erhöhung"];
+    in-out property <int> mic-eq-profile-index: 0;
+
+    // param-id (0x95-Namespace angenommen), value
+    callback param-changed(int, float);
+    callback voice-morph-profile-changed(int);
+    callback mic-eq-profile-changed(int);
+
+    spacing: 16px;
+    padding: 16px;
+
+    HorizontalLayout {
+        EffectToggle {
+            label: "Noise Reduction";
+            checked: noise-reduction-on;
+            toggled(on) => { noise-reduction-on = on; param-changed(0x04, on ? 1.0 : 0.0); }
+        }
+        Slider {
+            minimum: 0; maximum: 100;
+            value: noise-reduction-level;
+            enabled: noise-reduction-on;
+            changed(v) => { noise-reduction-level = v; param-changed(0x05, v); }
+        }
+    }
+
+    EffectToggle {
+        label: "Acoustic Echo Cancellation";
+        checked: aec-on;
+        toggled(on) => { aec-on = on; param-changed(0x00, on ? 1.0 : 0.0); }
+    }
+
+    EffectToggle {
+        label: "Smart Volume";
+        checked: smart-volume-on;
+        toggled(on) => { smart-volume-on = on; /* Param-ID noch nicht bestätigt */ }
+    }
+
+    HorizontalLayout {
+        EffectToggle {
+            label: "Voice Morph";
+            checked: voice-morph-on;
+            toggled(on) => { voice-morph-on = on; param-changed(0x2c, on ? 1.0 : 0.0); }
+        }
+        ComboBox {
+            model: voice-morph-profiles;
+            current-index: voice-morph-profile-index;
+            enabled: voice-morph-on;
+            selected(v) => {
+                voice-morph-profile-index = self.current-index;
+                voice-morph-profile-changed(self.current-index);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        EffectToggle {
+            label: "Mikrofon-Equalizer";
+            checked: mic-eq-on;
+            toggled(on) => { mic-eq-on = on; param-changed(0x13, on ? 1.0 : 0.0); }
+        }
+        ComboBox {
+            model: mic-eq-profiles;
+            current-index: mic-eq-profile-index;
+            enabled: mic-eq-on;
+            selected(v) => {
+                mic-eq-profile-index = self.current-index;
+                mic-eq-profile-changed(self.current-index);
+            }
+        }
+    }
+}

@@ -1,0 +1,62 @@
+import { EffectSlider } from "../effect-slider.slint";
+
+// Entspricht der "Acoustic Engine"-Seite (Kopfhörer/Lautsprecher-Umschalter
+// fehlt hier bewusst als eigene Komponente, siehe playback-tab.slint).
+export component AcousticEngineTab inherits HorizontalLayout {
+    in-out property <bool> surround-on: true;
+    in-out property <float> surround-level: 48;
+
+    in-out property <bool> crystalizer-on: true;
+    in-out property <float> crystalizer-level: 52;
+
+    in-out property <bool> bass-on: true;
+    in-out property <float> bass-level: 52;
+
+    in-out property <bool> smart-volume-on: true;
+    in-out property <float> smart-volume-level: 52;
+
+    in-out property <bool> dialog-plus-on: true;
+    in-out property <float> dialog-plus-level: 56;
+
+    // param-id, value – Rust ordnet über acoustic_engine::* Konstanten zu
+    callback param-changed(int, float);
+
+    spacing: 24px;
+    padding: 16px;
+
+    EffectSlider {
+        label: "Surround";
+        effect-enabled: surround-on;
+        value: surround-level;
+        toggled(on) => { surround-on = on; param-changed(0x00, on ? 1.0 : 0.0); }
+        value-changed(v) => { surround-level = v; param-changed(0x01, v); }
+    }
+    EffectSlider {
+        label: "Crystalizer";
+        effect-enabled: crystalizer-on;
+        value: crystalizer-level;
+        toggled(on) => { crystalizer-on = on; param-changed(0x07, on ? 1.0 : 0.0); }
+        value-changed(v) => { crystalizer-level = v; param-changed(0x08, v); }
+    }
+    EffectSlider {
+        label: "Bass";
+        effect-enabled: bass-on;
+        value: bass-level;
+        toggled(on) => { bass-on = on; param-changed(0x18, on ? 1.0 : 0.0); }
+        value-changed(v) => { bass-level = v; param-changed(0x19, v); }
+    }
+    EffectSlider {
+        label: "Smart Volume";
+        effect-enabled: smart-volume-on;
+        value: smart-volume-level;
+        toggled(on) => { smart-volume-on = on; param-changed(0x04, on ? 1.0 : 0.0); }
+        value-changed(v) => { smart-volume-level = v; param-changed(0x05, v); }
+    }
+    EffectSlider {
+        label: "Dialog+";
+        effect-enabled: dialog-plus-on;
+        value: dialog-plus-level;
+        toggled(on) => { dialog-plus-on = on; param-changed(0x02, on ? 1.0 : 0.0); }
+        value-changed(v) => { dialog-plus-level = v; param-changed(0x03, v); }
+    }
+}

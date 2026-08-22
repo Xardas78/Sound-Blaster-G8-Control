@@ -1,0 +1,236 @@
+//! Sound Blaster G8 – reverse-engineertes proprietäres Protokoll.
+//!
+//! Befehlskanal: HID SET_REPORT (Output Report, ReportID 0) per Control-Transfer
+//! an Interface 4 (wIndex 4) des Composite-Geräts mit USB-ID 041e:329b.
+//! 64-Byte-Payload, KEIN separater Interrupt-OUT-Endpoint.
+//!
+//! Byte-Layout für die meisten Parameter (Toggle/Level):
+//!   [0]     0x5a  fester Report-Header
+//!   [1]     0x12  Kommando (Set Parameter)
+//!   [2]     0x07  fest
+//!   [3]     0x01  fest
+//!   [4]     Namespace (0x95 Aufnahme / 0x96 Wiedergabe / 0x97 Decoder)
+//!   [5]     Parameter-ID
+//!   [6..10] Float32 little-endian Wert
+//!   [10..64] Padding (0x00)
+//!
+//! Toggle-Parameter verwenden denselben Float-Slot: 0.0 = aus, 1.0 = ein.
+//!
+//! Standard-USB-Audio-Class (kein Reverse Engineering nötig, hier nicht abgebildet):
+//!   - Lautstärke (Feature Unit SET_CUR/GET_CUR)
+//!   - Mixer-Pegel (7 Feature-Unit-Entities: 0x03,0x04,0x05,0x06,0x09,0x0a,0x0c)
+//!   - Bit-Tiefe/Sample-Format (SET_INTERFACE, Alt-Setting 0=Idle/1=24bit/2=32bit
+//!     auf Interface 1)
+//!   - Mic-Jack-Sensing (UAC2 Interrupt Data Message auf EP 0x84)
+
+/// Adressierbare Parameter-Namespaces (Byte 4 im Report).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Namespace {
+    /// Aufnahme-Seite (CrystalVoice).
+    Recording = 0x95,
+    /// Wiedergabe-Seite (Acoustic Engine, Equalizer).
+    Playback = 0x96,
+    /// Decoder (Dolby Digital).
+    Decoder = 0x97,
+}
+
+/// Ein Ein/Aus-Schalter-Parameter. Wert 0.0 = aus, 1.0 = ein.
+#[derive(Clone, Copy, Debug)]
+pub struct ToggleParam {
+    pub namespace: Namespace,
+    pub param_id: u8,
+}
+
+/// Ein kontinuierlicher Pegel-/Wert-Parameter (Float32).
+#[derive(Clone, Copy, Debug)]
+pub struct LevelParam {
+    pub namespace: Namespace,
+    pub param_id: u8,
+}
+
+/// Baut den vollständigen 64-Byte-Output-Report für einen Toggle- oder Level-Parameter.
+pub fn build_report(namespace: Namespace, param_id: u8, value: f32) -> [u8; 64] {
+    let mut buf = [0u8; 64];
+    buf[0] = 0x5a;
+    buf[1] = 0x12;
+    buf[2] = 0x07;
+    buf[3] = 0x01;
+    buf[4] = namespace as u8;
+    buf[5] = param_id;
+    buf[6..10].copy_from_slice(&value.to_le_bytes());
+    buf
+}
+
+pub fn build_toggle_report(p: ToggleParam, on: bool) -> [u8; 64] {
+    build_report(p.namespace, p.param_id, if on { 1.0 } else { 0.0 })
+}
+
+pub fn build_level_report(p: LevelParam, value: f32) -> [u8; 64] {
+    build_report(p.namespace, p.param_id, value)
+}
+
+// ---------------------------------------------------------------------------
+// Acoustic Engine (Wiedergabe, Namespace::Playback)
+// ---------------------------------------------------------------------------
+pub mod acoustic_engine {
+    use super::{LevelParam, Namespace, ToggleParam};
+
+    pub const SURROUND_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x00 };
+    pub const SURROUND_LEVEL: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x01 };
+
+    pub const DIALOG_PLUS_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x02 };
+    pub const DIALOG_PLUS_LEVEL: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x03 };
+
+    pub const SMART_VOLUME_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x04 };
+    pub const SMART_VOLUME_LEVEL: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x05 };
+    /// Modus-Parameter (kein einfacher Toggle): Nacht=2.0, Laut=1.0, Normal=0.0
+    pub const SMART_VOLUME_MODE: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x06 };
+
+    pub const CRYSTALIZER_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x07 };
+    pub const CRYSTALIZER_LEVEL: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x08 };
+
+    pub const BASS_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x18 };
+    pub const BASS_LEVEL: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x19 };
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum SmartVolumeMode {
+        Normal,
+        Laut,
+        Nacht,
+    }
+    impl SmartVolumeMode {
+        pub fn as_value(self) -> f32 {
+            match self {
+                SmartVolumeMode::Normal => 0.0,
+                SmartVolumeMode::Laut => 1.0,
+                SmartVolumeMode::Nacht => 2.0,
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Wiedergabe-Equalizer (10-Band, Namespace::Playback)
+// ---------------------------------------------------------------------------
+pub mod equalizer {
+    use super::{LevelParam, Namespace, ToggleParam};
+
+    pub const TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Playback, param_id: 0x09 };
+    /// Separater Parameter, größerer Wertebereich (auch negativ).
+    pub const PREAMP: LevelParam = LevelParam { namespace: Namespace::Playback, param_id: 0x0a };
+
+    /// 10 Frequenzbänder, IDs 0x0b..=0x14 (62Hz .. 16kHz).
+    /// "Bass"- und "Höhen"-Kurzregler im Original steuern direkt Bänder aus
+    /// diesem Block, haben keine eigene ID.
+    pub const BAND_IDS: [u8; 10] = [0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14];
+
+    pub fn band(index: usize) -> LevelParam {
+        LevelParam { namespace: Namespace::Playback, param_id: BAND_IDS[index] }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CrystalVoice (Aufnahme, Namespace::Recording)
+// ---------------------------------------------------------------------------
+pub mod crystal_voice {
+    use super::{LevelParam, Namespace, ToggleParam};
+
+    pub const AEC_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x00 };
+
+    pub const NOISE_REDUCTION_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x04 };
+    pub const NOISE_REDUCTION_LEVEL: LevelParam = LevelParam { namespace: Namespace::Recording, param_id: 0x05 };
+
+    pub const VOICE_MORPH_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x2c };
+    /// Profilabhängiger Parameterblock (Pitch/Formant), 9 Werte pro Charakter.
+    pub const VOICE_MORPH_PROFILE_IDS: [u8; 9] = [0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12];
+
+    pub const MIC_EQ_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x13 };
+    /// Profilabhängiger Parameterblock, 10 Werte pro Preset (z.B. Pitch-Reduzierung).
+    pub const MIC_EQ_PROFILE_IDS: [u8; 10] =
+        [0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d];
+
+    // Smart Volume (Mic) Toggle noch nicht isoliert bestätigt – TODO: verifizieren.
+}
+
+// ---------------------------------------------------------------------------
+// Decoder (Dolby Digital, Namespace::Decoder)
+// ---------------------------------------------------------------------------
+pub mod decoder {
+    use super::{LevelParam, Namespace};
+
+    pub const MODE: LevelParam = LevelParam { namespace: Namespace::Decoder, param_id: 0x02 };
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum DecoderMode {
+        Normal,
+        Voll,
+        Nacht,
+    }
+    impl DecoderMode {
+        pub fn as_value(self) -> f32 {
+            match self {
+                DecoderMode::Normal => 2.0,
+                DecoderMode::Voll => 1.0,
+                DecoderMode::Nacht => 3.0,
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sonderfälle außerhalb des Toggle/Level-Schemas
+// ---------------------------------------------------------------------------
+pub mod special {
+    /// Scout Mode ein/aus. Löst bei "ein" zusätzlich sbx_sync() aus
+    /// (das vom Nutzer beobachtete "SBX leuchtet blau auf").
+    pub fn scout_mode(on: bool) -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x26;
+        buf[2] = 0x05;
+        buf[3] = 0x07;
+        buf[4] = 0x02;
+        buf[5] = 0x00;
+        buf[6] = if on { 0x01 } else { 0x00 };
+        buf
+    }
+
+    /// Generischer SBX-Sync/Toggle-Befehl. Mode (ein/aus, Sound-Modus-Kachel)
+    /// und SBX sind praktisch derselbe zugrundeliegende Zustand (invers/exklusiv) –
+    /// dieser eine Befehl schaltet beide gemeinsam.
+    pub fn sbx_sync() -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x26;
+        buf[2] = 0x03;
+        buf[3] = 0x08;
+        buf[4] = 0xff;
+        buf[5] = 0xff;
+        buf
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn surround_on_report() {
+        let r = build_toggle_report(acoustic_engine::SURROUND_TOGGLE, true);
+        assert_eq!(&r[0..6], &[0x5a, 0x12, 0x07, 0x01, 0x96, 0x00]);
+        assert_eq!(&r[6..10], &1.0f32.to_le_bytes());
+    }
+
+    #[test]
+    fn scout_on_report() {
+        let r = special::scout_mode(true);
+        assert_eq!(&r[0..7], &[0x5a, 0x26, 0x05, 0x07, 0x02, 0x00, 0x01]);
+    }
+
+    #[test]
+    fn decoder_mode_report() {
+        let r = build_level_report(decoder::MODE, decoder::DecoderMode::Nacht.as_value());
+        assert_eq!(&r[0..6], &[0x5a, 0x12, 0x07, 0x01, 0x97, 0x02]);
+        assert_eq!(&r[6..10], &3.0f32.to_le_bytes());
+    }
+}

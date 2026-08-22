@@ -1,0 +1,63 @@
+import { EffectToggle } from "../effect-slider.slint";
+
+export component ScoutModeTab inherits VerticalLayout {
+    in-out property <bool> scout-on: false;
+    callback toggled(bool);
+
+    padding: 16px;
+    EffectToggle {
+        label: "Scout Mode";
+        checked: scout-on;
+        toggled(on) => { scout-on = on; toggled(on); }
+    }
+    Text {
+        wrap: word-wrap;
+        text: "Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel.";
+    }
+}
+
+export component DirectModeTab inherits VerticalLayout {
+    in-out property <bool> direct-mode-on: false;
+    // Direct Mode ist vermutlich reines UAC-Routing (Bypass), kein 5a-Report –
+    // noch nicht durch Capture bestätigt.
+    callback toggled(bool);
+
+    padding: 16px;
+    EffectToggle {
+        label: "Direct Mode";
+        checked: direct-mode-on;
+        toggled(on) => { direct-mode-on = on; toggled(on); }
+    }
+    Text {
+        wrap: word-wrap;
+        text: "Im Direct Mode erhalten Sie Audio in seiner reinsten Form direkt von der Quelle. Alle Audioeffekte werden nicht auf die Ausgabe angewendet.";
+    }
+}
+
+export component DecoderTab inherits VerticalLayout {
+    in-out property <int> selected-mode: 1; // 0=Normal 1=Voll 2=Nacht
+    callback mode-changed(int);
+
+    padding: 16px;
+    spacing: 8px;
+
+    Text {
+        wrap: word-wrap;
+        text: "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder.";
+    }
+
+    for label[i] in ["Normal", "Voll", "Nacht"]: HorizontalLayout {
+        spacing: 8px;
+        Rectangle {
+            width: 16px; height: 16px;
+            border-radius: 8px;
+            border-width: 2px;
+            border-color: selected-mode == i ? orange : gray;
+            background: selected-mode == i ? orange : transparent;
+            TouchArea {
+                clicked => { selected-mode = i; mode-changed(i); }
+            }
+        }
+        Text { text: label; }
+    }
+}

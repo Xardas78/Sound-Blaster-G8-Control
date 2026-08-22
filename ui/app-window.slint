@@ -1,0 +1,84 @@
+import { TabWidget, Tab } from "std-widgets.slint";
+import { AcousticEngineTab } from "tabs/acoustic-engine-tab.slint";
+import { CrystalVoiceTab } from "tabs/crystal-voice-tab.slint";
+import { EqualizerTab } from "tabs/equalizer-tab.slint";
+import { ScoutModeTab, DirectModeTab, DecoderTab } from "tabs/misc-tabs.slint";
+import { MixerTab } from "tabs/mixer-tab.slint";
+
+export component AppWindow inherits Window {
+    title: "Sound Blaster G8 Control";
+    width: 900px;
+    height: 600px;
+
+    // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
+    // Report-Builder-Funktionen pro Namespace.
+    callback playback-param-changed(int, float);
+    callback recording-param-changed(int, float);
+    callback eq-param-changed(int, float);
+    callback scout-toggled(bool);
+    callback direct-mode-toggled(bool);
+    callback decoder-mode-changed(int);
+    callback mixer-level-changed(int, float);
+
+    TabWidget {
+        Tab {
+            title: "Gerät";
+            // TODO: Sound-Modus-Presets, Firmware/Treiber-Info, Reset,
+            // Volume Sync, Energiesparen, Logo-LED
+        }
+        Tab {
+            title: "Wiedergabe";
+            VerticalLayout {
+                // TODO: Kopfhörer/Lautsprecher-Umschalter, Format-Dropdown
+                AcousticEngineTab {
+                    param-changed(id, v) => { playback-param-changed(id, v); }
+                }
+            }
+        }
+        Tab {
+            title: "Aufnahme";
+            CrystalVoiceTab {
+                param-changed(id, v) => { recording-param-changed(id, v); }
+            }
+        }
+        Tab {
+            title: "Effekte";
+            TabWidget {
+                Tab {
+                    title: "Equalizer";
+                    EqualizerTab {
+                        param-changed(id, v) => { eq-param-changed(id, v); }
+                    }
+                }
+                Tab {
+                    title: "Scout Mode";
+                    ScoutModeTab {
+                        toggled(on) => { scout-toggled(on); }
+                    }
+                }
+                Tab {
+                    title: "Direct Mode";
+                    DirectModeTab {
+                        toggled(on) => { direct-mode-toggled(on); }
+                    }
+                }
+                Tab {
+                    title: "Decoder";
+                    DecoderTab {
+                        mode-changed(m) => { decoder-mode-changed(m); }
+                    }
+                }
+            }
+        }
+        Tab {
+            title: "Mixer";
+            MixerTab {
+                level-changed(id, v) => { mixer-level-changed(id, v); }
+            }
+        }
+        Tab {
+            title: "Einstellungen";
+            // TODO: Volume Sync, Firmware-Update, Logo LED
+        }
+    }
+}

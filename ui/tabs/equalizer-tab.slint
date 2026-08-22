@@ -1,0 +1,46 @@
+import { EffectToggle } from "../effect-slider.slint";
+import { Slider } from "std-widgets.slint";
+
+export component EqualizerTab inherits VerticalLayout {
+    in-out property <bool> eq-on: true;
+    in-out property <float> preamp: 0;
+    in-out property <[float]> bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    // param-id (0x0a=Preamp, 0x0b..0x14=Bänder), value
+    callback param-changed(int, float);
+
+    spacing: 16px;
+    padding: 16px;
+
+    EffectToggle {
+        label: "Equalizer";
+        checked: eq-on;
+        toggled(on) => { eq-on = on; param-changed(0x09, on ? 1.0 : 0.0); }
+    }
+
+    HorizontalLayout {
+        spacing: 12px;
+        for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
+            Text { text: freq; horizontal-alignment: center; }
+            Slider {
+                orientation: vertical;
+                minimum: -12; maximum: 12;
+                value: bands[i];
+                enabled: eq-on;
+                height: 160px;
+                changed(v) => { bands[i] = v; param-changed(0x0b + i, v); }
+            }
+        }
+        VerticalLayout {
+            Text { text: "Vorver."; horizontal-alignment: center; }
+            Slider {
+                orientation: vertical;
+                minimum: -12; maximum: 12;
+                value: preamp;
+                enabled: eq-on;
+                height: 160px;
+                changed(v) => { preamp = v; param-changed(0x0a, v); }
+            }
+        }
+    }
+}

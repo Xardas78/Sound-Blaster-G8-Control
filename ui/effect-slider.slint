@@ -1,0 +1,64 @@
+import { Slider, Switch } from "std-widgets.slint";
+
+// Ein Regler-Block wie in der Acoustic-Engine-/CrystalVoice-Seite des
+// Originals: Titel, Zahlenwert, vertikaler Slider, darunter ein Toggle.
+export component EffectSlider inherits VerticalLayout {
+    in property <string> label;
+    in property <bool> effect-enabled: true;
+    in property <float> value: 50;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+
+    callback toggled(bool);
+    callback value-changed(float);
+
+    spacing: 8px;
+    alignment: center;
+
+    Text {
+        text: label;
+        horizontal-alignment: center;
+        font-weight: 600;
+    }
+
+    Text {
+        text: round(value);
+        horizontal-alignment: center;
+    }
+
+    Slider {
+        orientation: vertical;
+        minimum: minimum;
+        maximum: maximum;
+        value: value;
+        enabled: effect-enabled;
+        height: 180px;
+        changed(v) => { value-changed(v); }
+    }
+
+    Switch {
+        checked: effect-enabled;
+        toggled => { toggled(self.checked); }
+    }
+}
+
+// Einfacher Ein/Aus-Regler ohne Slider (z.B. Direct Mode, Scout Mode).
+export component EffectToggle inherits HorizontalLayout {
+    in property <string> label;
+    in-out property <bool> checked: false;
+
+    callback toggled(bool);
+
+    spacing: 8px;
+
+    Switch {
+        checked: checked;
+        toggled => { toggled(self.checked); }
+    }
+    Text {
+        text: label;
+        font-size: 18px;
+        font-weight: 700;
+        vertical-alignment: center;
+    }
+}

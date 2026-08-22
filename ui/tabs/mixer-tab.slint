@@ -1,0 +1,50 @@
+import { Slider } from "std-widgets.slint";
+
+// Alle Regler hier sind Standard-USB-Audio-Class Feature-Unit SET_CUR –
+// kein 5a-Report nötig. entity-id ordnet Rust-seitig dem passenden
+// Feature-Unit-Entity zu (0x03, 0x04, 0x05, 0x06, 0x09, 0x0a, 0x0c).
+export component MixerRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <int> entity-id;
+    in-out property <float> level: 50;
+    callback level-changed(int, float);
+
+    spacing: 8px;
+    Text { text: label; width: 100px; vertical-alignment: center; }
+    Slider {
+        minimum: 0; maximum: 100;
+        value: level;
+        changed(v) => { level = v; level-changed(entity-id, v); }
+    }
+    Text { text: round(level) + "%"; width: 40px; }
+}
+
+export component MixerTab inherits VerticalLayout {
+    in-out property <float> playback-speaker: 49;
+    in-out property <float> monitor-line-in: 60;
+    in-out property <float> monitor-ext-mic: 55;
+    in-out property <float> monitor-spdif-in: 65;
+    in-out property <float> rec-spdif-in: 61;
+    in-out property <float> rec-line-in: 59;
+    in-out property <float> rec-ext-mic: 63;
+    in-out property <float> rec-what-u-hear: 65;
+
+    callback level-changed(int, float);
+
+    spacing: 16px;
+    padding: 16px;
+
+    Text { text: "Wiedergabe"; font-weight: 700; }
+    MixerRow { label: "Lautsprecher"; entity-id: 0x03; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } }
+
+    Text { text: "Überwachung"; font-weight: 700; }
+    MixerRow { label: "Line In"; entity-id: 0x04; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "External Mic"; entity-id: 0x05; level: monitor-ext-mic; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "SPDIF In"; entity-id: 0x06; level: monitor-spdif-in; level-changed(id, v) => { level-changed(id, v); } }
+
+    Text { text: "Aufnahme"; font-weight: 700; }
+    MixerRow { label: "SPDIF In"; entity-id: 0x09; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "Line In"; entity-id: 0x0a; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "External Mic"; entity-id: 0x0c; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "What U Hear"; entity-id: 0x0c; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } }
+}
