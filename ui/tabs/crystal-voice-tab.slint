@@ -1,5 +1,5 @@
-import { EffectToggle } from "../effect-slider.slint";
-import { Slider, ComboBox } from "std-widgets.slint";
+import { EffectToggle, CompactComboBox } from "../effect-slider.slint";
+import { Slider } from "std-widgets.slint";
 
 export component CrystalVoiceTab inherits VerticalLayout {
     in-out property <bool> noise-reduction-on: false;
@@ -9,13 +9,23 @@ export component CrystalVoiceTab inherits VerticalLayout {
 
     in-out property <bool> smart-volume-on: false;
 
+    // Voice-Morph-/Mikrofon-Equalizer-Listen: nur "Roboter" bzw.
+    // "Pitch-Reduzierung" stammen aus dem Original-Screenshot, der Rest
+    // ist eine plausible Ergänzung (keine Capture-Bestätigung für die
+    // vollständige Liste/Reihenfolge) – bei Gelegenheit gegenprüfen.
     in-out property <bool> voice-morph-on: false;
-    in-out property <[string]> voice-morph-profiles: ["Roboter", "Alien", "Weiblich", "Männlich"];
+    in-out property <[string]> voice-morph-profiles: ["Roboter", "Alien", "Weiblich", "Männlich", "Baby", "Radio", "Telefon", "Höhle"];
     in-out property <int> voice-morph-profile-index: 0;
 
     in-out property <bool> mic-eq-on: false;
-    in-out property <[string]> mic-eq-profiles: ["Pitch-Reduzierung", "Pitch-Erhöhung"];
+    in-out property <[string]> mic-eq-profiles: ["Pitch-Reduzierung", "Pitch-Erhöhung", "Nah", "Fern"];
     in-out property <int> mic-eq-profile-index: 0;
+
+    // Breite/Einrückung für Voice-Morph- und Mikrofon-Equalizer-Zeile:
+    // gleiche Label-Breite, damit beide Auswahlfelder exakt übereinander
+    // stehen, unabhängig von der (unterschiedlich langen) Beschriftung.
+    property <length> profile-label-width: 220px;
+    property <length> profile-box-width: 200px;
 
     // param-id (0x95-Namespace angenommen), value
     callback param-changed(int, float);
@@ -32,6 +42,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
             toggled(on) => { noise-reduction-on = on; param-changed(4, on ? 1.0 : 0.0); }
         }
         Slider {
+            width: 200px;
             minimum: 0; maximum: 100;
             value: noise-reduction-level;
             enabled: noise-reduction-on;
@@ -71,17 +82,20 @@ export component CrystalVoiceTab inherits VerticalLayout {
 
     HorizontalLayout {
         EffectToggle {
+            width: profile-label-width;
             label: "Voice Morph";
             checked: voice-morph-on;
             toggled(on) => { voice-morph-on = on; param-changed(44, on ? 1.0 : 0.0); }
         }
-        ComboBox {
+        CompactComboBox {
+            width: profile-box-width;
+            item-font-size: 14px;
             model: voice-morph-profiles;
             current-index: voice-morph-profile-index;
             enabled: voice-morph-on;
-            selected(v) => {
-                voice-morph-profile-index = self.current-index;
-                voice-morph-profile-changed(self.current-index);
+            selected(i) => {
+                voice-morph-profile-index = i;
+                voice-morph-profile-changed(i);
             }
         }
     }
@@ -94,17 +108,20 @@ export component CrystalVoiceTab inherits VerticalLayout {
 
     HorizontalLayout {
         EffectToggle {
+            width: profile-label-width;
             label: "Mikrofon-Equalizer";
             checked: mic-eq-on;
             toggled(on) => { mic-eq-on = on; param-changed(19, on ? 1.0 : 0.0); }
         }
-        ComboBox {
+        CompactComboBox {
+            width: profile-box-width;
+            item-font-size: 14px;
             model: mic-eq-profiles;
             current-index: mic-eq-profile-index;
             enabled: mic-eq-on;
-            selected(v) => {
-                mic-eq-profile-index = self.current-index;
-                mic-eq-profile-changed(self.current-index);
+            selected(i) => {
+                mic-eq-profile-index = i;
+                mic-eq-profile-changed(i);
             }
         }
     }
