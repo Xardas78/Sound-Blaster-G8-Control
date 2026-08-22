@@ -77,7 +77,7 @@ export component CompactSpinBox inherits Rectangle {
 
     callback edited(int);
 
-    height: 24px;
+    height: 30px;
     border-radius: 4px;
     border-width: 1px;
     border-color: #cccccc;
@@ -96,18 +96,18 @@ export component CompactSpinBox inherits Rectangle {
         }
 
         VerticalLayout {
-            width: 14px;
+            width: 18px;
             TouchArea {
-                height: 11px;
+                height: 14px;
                 enabled: root.enabled && value < maximum;
                 clicked => { value += 1; edited(value); }
-                Text { text: "⌃"; font-size: 8px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+                Text { text: "⌃"; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
             }
             TouchArea {
-                height: 11px;
+                height: 14px;
                 enabled: root.enabled && value > minimum;
                 clicked => { value -= 1; edited(value); }
-                Text { text: "⌄"; font-size: 8px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+                Text { text: "⌄"; font-size: 11px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
             }
         }
     }
