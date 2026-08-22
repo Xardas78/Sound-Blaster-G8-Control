@@ -148,72 +148,133 @@ export component EqualizerTab inherits VerticalLayout {
 
         Rectangle { width: 1px; background: #cccccc; }
 
-        // Vorverstärkung/Bass/Höhen. Vorverstärkung verschiebt zusätzlich
-        // die ganze Kurve oben nach oben/unten (siehe y0..y8). Bass und
-        // Höhen haben laut Reverse Engineering keine eigene Param-ID,
-        // sondern docken auf das unterste bzw. oberste Frequenzband (siehe
-        // HANDOFF.md) – bewegen deshalb auch den jeweiligen Band-Regler mit.
+        // Vorverstärkung/Bass/Höhen, mit eigenem Raster/Skala wie der
+        // Hauptchart (kein Farbverlauf/Kurve nötig, nur Positionsreferenz).
+        // Vorverstärkung verschiebt zusätzlich die ganze Kurve links nach
+        // oben/unten (siehe y0..y8). Bass und Höhen haben laut Reverse
+        // Engineering keine eigene Param-ID, sondern docken auf das
+        // unterste bzw. oberste Frequenzband (siehe HANDOFF.md) – bewegen
+        // deshalb auch den jeweiligen Band-Regler mit.
         HorizontalLayout {
-            spacing: 12px;
-            VerticalLayout {
-                width: 64px;
-                spacing: 4px;
-                Slider {
-                    orientation: vertical;
-                    minimum: -12; maximum: 12;
-                    value: preamp;
-                    enabled: eq-on;
-                    height: 160px;
-                    changed(v) => { preamp = v; param-changed(10, v); }
+            spacing: 4px;
+
+            Rectangle {
+                width: 22px;
+                height: 284px;
+                for db[i] in [12, 6, 0, -6, -12]: Text {
+                    x: 0;
+                    y: (12 - db) / 24 * 284px - 7px;
+                    width: 22px;
+                    height: 14px;
+                    text: db;
+                    font-size: 10px;
+                    color: #999999;
+                    horizontal-alignment: right;
                 }
-                SpinBox {
-                    minimum: -12; maximum: 12;
-                    value: round(preamp);
-                    enabled: eq-on;
-                    height: 26px;
-                    edited(v) => { preamp = v; param-changed(10, v); }
-                }
-                Text { text: "Vorver."; horizontal-alignment: center; }
             }
+
             VerticalLayout {
-                width: 64px;
                 spacing: 4px;
-                Slider {
-                    orientation: vertical;
-                    minimum: -12; maximum: 12;
-                    value: bands[0];
-                    enabled: eq-on;
-                    height: 160px;
-                    changed(v) => { bands[0] = v; param-changed(11, v); }
+
+                Rectangle {
+                    width: 216px;
+                    height: 284px;
+                    clip: true;
+
+                    for db[i] in [12, 6, 0, -6, -12]: Rectangle {
+                        x: 0;
+                        y: (12 - db) / 24 * 284px;
+                        width: 216px;
+                        height: 1px;
+                        background: db == 0 ? #cccccc : #e6e6e6;
+                    }
+                    for gx[i] in [32, 108, 184]: Rectangle {
+                        x: gx * 1px;
+                        y: 0;
+                        width: 1px;
+                        height: 284px;
+                        background: #eeeeee;
+                    }
+
+                    HorizontalLayout {
+                        width: 100%;
+                        height: 100%;
+                        spacing: 12px;
+                        VerticalLayout {
+                            width: 64px;
+                            Slider {
+                                orientation: vertical;
+                                minimum: -12; maximum: 12;
+                                value: preamp;
+                                enabled: eq-on;
+                                height: 284px;
+                                changed(v) => { preamp = v; param-changed(10, v); }
+                            }
+                        }
+                        VerticalLayout {
+                            width: 64px;
+                            Slider {
+                                orientation: vertical;
+                                minimum: -12; maximum: 12;
+                                value: bands[0];
+                                enabled: eq-on;
+                                height: 284px;
+                                changed(v) => { bands[0] = v; param-changed(11, v); }
+                            }
+                        }
+                        VerticalLayout {
+                            width: 64px;
+                            Slider {
+                                orientation: vertical;
+                                minimum: -12; maximum: 12;
+                                value: bands[8];
+                                enabled: eq-on;
+                                height: 284px;
+                                changed(v) => { bands[8] = v; param-changed(19, v); }
+                            }
+                        }
+                    }
                 }
-                SpinBox {
-                    minimum: -12; maximum: 12;
-                    value: round(bands[0]);
-                    enabled: eq-on;
-                    height: 26px;
-                    edited(v) => { bands[0] = v; param-changed(11, v); }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        width: 64px;
+                        spacing: 4px;
+                        SpinBox {
+                            minimum: -12; maximum: 12;
+                            value: round(preamp);
+                            enabled: eq-on;
+                            height: 26px;
+                            edited(v) => { preamp = v; param-changed(10, v); }
+                        }
+                        Text { text: "Vorver."; horizontal-alignment: center; }
+                    }
+                    VerticalLayout {
+                        width: 64px;
+                        spacing: 4px;
+                        SpinBox {
+                            minimum: -12; maximum: 12;
+                            value: round(bands[0]);
+                            enabled: eq-on;
+                            height: 26px;
+                            edited(v) => { bands[0] = v; param-changed(11, v); }
+                        }
+                        Text { text: "Bass"; horizontal-alignment: center; }
+                    }
+                    VerticalLayout {
+                        width: 64px;
+                        spacing: 4px;
+                        SpinBox {
+                            minimum: -12; maximum: 12;
+                            value: round(bands[8]);
+                            enabled: eq-on;
+                            height: 26px;
+                            edited(v) => { bands[8] = v; param-changed(19, v); }
+                        }
+                        Text { text: "Höhen"; horizontal-alignment: center; }
+                    }
                 }
-                Text { text: "Bass"; horizontal-alignment: center; }
-            }
-            VerticalLayout {
-                width: 64px;
-                spacing: 4px;
-                Slider {
-                    orientation: vertical;
-                    minimum: -12; maximum: 12;
-                    value: bands[8];
-                    enabled: eq-on;
-                    height: 160px;
-                    changed(v) => { bands[8] = v; param-changed(19, v); }
-                }
-                SpinBox {
-                    minimum: -12; maximum: 12;
-                    value: round(bands[8]);
-                    enabled: eq-on;
-                    height: 26px;
-                    edited(v) => { bands[8] = v; param-changed(19, v); }
-                }
-                Text { text: "Höhen"; horizontal-alignment: center; }
             }
         }
     }
