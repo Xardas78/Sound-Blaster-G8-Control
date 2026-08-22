@@ -1,0 +1,15 @@
+[package]
+name = "g8-control"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "g8-control"
+path = "src/main.rs"
+
+[dependencies]
+slint = "1.8"
+hidapi = "2.6"
+
+[build-dependencies]
+slint-build = "1.8"

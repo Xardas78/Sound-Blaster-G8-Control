@@ -1,4 +1,4 @@
-import { TabWidget, Tab } from "std-widgets.slint";
+import { TabWidget, VerticalBox } from "std-widgets.slint";
 import { AcousticEngineTab } from "tabs/acoustic-engine-tab.slint";
 import { CrystalVoiceTab } from "tabs/crystal-voice-tab.slint";
 import { EqualizerTab } from "tabs/equalizer-tab.slint";
@@ -9,6 +9,10 @@ export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
     width: 900px;
     height: 600px;
+
+    // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
+    in-out property <bool> device-connected: false;
+    in-out property <string> device-status: "Suche Gerät …";
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
@@ -23,8 +27,22 @@ export component AppWindow inherits Window {
     TabWidget {
         Tab {
             title: "Gerät";
-            // TODO: Sound-Modus-Presets, Firmware/Treiber-Info, Reset,
-            // Volume Sync, Energiesparen, Logo-LED
+            VerticalBox {
+                alignment: start;
+                Text {
+                    text: "Sound Blaster G8";
+                    font-size: 20px;
+                    font-weight: 700;
+                }
+                Text {
+                    text: device-connected ? "✓ Verbunden (USB 041e:329b, Vendor-HID Interface 4)" : device-status;
+                    color: device-connected ? #2ecc71 : #e74c3c;
+                }
+                Text {
+                    wrap: word-wrap;
+                    text: "Sound-Modus-Presets, Firmware-Info und Treiber-Version sind über den proprietären Kanal noch nicht reverse-engineert (siehe HANDOFF.md, \"Offene Punkte\"). Master-Reset (SBX+HP/SPK 5s halten) und Firmware-Update laufen laut Anleitung rein am Gerät selbst ab.";
+                }
+            }
         }
         Tab {
             title: "Wiedergabe";
@@ -78,7 +96,13 @@ export component AppWindow inherits Window {
         }
         Tab {
             title: "Einstellungen";
-            // TODO: Volume Sync, Firmware-Update, Logo LED
+            VerticalBox {
+                alignment: start;
+                Text {
+                    wrap: word-wrap;
+                    text: "Volume Sync, Energiesparen und Logo-LED sind über den proprietären Kanal noch nicht reverse-engineert (kein Capture vorhanden). Sobald die 5a-Reports dafür bekannt sind, kommen sie hier als weitere Toggles rein.";
+                }
+            }
         }
     }
 }

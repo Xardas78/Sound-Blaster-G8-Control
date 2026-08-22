@@ -1,3 +1,8 @@
+// Katalog aller bekannten Parameter, auch die noch nicht ans UI angebundenen
+// (Profilblöcke, Modus-Parameter etc.) – bewusst als vollständige Referenz
+// erhalten, siehe HANDOFF.md.
+#![allow(dead_code)]
+
 //! Sound Blaster G8 – reverse-engineertes proprietäres Protokoll.
 //!
 //! Befehlskanal: HID SET_REPORT (Output Report, ReportID 0) per Control-Transfer

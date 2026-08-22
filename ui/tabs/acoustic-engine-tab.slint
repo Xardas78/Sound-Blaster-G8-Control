@@ -28,35 +28,35 @@ export component AcousticEngineTab inherits HorizontalLayout {
         label: "Surround";
         effect-enabled: surround-on;
         value: surround-level;
-        toggled(on) => { surround-on = on; param-changed(0x00, on ? 1.0 : 0.0); }
-        value-changed(v) => { surround-level = v; param-changed(0x01, v); }
+        toggled(on) => { surround-on = on; param-changed(0, on ? 1.0 : 0.0); }
+        value-changed(v) => { surround-level = v; param-changed(1, v); }
     }
     EffectSlider {
         label: "Crystalizer";
         effect-enabled: crystalizer-on;
         value: crystalizer-level;
-        toggled(on) => { crystalizer-on = on; param-changed(0x07, on ? 1.0 : 0.0); }
-        value-changed(v) => { crystalizer-level = v; param-changed(0x08, v); }
+        toggled(on) => { crystalizer-on = on; param-changed(7, on ? 1.0 : 0.0); }
+        value-changed(v) => { crystalizer-level = v; param-changed(8, v); }
     }
     EffectSlider {
         label: "Bass";
         effect-enabled: bass-on;
         value: bass-level;
-        toggled(on) => { bass-on = on; param-changed(0x18, on ? 1.0 : 0.0); }
-        value-changed(v) => { bass-level = v; param-changed(0x19, v); }
+        toggled(on) => { bass-on = on; param-changed(24, on ? 1.0 : 0.0); }
+        value-changed(v) => { bass-level = v; param-changed(25, v); }
     }
     EffectSlider {
         label: "Smart Volume";
         effect-enabled: smart-volume-on;
         value: smart-volume-level;
-        toggled(on) => { smart-volume-on = on; param-changed(0x04, on ? 1.0 : 0.0); }
-        value-changed(v) => { smart-volume-level = v; param-changed(0x05, v); }
+        toggled(on) => { smart-volume-on = on; param-changed(4, on ? 1.0 : 0.0); }
+        value-changed(v) => { smart-volume-level = v; param-changed(5, v); }
     }
     EffectSlider {
         label: "Dialog+";
         effect-enabled: dialog-plus-on;
         value: dialog-plus-level;
-        toggled(on) => { dialog-plus-on = on; param-changed(0x02, on ? 1.0 : 0.0); }
-        value-changed(v) => { dialog-plus-level = v; param-changed(0x03, v); }
+        toggled(on) => { dialog-plus-on = on; param-changed(2, on ? 1.0 : 0.0); }
+        value-changed(v) => { dialog-plus-level = v; param-changed(3, v); }
     }
 }

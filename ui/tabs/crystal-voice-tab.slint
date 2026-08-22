@@ -29,20 +29,20 @@ export component CrystalVoiceTab inherits VerticalLayout {
         EffectToggle {
             label: "Noise Reduction";
             checked: noise-reduction-on;
-            toggled(on) => { noise-reduction-on = on; param-changed(0x04, on ? 1.0 : 0.0); }
+            toggled(on) => { noise-reduction-on = on; param-changed(4, on ? 1.0 : 0.0); }
         }
         Slider {
             minimum: 0; maximum: 100;
             value: noise-reduction-level;
             enabled: noise-reduction-on;
-            changed(v) => { noise-reduction-level = v; param-changed(0x05, v); }
+            changed(v) => { noise-reduction-level = v; param-changed(5, v); }
         }
     }
 
     EffectToggle {
         label: "Acoustic Echo Cancellation";
         checked: aec-on;
-        toggled(on) => { aec-on = on; param-changed(0x00, on ? 1.0 : 0.0); }
+        toggled(on) => { aec-on = on; param-changed(0, on ? 1.0 : 0.0); }
     }
 
     EffectToggle {
@@ -55,7 +55,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         EffectToggle {
             label: "Voice Morph";
             checked: voice-morph-on;
-            toggled(on) => { voice-morph-on = on; param-changed(0x2c, on ? 1.0 : 0.0); }
+            toggled(on) => { voice-morph-on = on; param-changed(44, on ? 1.0 : 0.0); }
         }
         ComboBox {
             model: voice-morph-profiles;
@@ -72,7 +72,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         EffectToggle {
             label: "Mikrofon-Equalizer";
             checked: mic-eq-on;
-            toggled(on) => { mic-eq-on = on; param-changed(0x13, on ? 1.0 : 0.0); }
+            toggled(on) => { mic-eq-on = on; param-changed(19, on ? 1.0 : 0.0); }
         }
         ComboBox {
             model: mic-eq-profiles;

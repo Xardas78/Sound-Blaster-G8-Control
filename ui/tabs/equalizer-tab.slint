@@ -15,7 +15,7 @@ export component EqualizerTab inherits VerticalLayout {
     EffectToggle {
         label: "Equalizer";
         checked: eq-on;
-        toggled(on) => { eq-on = on; param-changed(0x09, on ? 1.0 : 0.0); }
+        toggled(on) => { eq-on = on; param-changed(9, on ? 1.0 : 0.0); }
     }
 
     HorizontalLayout {
@@ -28,7 +28,7 @@ export component EqualizerTab inherits VerticalLayout {
                 value: bands[i];
                 enabled: eq-on;
                 height: 160px;
-                changed(v) => { bands[i] = v; param-changed(0x0b + i, v); }
+                changed(v) => { bands[i] = v; param-changed(11 + i, v); }
             }
         }
         VerticalLayout {
@@ -39,7 +39,7 @@ export component EqualizerTab inherits VerticalLayout {
                 value: preamp;
                 enabled: eq-on;
                 height: 160px;
-                changed(v) => { preamp = v; param-changed(0x0a, v); }
+                changed(v) => { preamp = v; param-changed(10, v); }
             }
         }
     }
