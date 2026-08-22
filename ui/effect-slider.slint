@@ -62,3 +62,53 @@ export component EffectToggle inherits HorizontalLayout {
         vertical-alignment: center;
     }
 }
+
+// Schlanke Zahlen-Eingabe mit Hoch/Runter-Pfeilen für enge Spalten (z. B.
+// unter den Equalizer-Slidern). Die eingebaute `SpinBox` aus std-widgets
+// hat im Fluent-Style eine feste Mindestbreite von 128px – zu breit für
+// 64-74px-Spalten. Diese Komponente hat keine Mindestbreite und passt sich
+// der `width`, die man ihr gibt, an. Bedienung nur über die Pfeile (keine
+// Texteingabe), das reicht für die vorgesehenen Werte im Bereich -12..12.
+export component CompactSpinBox inherits Rectangle {
+    in property <int> minimum: -12;
+    in property <int> maximum: 12;
+    in-out property <int> value: 0;
+    in property <bool> enabled: true;
+
+    callback edited(int);
+
+    height: 24px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #cccccc;
+    background: enabled ? white : #f0f0f0;
+
+    HorizontalLayout {
+        padding-left: 4px;
+        padding-right: 2px;
+
+        Text {
+            text: value;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            font-size: 12px;
+            color: enabled ? #333333 : #999999;
+        }
+
+        VerticalLayout {
+            width: 14px;
+            TouchArea {
+                height: 11px;
+                enabled: root.enabled && value < maximum;
+                clicked => { value += 1; edited(value); }
+                Text { text: "⌃"; font-size: 8px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+            }
+            TouchArea {
+                height: 11px;
+                enabled: root.enabled && value > minimum;
+                clicked => { value -= 1; edited(value); }
+                Text { text: "⌄"; font-size: 8px; horizontal-alignment: center; vertical-alignment: center; color: #666666; }
+            }
+        }
+    }
+}

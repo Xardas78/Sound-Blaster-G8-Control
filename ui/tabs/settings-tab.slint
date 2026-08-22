@@ -1,78 +1,85 @@
-import { TabWidget, Button, Switch } from "std-widgets.slint";
+import { Button, Switch, Palette } from "std-widgets.slint";
 
-// Entspricht der "Einstellungen"-Seite im Original (Unterreiter Gerät/
-// Anwendung). Reset, Firmware/Treiber-Check, Volume Sync, Energieeinsparung
-// und Logo-LED sind über den proprietären Kanal noch nicht reverse-
-// engineert (kein Capture vorhanden) – die Controls sind vorbereitet,
-// lösen aber noch keinen echten Befehl aus, siehe HANDOFF.md.
-export component SettingsTab inherits TabWidget {
+// Entspricht der "Einstellungen"-Seite im Original, aber ohne die
+// Gerät/Anwendung-Unterreiter des Originals – auf Wunsch flach in einem
+// Reiter zusammengefasst. Reset, Firmware/Treiber-Check, Volume Sync,
+// Energieeinsparung und Logo-LED sind über den proprietären Kanal noch
+// nicht reverse-engineert (kein Capture vorhanden) – die Controls sind
+// vorbereitet, lösen aber noch keinen echten Befehl aus, siehe HANDOFF.md.
+// Dark Mode ist reiner UI-Zustand (Slint-Standard-Widgets über die
+// eingebaute Palette-Umschaltung), braucht keine Rust-Anbindung.
+export component SettingsTab inherits HorizontalLayout {
     in property <bool> device-connected: false;
 
     in-out property <bool> volume-sync-on: true;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
+    in-out property <bool> dark-mode-on: false;
 
     callback reset-clicked();
     callback volume-sync-toggled(bool);
     callback power-saving-toggled(bool);
     callback logo-led-toggled(bool);
 
-    Tab {
-        title: "Gerät";
+    padding: 16px;
+    spacing: 48px;
+    alignment: start;
+
+    VerticalLayout {
+        spacing: 12px;
+        alignment: start;
+        Text { text: "Sound Blaster G8"; font-weight: 700; }
+        Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
+        Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
+
+        Text { text: "Firmware"; font-weight: 700; }
+        Text { text: "Version: unbekannt (kein Report bekannt)"; color: gray; }
+        Button { text: "Jetzt prüfen"; enabled: false; }
+    }
+
+    VerticalLayout {
+        spacing: 12px;
+        alignment: start;
         HorizontalLayout {
-            padding: 16px;
-            spacing: 32px;
-            alignment: start;
-
+            spacing: 8px;
+            Switch { checked: volume-sync-on; toggled => { volume-sync-on = self.checked; volume-sync-toggled(self.checked); } }
             VerticalLayout {
-                spacing: 12px;
-                alignment: start;
-                Text { text: "Sound Blaster G8"; font-weight: 700; }
-                Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
-                Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
-
-                Text { text: "Firmware"; font-weight: 700; }
-                Text { text: "Version: unbekannt (kein Report bekannt)"; color: gray; }
-                Button { text: "Jetzt prüfen"; enabled: false; }
-            }
-
-            VerticalLayout {
-                spacing: 12px;
-                alignment: start;
-                HorizontalLayout {
-                    spacing: 8px;
-                    Switch { checked: volume-sync-on; toggled => { volume-sync-on = self.checked; volume-sync-toggled(self.checked); } }
-                    VerticalLayout {
-                        Text { text: "Volume Sync"; font-weight: 600; }
-                        Text {
-                            wrap: word-wrap;
-                            width: 260px;
-                            text: "Der Lautstärkeknopf steuert Geräte- und PC-Lautstärke gemeinsam.";
-                            color: gray;
-                        }
-                    }
-                }
-                HorizontalLayout {
-                    spacing: 8px;
-                    Switch { checked: power-saving-on; toggled => { power-saving-on = self.checked; power-saving-toggled(self.checked); } }
-                    Text { text: "Energieeinsparung"; font-weight: 600; vertical-alignment: center; }
-                }
-                HorizontalLayout {
-                    spacing: 8px;
-                    Switch { checked: logo-led-on; toggled => { logo-led-on = self.checked; logo-led-toggled(self.checked); } }
-                    Text { text: "Sound Blaster Logo LED"; font-weight: 600; vertical-alignment: center; }
+                Text { text: "Volume Sync"; font-weight: 600; }
+                Text {
+                    wrap: word-wrap;
+                    width: 260px;
+                    text: "Der Lautstärkeknopf steuert Geräte- und PC-Lautstärke gemeinsam.";
+                    color: gray;
                 }
             }
         }
+        HorizontalLayout {
+            spacing: 8px;
+            Switch { checked: power-saving-on; toggled => { power-saving-on = self.checked; power-saving-toggled(self.checked); } }
+            Text { text: "Energieeinsparung"; font-weight: 600; vertical-alignment: center; }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Switch { checked: logo-led-on; toggled => { logo-led-on = self.checked; logo-led-toggled(self.checked); } }
+            Text { text: "Sound Blaster Logo LED"; font-weight: 600; vertical-alignment: center; }
+        }
     }
-    Tab {
-        title: "Anwendung";
-        VerticalLayout {
-            padding: 16px;
-            Text {
-                wrap: word-wrap;
-                text: "Kein Screenshot dieser Seite vorhanden – Inhalt noch unbekannt.";
+
+    // Ehemals "Anwendung"-Unterreiter – jetzt hier mit eingebaut.
+    VerticalLayout {
+        spacing: 12px;
+        alignment: start;
+        Text { text: "Anwendung"; font-weight: 700; }
+        HorizontalLayout {
+            spacing: 8px;
+            Switch {
+                checked: dark-mode-on;
+                toggled => {
+                    dark-mode-on = self.checked;
+                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
+                }
             }
+            Text { text: "Dark Mode"; font-weight: 600; vertical-alignment: center; }
         }
     }
 }
