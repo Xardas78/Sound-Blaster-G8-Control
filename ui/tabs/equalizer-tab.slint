@@ -6,6 +6,18 @@ export component EqualizerTab inherits VerticalLayout {
     in-out property <float> preamp: 0;
     in-out property <[float]> bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
+    // Kurven-Y in Pixeln (0..120, 60=0dB) je Band, inkl. Vorverstärkung –
+    // die verschiebt die ganze Kurve nach oben/unten, wie im Original.
+    property <length> y0: (12 - (bands[0] + preamp)) * 5px;
+    property <length> y1: (12 - (bands[1] + preamp)) * 5px;
+    property <length> y2: (12 - (bands[2] + preamp)) * 5px;
+    property <length> y3: (12 - (bands[3] + preamp)) * 5px;
+    property <length> y4: (12 - (bands[4] + preamp)) * 5px;
+    property <length> y5: (12 - (bands[5] + preamp)) * 5px;
+    property <length> y6: (12 - (bands[6] + preamp)) * 5px;
+    property <length> y7: (12 - (bands[7] + preamp)) * 5px;
+    property <length> y8: (12 - (bands[8] + preamp)) * 5px;
+
     // param-id (0x0a=Preamp, 0x0b..0x14=Bänder), value
     callback param-changed(int, float);
 
@@ -25,54 +37,92 @@ export component EqualizerTab inherits VerticalLayout {
         VerticalLayout {
             spacing: 4px;
 
-            Rectangle {
-                width: 672px;
-                height: 120px;
+            HorizontalLayout {
+                spacing: 4px;
 
-                // Gefüllte Fläche unter der Kurve. Viewbox deckungsgleich
-                // zur Box (672x120), sonst skaliert Slint seitenverhältnis-
-                // treu und die Kurve schrumpft auf einen schmalen Streifen.
-                Path {
-                    width: 100%;
-                    height: 100%;
-                    viewbox-width: 672;
-                    viewbox-height: 120;
-                    fill: @linear-gradient(180deg, #4a90d9cc 0%, #4a90d900 100%);
-                    MoveTo { x: 32; y: (12 - bands[0]) * 5; }
-                    LineTo { x: 108; y: (12 - bands[1]) * 5; }
-                    LineTo { x: 184; y: (12 - bands[2]) * 5; }
-                    LineTo { x: 260; y: (12 - bands[3]) * 5; }
-                    LineTo { x: 336; y: (12 - bands[4]) * 5; }
-                    LineTo { x: 412; y: (12 - bands[5]) * 5; }
-                    LineTo { x: 488; y: (12 - bands[6]) * 5; }
-                    LineTo { x: 564; y: (12 - bands[7]) * 5; }
-                    LineTo { x: 640; y: (12 - bands[8]) * 5; }
-                    LineTo { x: 640; y: 120; }
-                    LineTo { x: 32; y: 120; }
-                    Close { }
+                // dB-Skala links, an den Rasterlinien ausgerichtet.
+                Rectangle {
+                    width: 22px;
+                    height: 120px;
+                    for db[i] in [12, 6, 0, -6, -12]: Text {
+                        x: 0;
+                        y: (12 - db) * 5px - 7px;
+                        width: 22px;
+                        height: 14px;
+                        text: db;
+                        font-size: 10px;
+                        color: #999999;
+                        horizontal-alignment: right;
+                    }
                 }
-                // Kurvenlinie obendrauf.
-                Path {
-                    width: 100%;
-                    height: 100%;
-                    viewbox-width: 672;
-                    viewbox-height: 120;
-                    stroke: #2b78c4;
-                    stroke-width: 2px;
-                    MoveTo { x: 32; y: (12 - bands[0]) * 5; }
-                    LineTo { x: 108; y: (12 - bands[1]) * 5; }
-                    LineTo { x: 184; y: (12 - bands[2]) * 5; }
-                    LineTo { x: 260; y: (12 - bands[3]) * 5; }
-                    LineTo { x: 336; y: (12 - bands[4]) * 5; }
-                    LineTo { x: 412; y: (12 - bands[5]) * 5; }
-                    LineTo { x: 488; y: (12 - bands[6]) * 5; }
-                    LineTo { x: 564; y: (12 - bands[7]) * 5; }
-                    LineTo { x: 640; y: (12 - bands[8]) * 5; }
+
+                Rectangle {
+                    width: 672px;
+                    height: 120px;
+                    clip: true;
+
+                    // Dünnes Raster hinter der Kurve.
+                    for db[i] in [12, 6, 0, -6, -12]: Rectangle {
+                        x: 0;
+                        y: (12 - db) * 5px;
+                        width: 672px;
+                        height: 1px;
+                        background: db == 0 ? #cccccc : #e6e6e6;
+                    }
+                    for gx[i] in [32, 108, 184, 260, 336, 412, 488, 564, 640]: Rectangle {
+                        x: gx * 1px;
+                        y: 0;
+                        width: 1px;
+                        height: 120px;
+                        background: #eeeeee;
+                    }
+
+                    // Gefüllte Fläche unter der Kurve, sanft geschwungen
+                    // (quadratische Bezier durch die Bandmitten statt
+                    // eckiger Geradensegmente).
+                    Path {
+                        width: 100%;
+                        height: 100%;
+                        viewbox-width: 672;
+                        viewbox-height: 120;
+                        fill: @linear-gradient(180deg, #4a90d9cc 0%, #4a90d900 100%);
+                        MoveTo { x: 32; y: y0 / 1px; }
+                        QuadraticTo { control-x: 108; control-y: y1 / 1px; x: 146; y: (y1 + y2) / 2 / 1px; }
+                        QuadraticTo { control-x: 184; control-y: y2 / 1px; x: 222; y: (y2 + y3) / 2 / 1px; }
+                        QuadraticTo { control-x: 260; control-y: y3 / 1px; x: 298; y: (y3 + y4) / 2 / 1px; }
+                        QuadraticTo { control-x: 336; control-y: y4 / 1px; x: 374; y: (y4 + y5) / 2 / 1px; }
+                        QuadraticTo { control-x: 412; control-y: y5 / 1px; x: 450; y: (y5 + y6) / 2 / 1px; }
+                        QuadraticTo { control-x: 488; control-y: y6 / 1px; x: 526; y: (y6 + y7) / 2 / 1px; }
+                        QuadraticTo { control-x: 564; control-y: y7 / 1px; x: 602; y: (y7 + y8) / 2 / 1px; }
+                        LineTo { x: 640; y: y8 / 1px; }
+                        LineTo { x: 640; y: 120; }
+                        LineTo { x: 32; y: 120; }
+                        Close { }
+                    }
+                    // Kurvenlinie obendrauf, gleiche Kontur ohne Füllung.
+                    Path {
+                        width: 100%;
+                        height: 100%;
+                        viewbox-width: 672;
+                        viewbox-height: 120;
+                        stroke: #2b78c4;
+                        stroke-width: 2px;
+                        MoveTo { x: 32; y: y0 / 1px; }
+                        QuadraticTo { control-x: 108; control-y: y1 / 1px; x: 146; y: (y1 + y2) / 2 / 1px; }
+                        QuadraticTo { control-x: 184; control-y: y2 / 1px; x: 222; y: (y2 + y3) / 2 / 1px; }
+                        QuadraticTo { control-x: 260; control-y: y3 / 1px; x: 298; y: (y3 + y4) / 2 / 1px; }
+                        QuadraticTo { control-x: 336; control-y: y4 / 1px; x: 374; y: (y4 + y5) / 2 / 1px; }
+                        QuadraticTo { control-x: 412; control-y: y5 / 1px; x: 450; y: (y5 + y6) / 2 / 1px; }
+                        QuadraticTo { control-x: 488; control-y: y6 / 1px; x: 526; y: (y6 + y7) / 2 / 1px; }
+                        QuadraticTo { control-x: 564; control-y: y7 / 1px; x: 602; y: (y7 + y8) / 2 / 1px; }
+                        LineTo { x: 640; y: y8 / 1px; }
+                    }
                 }
             }
 
             HorizontalLayout {
                 spacing: 12px;
+                padding-left: 26px;
                 for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
                     width: 64px;
                     Slider {
@@ -90,10 +140,11 @@ export component EqualizerTab inherits VerticalLayout {
 
         Rectangle { width: 1px; background: #cccccc; }
 
-        // Vorverstärkung/Bass/Höhen. Bass und Höhen haben laut Reverse
-        // Engineering keine eigene Param-ID, sondern docken auf das
-        // unterste bzw. oberste Frequenzband (siehe HANDOFF.md) – bewegen
-        // deshalb auch den jeweiligen Band-Regler mit.
+        // Vorverstärkung/Bass/Höhen. Vorverstärkung verschiebt zusätzlich
+        // die ganze Kurve oben nach oben/unten (siehe y0..y8). Bass und
+        // Höhen haben laut Reverse Engineering keine eigene Param-ID,
+        // sondern docken auf das unterste bzw. oberste Frequenzband (siehe
+        // HANDOFF.md) – bewegen deshalb auch den jeweiligen Band-Regler mit.
         HorizontalLayout {
             spacing: 12px;
             VerticalLayout {
