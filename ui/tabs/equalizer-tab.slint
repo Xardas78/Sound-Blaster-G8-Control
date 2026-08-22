@@ -1,5 +1,15 @@
 import { EffectToggle, CompactSpinBox } from "../effect-slider.slint";
-import { Slider } from "std-widgets.slint";
+import { Slider, ComboBox, LineEdit, Button } from "std-widgets.slint";
+
+// Sound-Modus-Presets. Das Original speichert Presets im Gerät selbst
+// (Speicherformat nicht reverse-engineert, siehe HANDOFF.md) – diese
+// Presets sind deshalb rein App-seitig: 8 feste Klangbilder + 3 eigene
+// Speicherplätze, die aber nur für die Laufzeit der App gelten (kein
+// Neustart-übergreifendes Speichern implementiert).
+struct EqPreset {
+    preamp: float,
+    bands: [float],
+}
 
 // ---------------------------------------------------------------------
 // Größen-/Positions-Übersicht (bewusst an einer Stelle gesammelt, damit
@@ -30,6 +40,62 @@ export component EqualizerTab inherits VerticalLayout {
     in-out property <bool> eq-on: true;
     in-out property <float> preamp: 0;
     in-out property <[float]> bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    // 8 feste Presets (Index 0-7) + 3 eigene Speicherplätze (Index 8-10).
+    // Werte sind plausible Klangbilder, keine reverse-engineerten
+    // Original-Presets (die liegen im Gerät, Format unbekannt).
+    property <[string]> builtin-preset-names: ["Flach", "Rock", "Pop", "Jazz", "Klassik", "Bass-Boost", "Höhen-Boost", "Vocal"];
+    property <[EqPreset]> builtin-presets: [
+        { preamp: 0, bands: [0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { preamp: 0, bands: [5, 3, -2, -4, -2, 2, 5, 6, 6] },
+        { preamp: 0, bands: [-2, -1, 0, 2, 4, 4, 2, 0, -1] },
+        { preamp: 0, bands: [3, 2, 1, 1, -1, -1, 1, 2, 3] },
+        { preamp: 0, bands: [4, 3, 2, 0, 0, 0, -2, -3, -4] },
+        { preamp: 0, bands: [8, 6, 4, 1, 0, 0, 0, 0, 0] },
+        { preamp: 0, bands: [0, 0, 0, 0, 0, 1, 4, 6, 8] },
+        { preamp: 0, bands: [-3, -2, 0, 3, 5, 5, 2, 0, -2] },
+    ];
+    property <string> custom1-name: "Eigenes 1";
+    property <float> custom1-preamp: 0;
+    property <[float]> custom1-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <string> custom2-name: "Eigenes 2";
+    property <float> custom2-preamp: 0;
+    property <[float]> custom2-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <string> custom3-name: "Eigenes 3";
+    property <float> custom3-preamp: 0;
+    property <[float]> custom3-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <[string]> preset-names: [
+        builtin-preset-names[0], builtin-preset-names[1], builtin-preset-names[2], builtin-preset-names[3],
+        builtin-preset-names[4], builtin-preset-names[5], builtin-preset-names[6], builtin-preset-names[7],
+        custom1-name, custom2-name, custom3-name,
+    ];
+    property <int> selected-preset-index: 0;
+
+    function apply-preset(idx: int) {
+        if (idx == 8) {
+            preamp = custom1-preamp;
+            bands = custom1-bands;
+        } else if (idx == 9) {
+            preamp = custom2-preamp;
+            bands = custom2-bands;
+        } else if (idx == 10) {
+            preamp = custom3-preamp;
+            bands = custom3-bands;
+        } else {
+            preamp = builtin-presets[idx].preamp;
+            bands = builtin-presets[idx].bands;
+        }
+        param-changed(10, preamp);
+        param-changed(11, bands[0]);
+        param-changed(12, bands[1]);
+        param-changed(13, bands[2]);
+        param-changed(14, bands[3]);
+        param-changed(15, bands[4]);
+        param-changed(16, bands[5]);
+        param-changed(17, bands[6]);
+        param-changed(18, bands[7]);
+        param-changed(19, bands[8]);
+    }
 
     // Gemeinsame Höhe für die 9-Band-Kurve UND die Vorver/Bass/Höhen-Box
     // (siehe Erklärung oben). Einmal ändern, beide Charts bleiben synchron.
@@ -335,6 +401,56 @@ export component EqualizerTab inherits VerticalLayout {
                             edited(v) => { bands[8] = v; param-changed(19, v); }
                         }
                         Text { text: "Höhen"; horizontal-alignment: center; }
+                    }
+                }
+
+                // Sound-Modus-Presets, unterhalb der Vorver/Bass/Höhen-Box.
+                // App-seitig statt im Gerät gespeichert, siehe Kommentar bei
+                // EqPreset oben.
+                VerticalLayout {
+                    spacing: 8px;
+                    padding-top: 12px;
+
+                    Text { text: "Sound-Modus"; font-weight: 700; }
+
+                    ComboBox {
+                        model: preset-names;
+                        current-index: selected-preset-index;
+                        selected(name) => {
+                            selected-preset-index = self.current-index;
+                            apply-preset(self.current-index);
+                        }
+                    }
+
+                    if selected-preset-index >= 8: HorizontalLayout {
+                        spacing: 4px;
+                        LineEdit {
+                            text: selected-preset-index == 8 ? custom1-name : selected-preset-index == 9 ? custom2-name : custom3-name;
+                            edited(t) => {
+                                if (selected-preset-index == 8) {
+                                    custom1-name = t;
+                                } else if (selected-preset-index == 9) {
+                                    custom2-name = t;
+                                } else {
+                                    custom3-name = t;
+                                }
+                            }
+                        }
+                        Button {
+                            text: "Speichern";
+                            clicked => {
+                                if (selected-preset-index == 8) {
+                                    custom1-preamp = preamp;
+                                    custom1-bands = bands;
+                                } else if (selected-preset-index == 9) {
+                                    custom2-preamp = preamp;
+                                    custom2-bands = bands;
+                                } else {
+                                    custom3-preamp = preamp;
+                                    custom3-bands = bands;
+                                }
+                            }
+                        }
                     }
                 }
             }
