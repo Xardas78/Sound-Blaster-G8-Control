@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sound Blaster G8 Control
+Comment=Steuerung für den Creative Sound Blaster G8 USB-DAC/Verstärker
+Exec=g8-control
+Icon=g8-control
+Terminal=false
+Categories=AudioVideo;Audio;Settings;
+StartupNotify=true

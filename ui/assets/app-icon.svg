@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+    <defs>
+        <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e222b"/><stop offset="100%" stop-color="#0b0d11"/></linearGradient>
+        <linearGradient id="sbRed" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ff3333"/><stop offset="100%" stop-color="#990000"/></linearGradient>
+        <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-opacity="0.6"/></filter>
+    </defs>
+    <!-- Basis-Form -->
+    <rect width="512" height="512" rx="100" fill="url(#bg1)" stroke="#2d3341" stroke-width="4"/>
+    <!-- Hardware Gehäuse -->
+    <path d="M 80,240 L 432,240 L 400,440 L 112,440 Z" fill="#383d48" filter="url(#shadow)"/>
+    <path d="M 80,240 L 432,240 L 420,290 L 92,290 Z" fill="#252932"/>
+    <!-- Status LED Line -->
+    <line x1="130" y1="420" x2="382" y2="420" stroke="url(#sbRed)" stroke-width="6" stroke-linecap="round"/>
+    <!-- Großer Regler (Rechts) -->
+    <circle cx="320" cy="350" r="55" fill="#181a20" stroke="url(#sbRed)" stroke-width="4" filter="url(#shadow)"/>
+    <line x1="320" y1="350" x2="320" y2="305" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+    <!-- Kleiner Regler (Links) -->
+    <circle cx="180" cy="350" r="32" fill="#181a20" stroke="#5a6170" stroke-width="3"/>
+    <line x1="180" y1="350" x2="162" y2="332" stroke="#a0a7b5" stroke-width="3" stroke-linecap="round"/>
+    <!-- Text-Branding oben links -->
+    <text x="75" y="115" font-family="'Arial Black', sans-serif" font-size="64" font-weight="900" fill="#ffffff" letter-spacing="1">SB</text>
+    <text x="75" y="180" font-family="'Arial Black', sans-serif" font-size="54" font-weight="900" fill="url(#sbRed)" letter-spacing="2">G8</text>
+    <!-- Minimalistischer Linux-Indikator oben rechts -->
+    <path d="M 400,80 L 425,120 L 375,120 Z" fill="#ff9f0a"/>
+    <circle cx="390" cy="95" r="5" fill="#ffffff"/><circle cx="410" cy="95" r="5" fill="#ffffff"/>
+</svg>
