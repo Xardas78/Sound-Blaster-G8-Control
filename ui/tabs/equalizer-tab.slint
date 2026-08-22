@@ -19,27 +19,118 @@ export component EqualizerTab inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        spacing: 12px;
-        for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
-            Text { text: freq; horizontal-alignment: center; }
-            Slider {
-                orientation: vertical;
-                minimum: -12; maximum: 12;
-                value: bands[i];
-                enabled: eq-on;
-                height: 160px;
-                changed(v) => { bands[i] = v; param-changed(11 + i, v); }
+        spacing: 24px;
+
+        // 9-Band-Bereich mit Verlaufskurve darüber, wie im Original.
+        VerticalLayout {
+            spacing: 4px;
+
+            Rectangle {
+                width: 672px;
+                height: 120px;
+
+                // Gefüllte Fläche unter der Kurve. Viewbox deckungsgleich
+                // zur Box (672x120), sonst skaliert Slint seitenverhältnis-
+                // treu und die Kurve schrumpft auf einen schmalen Streifen.
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 672;
+                    viewbox-height: 120;
+                    fill: @linear-gradient(180deg, #4a90d9cc 0%, #4a90d900 100%);
+                    MoveTo { x: 32; y: (12 - bands[0]) * 5; }
+                    LineTo { x: 108; y: (12 - bands[1]) * 5; }
+                    LineTo { x: 184; y: (12 - bands[2]) * 5; }
+                    LineTo { x: 260; y: (12 - bands[3]) * 5; }
+                    LineTo { x: 336; y: (12 - bands[4]) * 5; }
+                    LineTo { x: 412; y: (12 - bands[5]) * 5; }
+                    LineTo { x: 488; y: (12 - bands[6]) * 5; }
+                    LineTo { x: 564; y: (12 - bands[7]) * 5; }
+                    LineTo { x: 640; y: (12 - bands[8]) * 5; }
+                    LineTo { x: 640; y: 120; }
+                    LineTo { x: 32; y: 120; }
+                    Close { }
+                }
+                // Kurvenlinie obendrauf.
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 672;
+                    viewbox-height: 120;
+                    stroke: #2b78c4;
+                    stroke-width: 2px;
+                    MoveTo { x: 32; y: (12 - bands[0]) * 5; }
+                    LineTo { x: 108; y: (12 - bands[1]) * 5; }
+                    LineTo { x: 184; y: (12 - bands[2]) * 5; }
+                    LineTo { x: 260; y: (12 - bands[3]) * 5; }
+                    LineTo { x: 336; y: (12 - bands[4]) * 5; }
+                    LineTo { x: 412; y: (12 - bands[5]) * 5; }
+                    LineTo { x: 488; y: (12 - bands[6]) * 5; }
+                    LineTo { x: 564; y: (12 - bands[7]) * 5; }
+                    LineTo { x: 640; y: (12 - bands[8]) * 5; }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+                for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
+                    width: 64px;
+                    Slider {
+                        orientation: vertical;
+                        minimum: -12; maximum: 12;
+                        value: bands[i];
+                        enabled: eq-on;
+                        height: 160px;
+                        changed(v) => { bands[i] = v; param-changed(11 + i, v); }
+                    }
+                    Text { text: freq; horizontal-alignment: center; }
+                }
             }
         }
-        VerticalLayout {
-            Text { text: "Vorver."; horizontal-alignment: center; }
-            Slider {
-                orientation: vertical;
-                minimum: -12; maximum: 12;
-                value: preamp;
-                enabled: eq-on;
-                height: 160px;
-                changed(v) => { preamp = v; param-changed(10, v); }
+
+        Rectangle { width: 1px; background: #cccccc; }
+
+        // Vorverstärkung/Bass/Höhen. Bass und Höhen haben laut Reverse
+        // Engineering keine eigene Param-ID, sondern docken auf das
+        // unterste bzw. oberste Frequenzband (siehe HANDOFF.md) – bewegen
+        // deshalb auch den jeweiligen Band-Regler mit.
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                width: 64px;
+                Slider {
+                    orientation: vertical;
+                    minimum: -12; maximum: 12;
+                    value: preamp;
+                    enabled: eq-on;
+                    height: 160px;
+                    changed(v) => { preamp = v; param-changed(10, v); }
+                }
+                Text { text: "Vorver."; horizontal-alignment: center; }
+            }
+            VerticalLayout {
+                width: 64px;
+                Slider {
+                    orientation: vertical;
+                    minimum: -12; maximum: 12;
+                    value: bands[0];
+                    enabled: eq-on;
+                    height: 160px;
+                    changed(v) => { bands[0] = v; param-changed(11, v); }
+                }
+                Text { text: "Bass"; horizontal-alignment: center; }
+            }
+            VerticalLayout {
+                width: 64px;
+                Slider {
+                    orientation: vertical;
+                    minimum: -12; maximum: 12;
+                    value: bands[8];
+                    enabled: eq-on;
+                    height: 160px;
+                    changed(v) => { bands[8] = v; param-changed(19, v); }
+                }
+                Text { text: "Höhen"; horizontal-alignment: center; }
             }
         }
     }

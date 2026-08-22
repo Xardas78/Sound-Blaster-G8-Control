@@ -12,6 +12,8 @@ import { MixerTab } from "mixer-tab.slint";
 // im Projektordner). Wir bilden das flach als zweite Tab-Reihe ab statt
 // Kachel-Navigation mit Zurück-Pfeil.
 export component DeviceHubTab inherits TabWidget {
+    current-index: 0;
+
     callback playback-param-changed(int, float);
     callback recording-param-changed(int, float);
     callback eq-param-changed(int, float);
