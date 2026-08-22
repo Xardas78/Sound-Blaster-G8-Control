@@ -1,8 +1,21 @@
 import { EffectSlider } from "../effect-slider.slint";
+import { Slider, Switch } from "std-widgets.slint";
 
-// Entspricht der "Acoustic Engine"-Seite (Kopfhörer/Lautsprecher-Umschalter
-// fehlt hier bewusst als eigene Komponente, siehe playback-tab.slint).
-export component AcousticEngineTab inherits HorizontalLayout {
+// Entspricht der "Acoustic Engine"-Seite im Original (siehe Screenshot im
+// Projektordner). Kopfhörer/Lautsprecher-Umschalter oben ist rein
+// UI-seitig – aus den Captures geht nicht hervor, ob/wie das Original
+// dafür zwei getrennte Wertesätze im Gerät hält, deshalb wirkt sich der
+// Umschalter hier nicht auf die Werte aus.
+//
+// WICHTIG (per USB-Capture "acoustic engine.pcapng" bestätigt): die
+// Pegel-Parameter (Surround/Crystalizer/Bass/Smart-Volume/Dialog+-Level)
+// erwarten einen Float zwischen 0.0 und 1.0, NICHT den rohen 0-100-
+// Slider-Wert! Das war vorher ein Bug (v statt v/100 gesendet) – hier
+// gefixt. Toggle-Parameter (0.0/0.5/1.0 o.ä.) und Smart-Volume-Modus
+// (0.0=Normal/1.0=Laut/2.0=Nacht) sind laut Capture unverändert korrekt.
+export component AcousticEngineTab inherits VerticalLayout {
+    in-out property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
+
     in-out property <bool> surround-on: true;
     in-out property <float> surround-level: 48;
 
@@ -14,6 +27,7 @@ export component AcousticEngineTab inherits HorizontalLayout {
 
     in-out property <bool> smart-volume-on: true;
     in-out property <float> smart-volume-level: 52;
+    in-out property <int> smart-volume-mode: 0; // 0=Normal, 1=Laut, 2=Nacht
 
     in-out property <bool> dialog-plus-on: true;
     in-out property <float> dialog-plus-level: 56;
@@ -21,42 +35,169 @@ export component AcousticEngineTab inherits HorizontalLayout {
     // param-id, value – Rust ordnet über acoustic_engine::* Konstanten zu
     callback param-changed(int, float);
 
-    spacing: 24px;
     padding: 16px;
+    spacing: 16px;
+    alignment: start;
 
-    EffectSlider {
-        label: "Surround";
-        effect-enabled: surround-on;
-        value: surround-level;
-        toggled(on) => { surround-on = on; param-changed(0, on ? 1.0 : 0.0); }
-        value-changed(v) => { surround-level = v; param-changed(1, v); }
+    // Kopfhörer/Lautsprecher-Segmentumschalter.
+    HorizontalLayout {
+        alignment: start;
+        Rectangle {
+            width: 340px;
+            height: 32px;
+            border-radius: 6px;
+            background: #e0e0e0;
+            clip: true;
+
+            HorizontalLayout {
+                Rectangle {
+                    background: output-target == 0 ? #3d7fd9 : transparent;
+                    TouchArea { clicked => { output-target = 0; } }
+                    Text {
+                        text: "Kopfhörer";
+                        color: output-target == 0 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                Rectangle {
+                    background: output-target == 1 ? #3d7fd9 : transparent;
+                    TouchArea { clicked => { output-target = 1; } }
+                    Text {
+                        text: "Lautsprecher";
+                        color: output-target == 1 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
     }
-    EffectSlider {
-        label: "Crystalizer";
-        effect-enabled: crystalizer-on;
-        value: crystalizer-level;
-        toggled(on) => { crystalizer-on = on; param-changed(7, on ? 1.0 : 0.0); }
-        value-changed(v) => { crystalizer-level = v; param-changed(8, v); }
+
+    HorizontalLayout {
+        spacing: 24px;
+        alignment: start;
+
+        EffectSlider {
+            label: "Surround";
+            description: "Erzeugt ein beispielloses Maß an Audio-Realismus, indem virtuelle Lautsprecher um Sie herum erzeugt werden.";
+            effect-enabled: surround-on;
+            value: surround-level;
+            toggled(on) => { surround-on = on; param-changed(0, on ? 1.0 : 0.0); }
+            value-changed(v) => { surround-level = v; param-changed(1, v / 100); }
+        }
+        EffectSlider {
+            label: "Crystalizer";
+            description: "Stellt sicher, dass Musik so klingt, wie der Künstler ursprünglich beabsichtigt hat, indem man jedes Audio-Detail hören kann.";
+            effect-enabled: crystalizer-on;
+            value: crystalizer-level;
+            toggled(on) => { crystalizer-on = on; param-changed(7, on ? 1.0 : 0.0); }
+            value-changed(v) => { crystalizer-level = v; param-changed(8, v / 100); }
+        }
+        EffectSlider {
+            label: "Bass";
+            description: "Deutlich verbessert das Klangerlebnis durch die bessere Wiedergabe der tiefen Töne.";
+            effect-enabled: bass-on;
+            value: bass-level;
+            toggled(on) => { bass-on = on; param-changed(24, on ? 1.0 : 0.0); }
+            value-changed(v) => { bass-level = v; param-changed(25, v / 100); }
+        }
+
+        // Smart Volume: eigener Block statt EffectSlider, weil zusätzlich
+        // zum Ein/Aus-Schalter noch Nacht/Laut-Modusknöpfe daneben sitzen
+        // (SMART_VOLUME_MODE, Param 0x06 – per Capture bestätigt: 0.0=
+        // Normal, 1.0=Laut, 2.0=Nacht).
+        VerticalLayout {
+            spacing: 8px;
+            alignment: start;
+            width: 180px;
+
+            Text { text: "Smart Volume"; horizontal-alignment: center; font-weight: 600; }
+            Text { text: round(smart-volume-level); horizontal-alignment: center; }
+
+            Slider {
+                orientation: vertical;
+                minimum: 0; maximum: 100;
+                value: smart-volume-level;
+                enabled: smart-volume-on;
+                height: 180px;
+                changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 14px;
+                    background: smart-volume-mode == 2 ? #3d7fd9 : #e0e0e0;
+                    TouchArea {
+                        clicked => { smart-volume-mode = 2; param-changed(6, 2.0); }
+                    }
+                    // Mondsichel statt 🌙-Emoji: fehlt in der verfügbaren
+                    // Schriftart komplett (rendert leer, wie zuvor schon
+                    // beim Mikrofon-Icon aufgefallen). Zwei überlappende
+                    // Kreise erzeugen die Sichelform.
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 6px;
+                        background: #333333;
+                        x: 8px;
+                        y: 8px;
+                    }
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 6px;
+                        background: smart-volume-mode == 2 ? #3d7fd9 : #e0e0e0;
+                        x: 12px;
+                        y: 6px;
+                    }
+                }
+                Switch {
+                    checked: smart-volume-on;
+                    toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+                }
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 14px;
+                    background: smart-volume-mode == 1 ? #3d7fd9 : #e0e0e0;
+                    TouchArea {
+                        clicked => { smart-volume-mode = 1; param-changed(6, 1.0); }
+                    }
+                    Text { text: "☀"; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
+                }
+            }
+
+            Text {
+                text: "Intelligenterweise verringert abrupte Lautstärkeänderungen durch automatische Lautstärkeanpassung der Audiowiedergabe.";
+                wrap: word-wrap;
+                horizontal-alignment: center;
+                font-size: 12px;
+                color: gray;
+            }
+        }
+
+        EffectSlider {
+            label: "Dialog+";
+            description: "Intelligenterweise verstärkt Stimmen in Musik und Filmen für eine deutlich klarere Stimmenwiedergabe.";
+            effect-enabled: dialog-plus-on;
+            value: dialog-plus-level;
+            toggled(on) => { dialog-plus-on = on; param-changed(2, on ? 1.0 : 0.0); }
+            value-changed(v) => { dialog-plus-level = v; param-changed(3, v / 100); }
+        }
     }
-    EffectSlider {
-        label: "Bass";
-        effect-enabled: bass-on;
-        value: bass-level;
-        toggled(on) => { bass-on = on; param-changed(24, on ? 1.0 : 0.0); }
-        value-changed(v) => { bass-level = v; param-changed(25, v); }
-    }
-    EffectSlider {
-        label: "Smart Volume";
-        effect-enabled: smart-volume-on;
-        value: smart-volume-level;
-        toggled(on) => { smart-volume-on = on; param-changed(4, on ? 1.0 : 0.0); }
-        value-changed(v) => { smart-volume-level = v; param-changed(5, v); }
-    }
-    EffectSlider {
-        label: "Dialog+";
-        effect-enabled: dialog-plus-on;
-        value: dialog-plus-level;
-        toggled(on) => { dialog-plus-on = on; param-changed(2, on ? 1.0 : 0.0); }
-        value-changed(v) => { dialog-plus-level = v; param-changed(3, v); }
+
+    Text {
+        text: "SBX";
+        font-size: 22px;
+        font-weight: 800;
+        font-italic: true;
+        color: #999999;
+        horizontal-alignment: right;
     }
 }

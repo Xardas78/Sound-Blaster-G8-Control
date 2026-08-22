@@ -4,6 +4,7 @@ import { Slider, Switch } from "std-widgets.slint";
 // Originals: Titel, Zahlenwert, vertikaler Slider, darunter ein Toggle.
 export component EffectSlider inherits VerticalLayout {
     in property <string> label;
+    in property <string> description;
     in property <bool> effect-enabled: true;
     in property <float> value: 50;
     in property <float> minimum: 0;
@@ -13,7 +14,8 @@ export component EffectSlider inherits VerticalLayout {
     callback value-changed(float);
 
     spacing: 8px;
-    alignment: center;
+    alignment: start;
+    width: 180px;
 
     Text {
         text: label;
@@ -39,6 +41,14 @@ export component EffectSlider inherits VerticalLayout {
     Switch {
         checked: effect-enabled;
         toggled => { toggled(self.checked); }
+    }
+
+    Text {
+        text: description;
+        wrap: word-wrap;
+        horizontal-alignment: center;
+        font-size: 12px;
+        color: gray;
     }
 }
 

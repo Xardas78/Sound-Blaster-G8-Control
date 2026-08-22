@@ -76,6 +76,13 @@ pub fn build_level_report(p: LevelParam, value: f32) -> [u8; 64] {
 
 // ---------------------------------------------------------------------------
 // Acoustic Engine (Wiedergabe, Namespace::Playback)
+//
+// Per USB-Capture ("acoustic engine.pcapng") bestätigt: alle LevelParam-
+// Werte hier sind Floats zwischen 0.0 und 1.0, NICHT 0..100! Die UI zeigt
+// 0..100 an (wie im Original), muss den Wert also vor dem Senden durch
+// 100 teilen (siehe ui/tabs/acoustic-engine-tab.slint). Toggle-Werte
+// (0.0/1.0) und SMART_VOLUME_MODE (0.0=Normal/1.0=Laut/2.0=Nacht) sind
+// laut Capture unverändert korrekt.
 // ---------------------------------------------------------------------------
 pub mod acoustic_engine {
     use super::{LevelParam, Namespace, ToggleParam};

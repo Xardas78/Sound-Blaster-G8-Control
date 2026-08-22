@@ -45,6 +45,10 @@ Byte-Layout (siehe `src/protocol.rs` für die vollständige, typisierte Fassung)
 
 **Acoustic Engine (Wiedergabe, 0x96):**
 
+Level-Werte sind Floats **0.0–1.0** (per Capture "acoustic engine.pcapng"
+bestätigt), nicht 0–100 – die UI zeigt 0–100 an und teilt vor dem Senden
+durch 100.
+
 | Feature | Toggle | Level |
 |---|---|---|
 | Surround | 0x00 | 0x01 |
