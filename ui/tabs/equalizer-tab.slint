@@ -1,22 +1,54 @@
 import { EffectToggle } from "../effect-slider.slint";
 import { Slider, SpinBox } from "std-widgets.slint";
 
+// ---------------------------------------------------------------------
+// Größen-/Positions-Übersicht (bewusst an einer Stelle gesammelt, damit
+// sich das Layout gefahrlos nachjustieren lässt):
+//
+// - chart-height: Höhe BEIDER Charts (9-Band-Kurve links UND die
+//   Vorverstärkung/Bass/Höhen-Box rechts). Beide benutzen dieselbe
+//   Property, damit ihre Rasterlinien immer auf gleicher Höhe liegen,
+//   egal welcher Wert hier eingetragen wird.
+// - Die Y-Position für einen dB-Wert `v` ist überall nach demselben
+//   Muster berechnet: (12 - v) / 24 * chart-height
+//   (12 = oberes Ende der Skala, 24 = Skalenbreite von -12 bis +12,
+//   chart-height = Pixelhöhe der Box). Wird chart-height geändert,
+//   skaliert automatisch alles mit – Kurve, Rasterlinien UND die
+//   Vorver/Bass/Höhen-Box.
+// - Die X-Positionen der 9 Bänder sind NICHT über eine Formel/Schleife
+//   berechnet (Slint-Path-Elemente lassen sich nicht bequem aus einer
+//   for-Schleife mit Nachbar-Zugriff aufbauen), sondern von Hand
+//   eingetragen: Spaltenmitte von Band i = 32 + i * 76, wobei 76 =
+//   Spaltenbreite (64px) + Abstand zwischen Spalten (12px), und 32 =
+//   halbe Spaltenbreite (erste Spalte beginnt bei 0). Wird die
+//   Spaltenbreite oder der Abstand unten in der Slider-Reihe geändert,
+//   müssen diese Zahlen von Hand mit angepasst werden.
+// ---------------------------------------------------------------------
 export component EqualizerTab inherits VerticalLayout {
     in-out property <bool> eq-on: true;
     in-out property <float> preamp: 0;
     in-out property <[float]> bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    // Kurven-Y in Pixeln (0..120, 60=0dB) je Band, inkl. Vorverstärkung –
-    // die verschiebt die ganze Kurve nach oben/unten, wie im Original.
-    property <length> y0: (12 - (bands[0] + preamp)) * 5px;
-    property <length> y1: (12 - (bands[1] + preamp)) * 5px;
-    property <length> y2: (12 - (bands[2] + preamp)) * 5px;
-    property <length> y3: (12 - (bands[3] + preamp)) * 5px;
-    property <length> y4: (12 - (bands[4] + preamp)) * 5px;
-    property <length> y5: (12 - (bands[5] + preamp)) * 5px;
-    property <length> y6: (12 - (bands[6] + preamp)) * 5px;
-    property <length> y7: (12 - (bands[7] + preamp)) * 5px;
-    property <length> y8: (12 - (bands[8] + preamp)) * 5px;
+    // Gemeinsame Höhe für die 9-Band-Kurve UND die Vorver/Bass/Höhen-Box
+    // (siehe Erklärung oben). Einmal ändern, beide Charts bleiben synchron.
+    property <length> chart-height: 284px;
+    // Breite der dB-Skala-Spalte links neben jedem Chart ("12", "6", "0", …).
+    property <length> db-label-width: 36px;
+    // Abstand zwischen den 3 Reglern in der Vorver/Bass/Höhen-Box.
+    property <length> side-slider-spacing: 24px;
+
+    // Kurven-Y je Band in Pixeln, inkl. Vorverstärkung (die verschiebt die
+    // ganze Kurve nach oben/unten, wie im Original). Gleiche Formel wie
+    // die Rasterlinien unten – siehe Erklärung oben.
+    property <length> y0: (12 - (bands[0] + preamp)) / 24 * chart-height;
+    property <length> y1: (12 - (bands[1] + preamp)) / 24 * chart-height;
+    property <length> y2: (12 - (bands[2] + preamp)) / 24 * chart-height;
+    property <length> y3: (12 - (bands[3] + preamp)) / 24 * chart-height;
+    property <length> y4: (12 - (bands[4] + preamp)) / 24 * chart-height;
+    property <length> y5: (12 - (bands[5] + preamp)) / 24 * chart-height;
+    property <length> y6: (12 - (bands[6] + preamp)) / 24 * chart-height;
+    property <length> y7: (12 - (bands[7] + preamp)) / 24 * chart-height;
+    property <length> y8: (12 - (bands[8] + preamp)) / 24 * chart-height;
 
     // param-id (0x0a=Preamp, 0x0b..0x14=Bänder), value
     callback param-changed(int, float);
@@ -33,7 +65,9 @@ export component EqualizerTab inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        spacing: 24px;
+        // Abstand zwischen dem 9-Band-Chart links und der Vorver/Bass/
+        // Höhen-Box rechts ("weiter nach rechts" = diese Zahl erhöhen).
+        spacing: 40px;
 
         // 9-Band-Bereich mit Verlaufskurve darüber, wie im Original.
         VerticalLayout {
@@ -44,29 +78,31 @@ export component EqualizerTab inherits VerticalLayout {
 
                 // dB-Skala links, an den Rasterlinien ausgerichtet.
                 Rectangle {
-                    width: 22px;
-                    height: 120px;
+                    width: db-label-width;
+                    height: chart-height;
                     for db[i] in [12, 6, 0, -6, -12]: Text {
                         x: 0;
-                        y: (12 - db) * 5px - 7px;
-                        width: 22px;
+                        y: (12 - db) / 24 * chart-height - 7px;
+                        width: db-label-width;
                         height: 14px;
                         text: db;
-                        font-size: 10px;
+                        font-size: 14px;
                         color: #999999;
                         horizontal-alignment: right;
                     }
                 }
 
+                // Breite = 9 Spalten * 76px Spaltenraster (siehe Erklärung
+                // oben), muss zur Slider-Reihe darunter passen.
                 Rectangle {
                     width: 672px;
-                    height: 120px;
+                    height: chart-height;
                     clip: true;
 
                     // Dünnes Raster hinter der Kurve.
                     for db[i] in [12, 6, 0, -6, -12]: Rectangle {
                         x: 0;
-                        y: (12 - db) * 5px;
+                        y: (12 - db) / 24 * chart-height;
                         width: 672px;
                         height: 1px;
                         background: db == 0 ? #cccccc : #e6e6e6;
@@ -75,18 +111,21 @@ export component EqualizerTab inherits VerticalLayout {
                         x: gx * 1px;
                         y: 0;
                         width: 1px;
-                        height: 120px;
+                        height: chart-height;
                         background: #eeeeee;
                     }
 
                     // Gefüllte Fläche unter der Kurve, sanft geschwungen
                     // (quadratische Bezier durch die Bandmitten statt
-                    // eckiger Geradensegmente).
+                    // eckiger Geradensegmente). viewbox-height MUSS
+                    // chart-height entsprechen, sonst skaliert Slint die
+                    // Kurve seitenverhältnistreu und sie passt nicht mehr
+                    // zu den Rasterlinien/Slidern (genau das war der Bug).
                     Path {
                         width: 100%;
                         height: 100%;
                         viewbox-width: 672;
-                        viewbox-height: 120;
+                        viewbox-height: chart-height / 1px;
                         fill: @linear-gradient(180deg, #4a90d9cc 0%, #4a90d900 100%);
                         MoveTo { x: 32; y: y0 / 1px; }
                         QuadraticTo { control-x: 108; control-y: y1 / 1px; x: 146; y: (y1 + y2) / 2 / 1px; }
@@ -97,16 +136,18 @@ export component EqualizerTab inherits VerticalLayout {
                         QuadraticTo { control-x: 488; control-y: y6 / 1px; x: 526; y: (y6 + y7) / 2 / 1px; }
                         QuadraticTo { control-x: 564; control-y: y7 / 1px; x: 602; y: (y7 + y8) / 2 / 1px; }
                         LineTo { x: 640; y: y8 / 1px; }
-                        LineTo { x: 640; y: 120; }
-                        LineTo { x: 32; y: 120; }
+                        LineTo { x: 640; y: chart-height / 1px; }
+                        LineTo { x: 32; y: chart-height / 1px; }
                         Close { }
                     }
-                    // Kurvenlinie obendrauf, gleiche Kontur ohne Füllung.
+                    // Kurvenlinie obendrauf, gleiche Kontur ohne Füllung
+                    // (gleiches viewbox-height wie oben, sonst Versatz
+                    // zwischen Füllung und Linie).
                     Path {
                         width: 100%;
                         height: 100%;
                         viewbox-width: 672;
-                        viewbox-height: 120;
+                        viewbox-height: chart-height / 1px;
                         stroke: #2b78c4;
                         stroke-width: 2px;
                         MoveTo { x: 32; y: y0 / 1px; }
@@ -122,12 +163,15 @@ export component EqualizerTab inherits VerticalLayout {
                 }
             }
 
+            // Slider-Reihe: padding-left = db-label-width + 4px Abstand
+            // (muss zur Chart-Box oben ausgerichtet bleiben). Spaltenbreite
+            // 64px + Abstand 12px = 76px Spaltenraster, siehe Erklärung oben.
             HorizontalLayout {
                 spacing: 12px;
-                padding-left: 26px;
+                padding-left: db-label-width + 4px;
                 for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
                     width: 64px;
-                    spacing: 4px;
+                    spacing: 10px;
                     Slider {
                         orientation: vertical;
                         minimum: -12; maximum: 12;
@@ -152,24 +196,25 @@ export component EqualizerTab inherits VerticalLayout {
 
         // Vorverstärkung/Bass/Höhen, mit eigenem Raster/Skala wie der
         // Hauptchart (kein Farbverlauf/Kurve nötig, nur Positionsreferenz).
-        // Vorverstärkung verschiebt zusätzlich die ganze Kurve links nach
-        // oben/unten (siehe y0..y8). Bass und Höhen haben laut Reverse
-        // Engineering keine eigene Param-ID, sondern docken auf das
-        // unterste bzw. oberste Frequenzband (siehe HANDOFF.md) – bewegen
-        // deshalb auch den jeweiligen Band-Regler mit.
+        // Nutzt dieselbe chart-height-Property wie oben, damit beide Charts
+        // exakt gleich hoch sind. Vorverstärkung verschiebt zusätzlich die
+        // ganze Kurve links nach oben/unten (siehe y0..y8). Bass und Höhen
+        // haben laut Reverse Engineering keine eigene Param-ID, sondern
+        // docken auf das unterste bzw. oberste Frequenzband (siehe
+        // HANDOFF.md) – bewegen deshalb auch den jeweiligen Band-Regler mit.
         HorizontalLayout {
             spacing: 4px;
 
             Rectangle {
-                width: 22px;
-                height: 284px;
+                width: db-label-width;
+                height: chart-height;
                 for db[i] in [12, 6, 0, -6, -12]: Text {
                     x: 0;
-                    y: (12 - db) / 24 * 284px - 7px;
-                    width: 22px;
+                    y: (12 - db) / 24 * chart-height - 7px;
+                    width: db-label-width;
                     height: 14px;
                     text: db;
-                    font-size: 10px;
+                    font-size: 14px;
                     color: #999999;
                     horizontal-alignment: right;
                 }
@@ -178,30 +223,27 @@ export component EqualizerTab inherits VerticalLayout {
             VerticalLayout {
                 spacing: 4px;
 
+                // Breite = 3 Spalten * 64px + 2 Zwischenräume *
+                // side-slider-spacing. Bei Änderung von side-slider-spacing
+                // wächst/schrumpft die Box automatisch mit (kein Clipping
+                // mehr wie vorher, als Spacing und Breite auseinanderliefen).
                 Rectangle {
-                    width: 216px;
-                    height: 284px;
+                    width: 3 * 64px + 2 * side-slider-spacing;
+                    height: chart-height;
                     clip: true;
 
                     for db[i] in [12, 6, 0, -6, -12]: Rectangle {
                         x: 0;
-                        y: (12 - db) / 24 * 284px;
-                        width: 216px;
+                        y: (12 - db) / 24 * chart-height;
+                        width: 3 * 64px + 2 * side-slider-spacing;
                         height: 1px;
                         background: db == 0 ? #cccccc : #e6e6e6;
-                    }
-                    for gx[i] in [32, 108, 184]: Rectangle {
-                        x: gx * 1px;
-                        y: 0;
-                        width: 1px;
-                        height: 284px;
-                        background: #eeeeee;
                     }
 
                     HorizontalLayout {
                         width: 100%;
                         height: 100%;
-                        spacing: 12px;
+                        spacing: side-slider-spacing;
                         VerticalLayout {
                             width: 64px;
                             Slider {
@@ -209,7 +251,7 @@ export component EqualizerTab inherits VerticalLayout {
                                 minimum: -12; maximum: 12;
                                 value: preamp;
                                 enabled: eq-on;
-                                height: 284px;
+                                height: chart-height;
                                 changed(v) => { preamp = v; param-changed(10, v); }
                             }
                         }
@@ -220,7 +262,7 @@ export component EqualizerTab inherits VerticalLayout {
                                 minimum: -12; maximum: 12;
                                 value: bands[0];
                                 enabled: eq-on;
-                                height: 284px;
+                                height: chart-height;
                                 changed(v) => { bands[0] = v; param-changed(11, v); }
                             }
                         }
@@ -231,7 +273,7 @@ export component EqualizerTab inherits VerticalLayout {
                                 minimum: -12; maximum: 12;
                                 value: bands[8];
                                 enabled: eq-on;
-                                height: 284px;
+                                height: chart-height;
                                 changed(v) => { bands[8] = v; param-changed(19, v); }
                             }
                         }
@@ -239,7 +281,7 @@ export component EqualizerTab inherits VerticalLayout {
                 }
 
                 HorizontalLayout {
-                    spacing: 12px;
+                    spacing: side-slider-spacing;
                     VerticalLayout {
                         width: 64px;
                         spacing: 4px;
