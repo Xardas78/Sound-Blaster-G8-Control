@@ -133,4 +133,14 @@ export component CrystalVoiceTab inherits VerticalLayout {
         font-size: 16px;
         color: gray;
     }
+
+    HorizontalLayout {
+        Rectangle { horizontal-stretch: 1; }
+        Image {
+            source: @image-url("../assets/cv-logo.svg");
+            width: 150px;
+            height: 57px;
+            image-fit: contain;
+        }
+    }
 }

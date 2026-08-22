@@ -1,4 +1,5 @@
 import { EffectToggle } from "../effect-slider.slint";
+import { CheckBox, LineEdit } from "std-widgets.slint";
 
 // Direct Mode, Scout Mode und Decoder waren früher drei eigene Unterreiter,
 // wirkten dort aber jeweils sehr leer (nur ein Schalter + Beschreibung
@@ -11,6 +12,12 @@ export component ModiDecoderTab inherits VerticalLayout {
     in-out property <bool> scout-on: false;
     in-out property <int> decoder-mode: 1; // 0=Normal 1=Voll 2=Nacht
 
+    // Scout-Mode-Zugriffstaste (Hotkey): rein UI-seitig vorbereitet. Ein
+    // echter globaler Tastatur-Hook bräuchte eine eigene Rust-Bibliothek
+    // (z.B. global-hotkey-Crate) – noch nicht angebunden.
+    in-out property <bool> scout-hotkey-enabled: false;
+    in-out property <string> scout-hotkey-text: "";
+
     callback direct-mode-toggled(bool);
     callback scout-toggled(bool);
     callback decoder-mode-changed(int);
@@ -21,10 +28,19 @@ export component ModiDecoderTab inherits VerticalLayout {
 
     VerticalLayout {
         spacing: 8px;
-        EffectToggle {
-            label: "Direct Mode";
-            checked: direct-mode-on;
-            toggled(on) => { direct-mode-on = on; direct-mode-toggled(on); }
+        HorizontalLayout {
+            EffectToggle {
+                label: "Direct Mode";
+                checked: direct-mode-on;
+                toggled(on) => { direct-mode-on = on; direct-mode-toggled(on); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Image {
+                source: @image-url("../assets/dm-logo.svg");
+                width: 140px;
+                height: 64px;
+                image-fit: contain;
+            }
         }
         Text {
             wrap: word-wrap;
@@ -38,10 +54,19 @@ export component ModiDecoderTab inherits VerticalLayout {
 
     VerticalLayout {
         spacing: 8px;
-        EffectToggle {
-            label: "Scout Mode";
-            checked: scout-on;
-            toggled(on) => { scout-on = on; scout-toggled(on); }
+        HorizontalLayout {
+            EffectToggle {
+                label: "Scout Mode";
+                checked: scout-on;
+                toggled(on) => { scout-on = on; scout-toggled(on); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Image {
+                source: @image-url("../assets/sm-logo.svg");
+                width: 140px;
+                height: 54px;
+                image-fit: contain;
+            }
         }
         Text {
             wrap: word-wrap;
@@ -49,13 +74,50 @@ export component ModiDecoderTab inherits VerticalLayout {
             color: gray;
             text: "Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel.";
         }
+        Text {
+            wrap: word-wrap;
+            font-size: 16px;
+            color: gray;
+            text: "Einige Audioeffekte werden nicht für die Ausgabe übernommen.";
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            CheckBox {
+                text: "Zugriffstaste";
+                checked: scout-hotkey-enabled;
+                toggled => { scout-hotkey-enabled = self.checked; }
+            }
+        }
+        Text {
+            wrap: word-wrap;
+            font-size: 14px;
+            color: gray;
+            text: "Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift.";
+        }
+        LineEdit {
+            width: 260px;
+            enabled: scout-hotkey-enabled;
+            placeholder-text: "Klicken Sie, um den Tastaturanschlag zuzuweisen";
+            text: scout-hotkey-text;
+            edited(t) => { scout-hotkey-text = t; }
+        }
     }
 
     Rectangle { height: 1px; background: #e0e0e0; }
 
     VerticalLayout {
         spacing: 8px;
-        Text { text: "Decoder"; font-weight: 700; font-size: 18px; }
+        HorizontalLayout {
+            Text { text: "Decoder"; font-weight: 700; font-size: 18px; }
+            Rectangle { horizontal-stretch: 1; }
+            Image {
+                source: @image-url("../assets/decoder-logo.svg");
+                width: 140px;
+                height: 72px;
+                image-fit: contain;
+            }
+        }
         Text {
             wrap: word-wrap;
             font-size: 16px;
