@@ -1,4 +1,4 @@
-import { TabWidget, VerticalBox } from "std-widgets.slint";
+import { TabWidget, VerticalBox, Palette } from "std-widgets.slint";
 import { DeviceHubTab } from "tabs/device-hub-tab.slint";
 import { PlaybackSettingsTab } from "tabs/playback-settings-tab.slint";
 import { RecordingSettingsTab } from "tabs/recording-settings-tab.slint";
@@ -13,6 +13,10 @@ export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
     width: 1350px;
     height: 820px;
+    // Dark-Mode-Hintergrund = RAL 7043 "Verkehrsgrau B" (#4f5250), statt
+    // dem dunkleren Fluent-Standard. Umgeschaltet über den Dark-Mode-
+    // Schalter im Einstellungen-Reiter (setzt Palette.color-scheme).
+    background: Palette.color-scheme == ColorScheme.dark ? #4f5250 : Palette.background;
 
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
