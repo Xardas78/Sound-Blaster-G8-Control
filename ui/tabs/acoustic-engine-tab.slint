@@ -77,8 +77,7 @@ export component AcousticEngineTab inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        spacing: 24px;
-        alignment: start;
+        spacing: 32px;
 
         EffectSlider {
             label: "Surround";
@@ -114,7 +113,7 @@ export component AcousticEngineTab inherits VerticalLayout {
         VerticalLayout {
             spacing: 8px;
             alignment: start;
-            width: 180px;
+            width: 230px;
 
             Text { text: "Smart Volume"; horizontal-alignment: center; font-weight: 600; }
             Text { text: round(smart-volume-level); horizontal-alignment: center; }
@@ -124,7 +123,7 @@ export component AcousticEngineTab inherits VerticalLayout {
                 minimum: 0; maximum: 100;
                 value: smart-volume-level;
                 enabled: smart-volume-on;
-                height: 220px;
+                height: 300px;
                 changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
             }
 
