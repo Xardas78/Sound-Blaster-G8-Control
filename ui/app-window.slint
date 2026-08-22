@@ -13,10 +13,11 @@ export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
     width: 1350px;
     height: 820px;
-    // Dark-Mode-Hintergrund = RAL 7043 "Verkehrsgrau B" (#4f5250), statt
-    // dem dunkleren Fluent-Standard. Umgeschaltet über den Dark-Mode-
-    // Schalter im Einstellungen-Reiter (setzt Palette.color-scheme).
-    background: Palette.color-scheme == ColorScheme.dark ? #4f5250 : Palette.background;
+    // Dark-Mode-Hintergrund: dunkles Anthrazit zwischen RAL 9017
+    // "Verkehrsschwarz" (#2a292a) und RAL 9007 "Graualuminium" (#878581),
+    // Richtung dunkel gewichtet. Umgeschaltet über den Dark-Mode-Schalter
+    // im Einstellungen-Reiter (setzt Palette.color-scheme).
+    background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : Palette.background;
 
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
