@@ -1,14 +1,18 @@
 import { TabWidget, VerticalBox } from "std-widgets.slint";
-import { AcousticEngineTab } from "tabs/acoustic-engine-tab.slint";
-import { CrystalVoiceTab } from "tabs/crystal-voice-tab.slint";
-import { EqualizerTab } from "tabs/equalizer-tab.slint";
-import { ScoutModeTab, DirectModeTab, DecoderTab } from "tabs/misc-tabs.slint";
-import { MixerTab } from "tabs/mixer-tab.slint";
+import { DeviceHubTab } from "tabs/device-hub-tab.slint";
+import { PlaybackSettingsTab } from "tabs/playback-settings-tab.slint";
+import { RecordingSettingsTab } from "tabs/recording-settings-tab.slint";
+import { SettingsTab } from "tabs/settings-tab.slint";
+import { QuickControlsBar } from "quick-controls-bar.slint";
 
+// Top-Level-Struktur folgt jetzt 1:1 dem Original (siehe Screenshots im
+// Projektordner): Gerät ist der Haupt-Hub für alle Effekte/Mixer, Wiedergabe
+// und Aufnahme sind reine Geräte-/Qualitätsauswahl, Einstellungen hat
+// Unterreiter Gerät/Anwendung.
 export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
-    width: 900px;
-    height: 600px;
+    width: 950px;
+    height: 700px;
 
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
@@ -23,85 +27,58 @@ export component AppWindow inherits Window {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback capture-source-changed(int);
+    callback reset-clicked();
+    callback volume-sync-toggled(bool);
+    callback power-saving-toggled(bool);
+    callback logo-led-toggled(bool);
 
-    TabWidget {
-        Tab {
-            title: "Gerät";
-            VerticalBox {
-                alignment: start;
-                Text {
-                    text: "Sound Blaster G8";
-                    font-size: 20px;
-                    font-weight: 700;
+    VerticalLayout {
+        TabWidget {
+            Tab {
+                title: "Gerät";
+                DeviceHubTab {
+                    playback-param-changed(id, v) => { playback-param-changed(id, v); }
+                    recording-param-changed(id, v) => { recording-param-changed(id, v); }
+                    eq-param-changed(id, v) => { eq-param-changed(id, v); }
+                    scout-toggled(on) => { scout-toggled(on); }
+                    direct-mode-toggled(on) => { direct-mode-toggled(on); }
+                    decoder-mode-changed(m) => { decoder-mode-changed(m); }
+                    mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
                 }
-                Text {
-                    text: device-connected ? "✓ Verbunden (USB 041e:329b, Vendor-HID Interface 4)" : device-status;
-                    color: device-connected ? #2ecc71 : #e74c3c;
+            }
+            Tab {
+                title: "Wiedergabe";
+                PlaybackSettingsTab { }
+            }
+            Tab {
+                title: "Aufnahme";
+                RecordingSettingsTab {
+                    source-selected(i) => { capture-source-changed(i); }
                 }
-                Text {
-                    wrap: word-wrap;
-                    text: "Sound-Modus-Presets, Firmware-Info und Treiber-Version sind über den proprietären Kanal noch nicht reverse-engineert (siehe HANDOFF.md, \"Offene Punkte\"). Master-Reset (SBX+HP/SPK 5s halten) und Firmware-Update laufen laut Anleitung rein am Gerät selbst ab.";
+            }
+            Tab {
+                title: "Einstellungen";
+                SettingsTab {
+                    device-connected: device-connected;
+                    reset-clicked => { reset-clicked(); }
+                    volume-sync-toggled(on) => { volume-sync-toggled(on); }
+                    power-saving-toggled(on) => { power-saving-toggled(on); }
+                    logo-led-toggled(on) => { logo-led-toggled(on); }
                 }
             }
         }
-        Tab {
-            title: "Wiedergabe";
-            VerticalLayout {
-                // TODO: Kopfhörer/Lautsprecher-Umschalter, Format-Dropdown
-                AcousticEngineTab {
-                    param-changed(id, v) => { playback-param-changed(id, v); }
-                }
-            }
+
+        QuickControlsBar {
+            level-changed(id, v) => { mixer-level-changed(id, v); }
         }
-        Tab {
-            title: "Aufnahme";
-            CrystalVoiceTab {
-                param-changed(id, v) => { recording-param-changed(id, v); }
-            }
-        }
-        Tab {
-            title: "Effekte";
-            TabWidget {
-                Tab {
-                    title: "Equalizer";
-                    EqualizerTab {
-                        param-changed(id, v) => { eq-param-changed(id, v); }
-                    }
-                }
-                Tab {
-                    title: "Scout Mode";
-                    ScoutModeTab {
-                        toggled(on) => { scout-toggled(on); }
-                    }
-                }
-                Tab {
-                    title: "Direct Mode";
-                    DirectModeTab {
-                        toggled(on) => { direct-mode-toggled(on); }
-                    }
-                }
-                Tab {
-                    title: "Decoder";
-                    DecoderTab {
-                        mode-changed(m) => { decoder-mode-changed(m); }
-                    }
-                }
-            }
-        }
-        Tab {
-            title: "Mixer";
-            MixerTab {
-                level-changed(id, v) => { mixer-level-changed(id, v); }
-            }
-        }
-        Tab {
-            title: "Einstellungen";
-            VerticalBox {
-                alignment: start;
-                Text {
-                    wrap: word-wrap;
-                    text: "Volume Sync, Energiesparen und Logo-LED sind über den proprietären Kanal noch nicht reverse-engineert (kein Capture vorhanden). Sobald die 5a-Reports dafür bekannt sind, kommen sie hier als weitere Toggles rein.";
-                }
+
+        if !device-connected: VerticalLayout {
+            padding: 8px;
+            Text {
+                horizontal-alignment: center;
+                color: #e74c3c;
+                text: device-status;
             }
         }
     }

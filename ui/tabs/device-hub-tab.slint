@@ -1,0 +1,69 @@
+import { TabWidget } from "std-widgets.slint";
+import { SoundModeTab } from "sound-mode-tab.slint";
+import { AcousticEngineTab } from "acoustic-engine-tab.slint";
+import { EqualizerTab } from "equalizer-tab.slint";
+import { CrystalVoiceTab } from "crystal-voice-tab.slint";
+import { ScoutModeTab, DirectModeTab, DecoderTab } from "misc-tabs.slint";
+import { MixerTab } from "mixer-tab.slint";
+
+// Im Original ist "Gerät" der Haupt-Hub: eine Kachel-Übersicht, aus der
+// Sound-Modus, Acoustic Engine, Equalizer, CrystalVoice, Direct Mode,
+// Scout Mode, Decoder und Mixer als Detailseiten aufgehen (Kachel-Screenshots
+// im Projektordner). Wir bilden das flach als zweite Tab-Reihe ab statt
+// Kachel-Navigation mit Zurück-Pfeil.
+export component DeviceHubTab inherits TabWidget {
+    callback playback-param-changed(int, float);
+    callback recording-param-changed(int, float);
+    callback eq-param-changed(int, float);
+    callback scout-toggled(bool);
+    callback direct-mode-toggled(bool);
+    callback decoder-mode-changed(int);
+    callback mixer-level-changed(int, float);
+
+    Tab {
+        title: "Sound-Modus";
+        SoundModeTab { }
+    }
+    Tab {
+        title: "Acoustic Engine";
+        AcousticEngineTab {
+            param-changed(id, v) => { playback-param-changed(id, v); }
+        }
+    }
+    Tab {
+        title: "Equalizer";
+        EqualizerTab {
+            param-changed(id, v) => { eq-param-changed(id, v); }
+        }
+    }
+    Tab {
+        title: "CrystalVoice";
+        CrystalVoiceTab {
+            param-changed(id, v) => { recording-param-changed(id, v); }
+        }
+    }
+    Tab {
+        title: "Direct Mode";
+        DirectModeTab {
+            toggled(on) => { direct-mode-toggled(on); }
+        }
+    }
+    Tab {
+        title: "Scout Mode";
+        ScoutModeTab {
+            toggled(on) => { scout-toggled(on); }
+        }
+    }
+    Tab {
+        title: "Decoder";
+        DecoderTab {
+            mode-changed(m) => { decoder-mode-changed(m); }
+        }
+    }
+    Tab {
+        title: "Mixer";
+        MixerTab {
+            level-changed(id, v) => { mixer-level-changed(id, v); }
+        }
+    }
+}

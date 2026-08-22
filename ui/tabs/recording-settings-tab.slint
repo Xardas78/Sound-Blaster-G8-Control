@@ -1,0 +1,36 @@
+import { ComboBox, Button } from "std-widgets.slint";
+
+// Entspricht der "Aufnahme"-Seite im Original: Audioqualität pro Quelle
+// (nur Anzeige, kein bekannter Wechsel-Mechanismus) und "Standard
+// festlegen" – Letzteres ist die ALSA-Enum-Control "PCM Capture Source"
+// (per `amixer -c USB1 sget 'PCM Capture Source'` verifiziert), kein
+// eigener USB-Report nötig.
+export component RecordingSettingsTab inherits VerticalLayout {
+    in-out property <int> active-source: 1; // Index passend zu mixer.rs::CAPTURE_SOURCES, Default = "Line In"
+
+    // source-index (0=S/PDIF In,1=Line In,2=External Mic,3=What U Hear)
+    callback source-selected(int);
+
+    padding: 16px;
+    spacing: 16px;
+    alignment: start;
+
+    Text { text: "Aufnahme"; font-size: 20px; font-weight: 700; }
+    Text { text: "Audioqualität"; font-weight: 600; }
+
+    for entry[i] in [
+        { label: "S/PDIF In", quality: "24 bit, 48000 Hz" },
+        { label: "Line In", quality: "24 bit, 48000 Hz" },
+        { label: "External Mic", quality: "24 bit, 44100 Hz" },
+        { label: "What U Hear", quality: "24 bit, 48000 Hz" },
+    ]: HorizontalLayout {
+        spacing: 12px;
+        Text { text: entry.label; width: 100px; vertical-alignment: center; }
+        Text { text: entry.quality; width: 160px; vertical-alignment: center; color: gray; }
+        Button {
+            text: active-source == i ? "✓ Standard" : "Standard festlegen";
+            enabled: active-source != i;
+            clicked => { active-source = i; source-selected(i); }
+        }
+    }
+}

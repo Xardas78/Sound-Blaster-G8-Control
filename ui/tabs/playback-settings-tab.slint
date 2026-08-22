@@ -1,0 +1,45 @@
+import { ComboBox } from "std-widgets.slint";
+
+// Entspricht der "Wiedergabe"-Seite im Original: Audioqualität (Bit-Tiefe/
+// Abtastrate) und Ausgabegerät-Wahl (Kopfhörer/Lautsprecher). Beides sind
+// Standard-USB-Audio-Class-Mechanismen (Alt-Setting bzw. reines UI-/Routing-
+// Konzept), noch nicht an Rust angebunden – siehe HANDOFF.md Punkt 5.
+export component PlaybackSettingsTab inherits VerticalLayout {
+    in-out property <int> output-device: 0; // 0=Kopfhörer, 1=Lautsprecher
+
+    padding: 16px;
+    spacing: 16px;
+    alignment: start;
+
+    Text { text: "Wiedergabe"; font-size: 20px; font-weight: 700; }
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+        Text { text: "Audioqualität (Lautsprecher):"; vertical-alignment: center; }
+        ComboBox {
+            model: ["16 bit, 96000 Hz", "24 bit, 96000 Hz", "32 bit, 192000 Hz"];
+            current-index: 0;
+            width: 220px;
+        }
+    }
+
+    for entry[i] in [
+        { label: "Kopfhörer", detail: "Virtual 7.1 Surround" },
+        { label: "Lautsprecher (Line Out)", detail: "7.1 Surround" },
+    ]: HorizontalLayout {
+        spacing: 8px;
+        Rectangle {
+            width: 16px; height: 16px;
+            border-radius: 8px;
+            border-width: 2px;
+            border-color: output-device == i ? orange : gray;
+            background: output-device == i ? orange : transparent;
+            TouchArea { clicked => { output-device = i; } }
+        }
+        VerticalLayout {
+            Text { text: entry.label; font-weight: 600; }
+            Text { text: entry.detail; color: gray; }
+        }
+    }
+}

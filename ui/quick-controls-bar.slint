@@ -1,0 +1,32 @@
+import { Slider } from "std-widgets.slint";
+
+// Im Original unten links in der Navigationsleiste fix sichtbar, auf jeder
+// Seite gleich: Ausgabe-Route-Umschalter + Lautstärke-/Mikro-Schnellregler.
+// Wir bilden das als Fußleiste unter dem TabWidget ab (horizontale statt
+// linke Navigation, siehe app-window.slint).
+export component QuickControlsBar inherits HorizontalLayout {
+    in-out property <float> speaker-level: 49;
+    in-out property <float> mic-level: 63;
+
+    // entity-id (0=Lautsprecher, 6=External Mic – siehe mixer.rs::CONTROLS), Prozent
+    callback level-changed(int, float);
+
+    padding: 12px;
+    spacing: 16px;
+
+    Text { text: "🔊"; vertical-alignment: center; }
+    Slider {
+        minimum: 0; maximum: 100;
+        value: speaker-level;
+        changed(v) => { speaker-level = v; level-changed(0, v); }
+    }
+    Text { text: round(speaker-level) + "%"; width: 40px; vertical-alignment: center; }
+
+    Text { text: "🎤"; vertical-alignment: center; }
+    Slider {
+        minimum: 0; maximum: 100;
+        value: mic-level;
+        changed(v) => { mic-level = v; level-changed(6, v); }
+    }
+    Text { text: round(mic-level) + "%"; width: 40px; vertical-alignment: center; }
+}

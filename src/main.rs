@@ -111,6 +111,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mixer::set_level(entity_id, value);
     });
 
+    ui.on_capture_source_changed(move |index| {
+        mixer::set_capture_source(index);
+    });
+
+    // Reset, Volume Sync, Energieeinsparung und Logo-LED sind über den
+    // proprietären Kanal noch nicht reverse-engineert (kein Capture
+    // vorhanden) – siehe HANDOFF.md "Offene Punkte". Controls existieren
+    // im UI, lösen aber bewusst noch keinen (geratenen) Befehl aus.
+    ui.on_reset_clicked(move || {
+        eprintln!("Gerät zurücksetzen: Report-Format noch nicht reverse-engineert");
+    });
+    ui.on_volume_sync_toggled(move |_on| {
+        eprintln!("Volume Sync: Report-Format noch nicht reverse-engineert");
+    });
+    ui.on_power_saving_toggled(move |_on| {
+        eprintln!("Energieeinsparung: Report-Format noch nicht reverse-engineert");
+    });
+    ui.on_logo_led_toggled(move |_on| {
+        eprintln!("Logo-LED: Report-Format noch nicht reverse-engineert");
+    });
+
     ui.run()?;
     Ok(())
 }
