@@ -39,9 +39,11 @@ export component AcousticEngineTab inherits VerticalLayout {
     spacing: 16px;
     alignment: start;
 
-    // Kopfhörer/Lautsprecher-Segmentumschalter.
+    // Kopfhörer/Lautsprecher-Segmentumschalter, mittig über dem Inhalt
+    // (per Wireframe-Koordinaten: Umschalter zentriert über den 5 Spalten,
+    // nicht linksbündig).
     HorizontalLayout {
-        alignment: start;
+        alignment: center;
         Rectangle {
             width: 340px;
             height: 32px;
@@ -104,9 +106,11 @@ export component AcousticEngineTab inherits VerticalLayout {
         }
 
         // Smart Volume: eigener Block statt EffectSlider, weil zusätzlich
-        // zum Ein/Aus-Schalter noch Nacht/Laut-Modusknöpfe daneben sitzen
-        // (SMART_VOLUME_MODE, Param 0x06 – per Capture bestätigt: 0.0=
-        // Normal, 1.0=Laut, 2.0=Nacht).
+        // zum Ein/Aus-Schalter noch eine Nacht/Normal/Laut-Leiste darunter
+        // sitzt (SMART_VOLUME_MODE, Param 0x06 – per Capture bestätigt:
+        // 0.0=Normal, 1.0=Laut, 2.0=Nacht). Reihenfolge/Position exakt
+        // nach Wireframe-Koordinaten: Leiste kommt NACH dem Schalter,
+        // nicht daneben.
         VerticalLayout {
             spacing: 8px;
             alignment: start;
@@ -120,56 +124,56 @@ export component AcousticEngineTab inherits VerticalLayout {
                 minimum: 0; maximum: 100;
                 value: smart-volume-level;
                 enabled: smart-volume-on;
-                height: 180px;
+                height: 220px;
                 changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
             }
 
-            HorizontalLayout {
-                spacing: 6px;
-                alignment: center;
+            Switch {
+                checked: smart-volume-on;
+                toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+            }
 
-                Rectangle {
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 14px;
-                    background: smart-volume-mode == 2 ? #3d7fd9 : #e0e0e0;
-                    TouchArea {
-                        clicked => { smart-volume-mode = 2; param-changed(6, 2.0); }
-                    }
-                    // Mondsichel statt 🌙-Emoji: fehlt in der verfügbaren
-                    // Schriftart komplett (rendert leer, wie zuvor schon
-                    // beim Mikrofon-Icon aufgefallen). Zwei überlappende
-                    // Kreise erzeugen die Sichelform.
+            Rectangle {
+                height: 28px;
+                border-radius: 6px;
+                background: #e0e0e0;
+                clip: true;
+                opacity: smart-volume-on ? 1.0 : 0.5;
+
+                HorizontalLayout {
                     Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        border-radius: 6px;
-                        background: #333333;
-                        x: 8px;
-                        y: 8px;
+                        background: smart-volume-mode == 2 ? #3d7fd9 : transparent;
+                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 2; param-changed(6, 2.0); } }
+                        Text {
+                            text: "Nacht";
+                            font-size: 11px;
+                            color: smart-volume-mode == 2 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                     Rectangle {
-                        width: 12px;
-                        height: 12px;
-                        border-radius: 6px;
-                        background: smart-volume-mode == 2 ? #3d7fd9 : #e0e0e0;
-                        x: 12px;
-                        y: 6px;
+                        background: smart-volume-mode == 0 ? #3d7fd9 : transparent;
+                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 0; param-changed(6, 0.0); } }
+                        Text {
+                            text: "Normal";
+                            font-size: 11px;
+                            color: smart-volume-mode == 0 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
-                }
-                Switch {
-                    checked: smart-volume-on;
-                    toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
-                }
-                Rectangle {
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 14px;
-                    background: smart-volume-mode == 1 ? #3d7fd9 : #e0e0e0;
-                    TouchArea {
-                        clicked => { smart-volume-mode = 1; param-changed(6, 1.0); }
+                    Rectangle {
+                        background: smart-volume-mode == 1 ? #3d7fd9 : transparent;
+                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 1; param-changed(6, 1.0); } }
+                        Text {
+                            text: "Laut";
+                            font-size: 11px;
+                            color: smart-volume-mode == 1 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
-                    Text { text: "☀"; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
                 }
             }
 
