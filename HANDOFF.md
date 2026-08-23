@@ -266,6 +266,22 @@ Geräte-Statusabfragen.
   `CTUSBa64`-Kerneltreiber) keine Kopplung zwischen Knopf und tatsächlich
   hörbarer Lautstärke, da PipeWire eine eigene, vom ALSA-Register
   unabhängige Software-Lautstärkestufe führt (siehe Abschnitt 7).
+- **Lautstärke-Hintergrunddienst** (`src/daemon.rs`, Schalter im
+  Einstellungen-Tab): für den Fall, dass die App wirklich komplett
+  beendet sein soll (kein Tray-Icon, kein Fenster), aber der
+  Lautstärkeknopf trotzdem mit PipeWire gekoppelt bleiben soll. Läuft
+  als `systemctl --user`-Dienst (`~/.config/systemd/user/
+  g8-control-volume-daemon.service`) – **kein Root/sudo nötig**, da
+  `--user` die vom systemweiten Root-systemd komplett getrennte
+  Nutzer-Instanz anspricht (verwaltet `~/.config/systemd/user/`, nicht
+  `/etc/systemd/system/`). Derselbe Programmpfad, mit `--daemon`
+  aufgerufen (`daemon::run()` in main.rs, vor jeder Slint-
+  Initialisierung abgezweigt), läuft ohne Fenster/Tray-Icon nur die
+  Poll-Schleife (identisch zur Volume-Sync-Kopplung im GUI-Prozess,
+  aber ohne HID-Gerätezugriff – reine ALSA/PipeWire-Kopplung). Start/
+  Stop direkt über den Schalter (kein Bestätigungsdialog mit
+  kopierbaren Befehlen wie z.B. bei CoolerControl – dort nötig, weil es
+  Root braucht, hier bewusst nicht, da risikolos userspace-only).
 
 ## 5. Bewusst nicht implementiert
 

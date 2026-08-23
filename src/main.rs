@@ -1,4 +1,5 @@
 mod autostart;
+mod daemon;
 mod device;
 mod mixer;
 mod persist;
@@ -20,6 +21,14 @@ use std::time::Duration;
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // `g8-control --daemon` läuft ohne Fenster/Tray-Icon als systemd-
+    // Nutzerdienst (siehe daemon.rs, ausgelöst über den Schalter im
+    // Einstellungen-Tab) – muss vor jeder Slint-Initialisierung
+    // abgezweigt werden, da dieser Modus keine Anzeige braucht.
+    if std::env::args().any(|a| a == "--daemon") {
+        daemon::run();
+    }
+
     let ui = AppWindow::new()?;
 
     let device = match G8Device::open() {
@@ -91,6 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     ui.set_autostart_on(autostart::is_enabled());
+    ui.set_daemon_on(daemon::is_enabled());
 
     {
         let device = device.clone();
@@ -575,6 +585,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     ui.on_autostart_toggled(move |on| {
         autostart::set_enabled(on);
+    });
+    ui.on_daemon_toggled(move |on| {
+        daemon::set_enabled(on);
     });
     let close_behavior = Rc::new(Cell::new(settings.borrow().close_behavior));
     {

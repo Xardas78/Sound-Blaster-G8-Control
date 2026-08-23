@@ -35,6 +35,10 @@ export component SettingsTab inherits HorizontalLayout {
     in-out property <bool> autostart-on: false;
     // 0 = Schließen (Programm beenden), 1 = In den Tray minimieren
     in-out property <int> close-behavior: 0;
+    // Hintergrunddienst (systemd --user): hält die Lautstärke-Kopplung
+    // (Knopf↔PipeWire) auch am Laufen, wenn die App komplett beendet
+    // wird (nicht nur in den Tray minimiert) – siehe daemon.rs.
+    in-out property <bool> daemon-on: false;
 
     callback reset-clicked();
     callback volume-sync-toggled(bool);
@@ -43,6 +47,7 @@ export component SettingsTab inherits HorizontalLayout {
     callback autostart-toggled(bool);
     callback close-behavior-changed(int);
     callback dark-mode-toggled(bool);
+    callback daemon-toggled(bool);
 
     padding: 16px;
     spacing: 48px;
@@ -217,6 +222,23 @@ export component SettingsTab inherits HorizontalLayout {
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Switch {
+                checked: daemon-on;
+                toggled => { daemon-on = self.checked; daemon-toggled(self.checked); }
+            }
+            VerticalLayout {
+                Text { text: "Lautstärke-Hintergrunddienst"; font-weight: 600; }
+                Text {
+                    wrap: word-wrap;
+                    width: 260px;
+                    text: "Hält den Lautstärkeknopf auch dann mit der PC-Lautstärke verbunden, wenn die App komplett beendet ist (nicht nur im Tray).";
+                    color: gray;
                 }
             }
         }

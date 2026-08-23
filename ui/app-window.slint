@@ -87,9 +87,11 @@ export component AppWindow inherits Window {
     callback autostart-toggled(bool);
     callback close-behavior-changed(int);
     callback dark-mode-toggled(bool);
+    callback daemon-toggled(bool);
 
     in-out property <bool> autostart-on: false;
     in-out property <int> close-behavior: 0;
+    in-out property <bool> daemon-on: false;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
     in-out property <bool> dark-mode-on: false;
@@ -167,6 +169,7 @@ export component AppWindow inherits Window {
                     footer-speaker-level: footer-speaker-level;
                     autostart-on: autostart-on;
                     close-behavior: close-behavior;
+                    daemon-on: daemon-on;
                     power-saving-on: power-saving-on;
                     logo-led-on: logo-led-on;
                     dark-mode-on: dark-mode-on;
@@ -178,6 +181,7 @@ export component AppWindow inherits Window {
                     autostart-toggled(on) => { autostart-on = on; autostart-toggled(on); }
                     close-behavior-changed(m) => { close-behavior = m; close-behavior-changed(m); }
                     dark-mode-toggled(on) => { dark-mode-toggled(on); }
+                    daemon-toggled(on) => { daemon-on = on; daemon-toggled(on); }
                 }
             }
         }

@@ -18,6 +18,7 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 - **Virtueller HRTF-Kopfhörer-Surround**: PipeWire-Filter-Chain mit HeSuVi-Faltung, da die G8-Hardware selbst nur Stereo ausgibt
 - **Lautstärkeknopf-Livesync**: der physische Regler am Gerät steuert live den Regler in der App (und optional die PipeWire-Systemlautstärke, "Volume Sync")
 - **Autostart, Tray-Icon, Einstellungen merken sich selbst**: Autostart mit dem System, Schließen-Verhalten wählbar (beenden oder in den Tray minimieren), App-seitige Einstellungen (Acoustic Engine, Equalizer, Energiesparen, Logo-LED, Dark Mode, Volume Sync) werden gespeichert und beim Start automatisch wieder angezeigt und ans Gerät gesendet
+- **Optionaler Lautstärke-Hintergrunddienst** (kein Root nötig): koppelt den Lautstärkeknopf mit der PC-Lautstärke auch wenn die App komplett beendet ist, nicht nur im Tray
 - Dark Mode
 
 ## Status
