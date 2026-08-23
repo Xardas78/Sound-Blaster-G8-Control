@@ -11,7 +11,6 @@
 //! Neustart bei Absturz, sauberes Stoppen und Status-Abfragen, das
 //! bräuchten wir sonst alles selbst nachbauen.
 
-use crate::mixer;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -86,15 +85,14 @@ pub fn set_enabled(enabled: bool) {
 /// Fenster/Tray-Icon und ohne HID-Gerätezugriff (Volume Sync ist reine
 /// ALSA/PipeWire-Kopplung, kein 5a-Protokoll nötig).
 pub fn run() -> ! {
-    let mut last: Option<f32> = None;
+    // KEIN eigener PipeWire-Push mehr (siehe main.rs, gleicher Kommentar):
+    // live verifiziert (2026-08-23, HANDOFF.md), dass PipeWire das ALSA-
+    // Hardware-Register für die G8 bereits von selbst spiegelt – dieser
+    // Dienst hat dadurch aktuell keine Wirkung mehr über das hinaus, was
+    // ohnehin automatisch passiert. Bewusst nicht entfernt (nur
+    // no-op-Schleife statt Dienst ganz zu streichen), bis geklärt ist, ob
+    // der Schalter dafür in der App entfernt werden soll.
     loop {
-        thread::sleep(Duration::from_millis(120));
-        if let Some(pct) = mixer::get_level(0) {
-            let changed = last.map(|prev| (prev - pct).abs() > 0.5).unwrap_or(true);
-            if changed {
-                last = Some(pct);
-                mixer::set_pipewire_sink_volume_percent(pct);
-            }
-        }
+        thread::sleep(Duration::from_secs(60));
     }
 }

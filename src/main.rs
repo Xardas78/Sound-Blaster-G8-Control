@@ -543,11 +543,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 s.volume_sync_on = on;
                 persist::save(&s);
             }
-            if on {
-                if let Some(pct) = mixer::get_level(0) {
-                    mixer::set_pipewire_sink_volume_percent(pct);
-                }
-            }
+            // Kein eigener PipeWire-Push mehr hier (siehe Kommentar beim
+            // Poll-Thread unten, HANDOFF.md 2026-08-23): PipeWire spiegelt
+            // das ALSA-Hardware-Register bereits von selbst.
             // Per Windows-Capture bestätigt: eigener Geräte-Befehl
             // (setting_id::VOLUME_SYNC) zusätzlich zu unserem PipeWire-
             // Mirroring – was er intern genau bewirkt, ist unklar, aber
@@ -570,10 +568,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if settings.borrow().volume_sync_on {
         volume_sync_enabled.store(true, Ordering::SeqCst);
         ui.set_volume_sync_on(true);
-        mixer::set_pipewire_sink_volume_percent(0.0);
-        if let Some(pct) = mixer::get_level(0) {
-            mixer::set_pipewire_sink_volume_percent(pct);
-        }
         if let Some(dev) = device.borrow().clone() {
             let report = special::device_setting(special::setting_id::VOLUME_SYNC, true);
             if let Err(e) = dev.send_report(&report) {
@@ -588,7 +582,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // nur Polling macht den Regler live mitlaufen.
     {
         let weak = ui.as_weak();
-        let volume_sync_enabled = volume_sync_enabled.clone();
         thread::spawn(move || {
             let mut last_speaker: Option<f32> = None;
             let mut last_mic: Option<f32> = None;
@@ -599,14 +592,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let changed = last_speaker.map(|prev| (prev - v).abs() > 0.5).unwrap_or(true);
                     if changed {
                         last_speaker = Some(v);
-                        if volume_sync_enabled.load(Ordering::SeqCst) {
-                            // v ist bereits taper-korrigiert (get_level()
-                            // für entity-id 0, siehe mixer.rs) – direkt als
-                            // linearen PipeWire-Prozentwert übernehmen, damit
-                            // die PC-Lautstärke denselben "gefühlten" Wert
-                            // zeigt wie unser eigener Regler.
-                            mixer::set_pipewire_sink_volume_percent(v);
-                        }
+                        // KEIN eigener PipeWire-Push mehr (weder hier noch in
+                        // daemon.rs): live verifiziert (2026-08-23, siehe
+                        // HANDOFF.md), dass PipeWire das ALSA-Hardware-
+                        // Register für die G8 bereits von selbst spiegelt
+                        // (wpctl get-volume folgt dem Regler exakt, auch
+                        // ganz ohne g8-control/Daemon). Ein eigener Push
+                        // schrieb denselben Wert nur unnötig ein zweites Mal
+                        // – mit leicht verzögerter/veralteter Ablesung, was
+                        // sich als kurzes "auf 0% zurückspringen" zeigte statt
+                        // zu helfen. `volume_sync_enabled`/"Volume Sync" bleibt
+                        // als Schalter bestehen (persistiert, Gerätebefehl
+                        // wird weiterhin gesendet), hat aber keinen PipeWire-
+                        // Effekt mehr, da keiner nötig ist.
                         let weak = weak.clone();
                         let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));
                     }

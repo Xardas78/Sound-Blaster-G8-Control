@@ -258,23 +258,6 @@ fn extract_percent(text: &str, direction: &str) -> Option<f32> {
     max
 }
 
-/// Setzt die PipeWire-Sink-Lautstärke direkt auf einen linearen
-/// Prozentwert (kein dB/kubische Umrechnung) – für den Lautsprecher-
-/// Regler (entity-id 0) gedacht, dessen get_level() bereits taper-
-/// korrigiert ist (siehe TAPER_TABLE oben). Der Zweck von Volume Sync
-/// ist, dass die PC-Lautstärke *gefühlt* zum Reglerstand passt – dafür
-/// ist der bereits korrigierte "gefühlte" Prozentwert die richtige
-/// Zielgröße, nicht der physikalisch exakte dB-Wert (der würde wieder
-/// bei ~84% statt ~50% in der Mitte landen, siehe HANDOFF.md).
-pub fn set_pipewire_sink_volume_percent(percent: f32) {
-    let percent = percent.clamp(0.0, 100.0);
-    run_with_timeout(
-        "wpctl",
-        &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{percent}%")],
-        CMD_TIMEOUT,
-    );
-}
-
 fn run_amixer(args: &[&str]) {
     let mut full_args = vec!["-c", CARD];
     full_args.extend_from_slice(args);

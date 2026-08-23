@@ -398,14 +398,15 @@ Reset wie unter Windows"** – der Report funktioniert unverändert über
 unseren eigenen HID-Kanal (`device.rs::send_report`), kein Windows-
 spezifisches Verhalten.
 
-**Bekannte Einschränkung (noch offen):** Nach dem Reset verliert unser
-`G8Device`-Handle die Verbindung (echte USB-Neuenumeration = neuer
-Gerätepfad), es gibt noch keine automatische Neuverbindung. Die App muss
-danach manuell neu gestartet werden, ein zweiter Reset-Klick in derselben
-Sitzung schlägt mit `hidapi error: No such device` fehl. Sauberer wäre ein
-Reconnect-Loop in main.rs (z.B. alle 2s `G8Device::open()` erneut
-versuchen, wenn `send_report`/`read_report` fehlschlagen) – nicht
-umgesetzt, siehe Abschnitt 8.
+**Behoben (2026-08-23):** Nach dem Reset verlor unser `G8Device`-Handle
+zunächst die Verbindung (echte USB-Neuenumeration = neuer Gerätepfad)
+und musste manuell durch einen App-Neustart ersetzt werden. Jetzt per
+`slint::Timer` (2s-Intervall, main.rs) automatisch behoben – Gerät hinter
+`Rc<RefCell<Option<Rc<G8Device>>>>`, jeder Timer-Tick versucht
+`G8Device::open()` erneut und ersetzt das Handle bei Erfolg immer (auch
+wenn technisch noch ein altes, totes Handle "vorhanden" ist). Live
+verifiziert: Reset zweimal hintereinander ohne App-Neustart ausgelöst,
+funktioniert beide Male.
 
 ## 6. Preset-Bibliothek (direkt nutzbar, kein Reverse Engineering nötig)
 
@@ -632,14 +633,13 @@ mehr.
     `~/.local/state/wireplumber/stream-properties` eine veraltete
     Lautstärke (~13%) für den G8-Sink gecacht, die tatsächlich direkt ins
     ALSA-Register durchschlug (bestätigt: `wpctl set-volume` bewegte den
-    ALSA-Rohwert). Per WirePlumber-Regel (`~/.config/wireplumber/
-    wireplumber.conf.d/51-g8-soft-mixer.conf`, `api.alsa.soft-mixer =
-    true` für alle G8-Nodes) behoben – PipeWire nutzt jetzt nur noch
-    Software-Lautstärke, schreibt nicht mehr ins Hardware-Register. Diese
-    Regel bleibt drin (sinnvolle Absicherung), war aber **nicht** die
-    Ursache des kompletten Ausfalls: Test mit komplett gestopptem
-    PipeWire+WirePlumber (`systemctl --user stop/mask`) zeigte das
-    Problem unverändert.
+    ALSA-Rohwert). Testweise per WirePlumber-Regel (`api.alsa.soft-mixer
+    = true`) "behoben" – **später als Sackgasse erkannt und wieder
+    entfernt** (siehe Nachtrag 2 unten: die Regel wirkte nachweislich gar
+    nicht, `wpctl set-volume` bewegte das ALSA-Register weiterhin trotz
+    `soft-mixer: true`). War ohnehin **nicht** die Ursache des kompletten
+    Ausfalls: Test mit komplett gestopptem PipeWire+WirePlumber
+    (`systemctl --user stop/mask`) zeigte das Problem unverändert.
   - Normaler PC-Neustart (Software-Reboot): keine Besserung.
   - **Tatsächlicher Fix: Das USB-Kabel direkt am Gerät abgezogen (nicht
     nur den PC aus-/eingeschaltet), danach funktionierte der Regler
@@ -655,8 +655,68 @@ mehr.
     nur durch echten Stromverlust am USB-Kabel selbst zurückgesetzt wird.
     Falls das nochmal auftritt: zuerst Kabel direkt am Gerät (nicht am
     PC/Hub) für 30+ Sekunden abziehen, bevor an der Software gesucht wird.
+  - **Nachtrag, selber Tag:** Nach weiterem Reset-Testen (zwei Resets
+    kurz hintereinander) trat exakt dasselbe Symptom nochmal auf –
+    diesmal half das Kabel-Abziehen NICHT, erst ein vollständiger
+    PC-Neustart brachte den Regler zurück. Das spricht dafür, dass der
+    hängende Zustand nicht immer im selben Teil sitzt: mal in der
+    G8-Firmware selbst (durch Kabel-Stromverlust behebbar), mal im
+    USB-Host-Controller/Port auf PC-Seite (nur durch xHCI-Neuinitialisierung
+    beim PC-Neustart behebbar, ein reines Geräte-Powercycle reicht dann
+    nicht). Wiederholtes Reset-Auslösen (echte USB-Neuenumeration) scheint
+    ein Auslöser für beide Varianten zu sein. **Praktische Reihenfolge bei
+    komplett unresponsivem Regler:** 1) Kabel direkt am Gerät 30+s abziehen,
+    2) falls das nicht hilft, kompletten PC-Neustart. Kein Software-Bug in
+    g8-control in beiden beobachteten Fällen (live per rohem ALSA-Register-
+    Polling verifiziert, unabhängig von PipeWire/WirePlumber/unserer App).
+  - **Nachtrag 2, echter Software-Bug gefunden und behoben (selber Tag):**
+    Nach dem PC-Neustart trat ein DRITTES, andersartiges Symptom auf: der
+    Regler reagierte live korrekt, aber der Wert sprang nach jeder
+    Änderung binnen ~200-400ms wieder auf 0% zurück ("blitzt kurz auf,
+    fällt dann zurück"). Ursache diesmal wirklich in unserer eigenen
+    Software: Sowohl der GUI-Prozess (Volume Sync, main.rs) als auch der
+    separate Hintergrunddienst (daemon.rs) pollten unabhängig voneinander
+    alle 120ms `mixer::get_level(0)` und schrieben beide unkoordiniert per
+    `wpctl set-volume` auf dieselbe PipeWire-Sink-Lautstärke – zwei
+    Schreiber mit leicht versetztem Timing auf denselben Zielwert. Erster
+    Fix (GUI schreibt nicht mehr, wenn der Hintergrunddienst aktiv ist)
+    behob es NICHT vollständig. Beim genaueren Hinschauen der eigentliche,
+    tiefere Fund: **PipeWire spiegelt das ALSA-Hardware-Register der G8
+    bereits von ganz allein** (live verifiziert: `wpctl get-volume`
+    folgte dem Regler exakt und in Echtzeit, komplett ohne g8-control
+    oder den Hintergrunddienst – weder App noch Daemon liefen während des
+    Tests). Unser eigener `wpctl set-volume`-Push war also nicht nur
+    unnötig, sondern die eigentliche Ursache des Zurückspringens: ein
+    zweiter, leicht verzögerter Schreiber auf einen Wert, den PipeWire
+    schon korrekt und aktuell hatte. **Fix:** `mixer::
+    set_pipewire_sink_volume_percent()` und alle Aufrufstellen (GUI-
+    Poll-Thread, Volume-Sync-Toggle-Handler, Start-Wiederherstellung,
+    `daemon.rs::run()`) komplett entfernt – weder App noch Daemon
+    schreiben noch aktiv zu PipeWire, beide verlassen sich auf PipeWires
+    eigenes automatisches Hardware-Volume-Spiegeln. Die (zuvor unter
+    Nachtrag 1 als "sinnvolle Absicherung" beschriebene) WirePlumber-
+    Soft-Mixer-Regel wurde wieder entfernt: wir WOLLEN das automatische
+    Hardware-Spiegeln jetzt aktiv, nicht verhindern. Live verifiziert
+    (App+Daemon beide aktiv): Regler läuft stabil, kein Zurückspringen
+    mehr, `wpctl get-volume`/ALSA bleiben synchron. **Bedeutung für die
+    Features "Volume Sync" und "Hintergrunddienst":** Beide sind dadurch
+    aktuell funktional ohne Wirkung (reine No-op-Schleifen/Schalter,
+    Gerätebefehl `setting_id::VOLUME_SYNC` wird bei Volume Sync weiterhin
+    gesendet) – PipeWire koppelt PC-Lautstärke und Regler bereits von
+    selbst, ganz ohne dass g8-control etwas tun muss. Absichtlich noch
+    nicht aus der UI entfernt (Nutzer-Entscheidung offen, siehe
+    Abschnitt 8).
 
 ## 8. Offene Punkte
+
+- **Entscheidung offen: "Volume Sync" und "Hintergrunddienst" in der UI
+  entfernen?** Beide sind seit dem Fix in Abschnitt 7 (Nachtrag 2)
+  funktional wirkungslos – PipeWire spiegelt die G8-Lautstärke bereits
+  automatisch, kein eigener PipeWire-Push mehr nötig oder vorhanden.
+  Aktuell bewusst nur als No-op-Schleifen/Schalter belassen statt
+  entfernt, bis der Nutzer entscheidet, ob die UI-Elemente (Settings-Tab
+  Schalter, systemd-Dienst-Infrastruktur in daemon.rs) ganz gestrichen
+  werden sollen.
 
 - **Kein Auto-Reconnect nach Geräteverlust**: `G8Device::open()` wird nur
   einmal beim Programmstart aufgerufen. Verliert das Gerät die Verbindung
