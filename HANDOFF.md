@@ -311,30 +311,29 @@ miteinander verknüpft sind:
   `set_pipewire_sink_volume_db()` rechnen jetzt über dB/linearen Gain um
   (`cubic_percent = gain^(1/3) * 100`), Formel gegen echte Gerätewerte
   verifiziert (exakte Übereinstimmung bei beiden Testpunkten oben).
-- **Schwerwiegender Vorfall gefunden und eingedämmt: PipeWire-USB-Stall.**
-  Beim Testen (Umschalten Kopfhörer/Lautsprecher + aktives Volume Sync)
-  blieb `wireplumber` im Kernel hängen: `cat /proc/<pid>/wchan` zeigte
-  **`usb_control_msg`** – ein USB-Control-Transfer (fast sicher zur G8)
-  kam nie zurück, der Prozess landete im `D`-State (uninterruptible
-  sleep) und war nicht mal per `SIGKILL` zu beenden. Jeder `wpctl`-Aufruf
-  (auch von außerhalb der App) hängte sich daran auf; `systemctl
-  restart` half nicht, da der Dienst zwar "aktiv" ist, aber der
-  Kernel-Aufruf blockiert bleibt. **Einziger Ausweg: Gerät physisch
-  aus-/einstecken** (oder Neustart) – kein Software-Fix möglich, sobald
-  der Prozess im `D`-State feststeckt.
-  - Wahrscheinlicher Auslöser: viele gleichzeitige/dichte
-    USB-Zugriffe auf dasselbe Gerät kurz hintereinander – 120ms-Polling
-    (Lautstärke), mehrere gleichzeitig offene HID-Handles (Hauptgerät +
-    Schalterstand-Poll-Thread) und ein PipeWire-Neustart
-    (`virtual_surround::restart_pipewire()`) fielen zeitlich zusammen.
-    Der Windows-Capture (siehe oben) zeigt aber, dass reine
-    Abfragehäufigkeit unproblematisch ist (Windows pollt alle ~32ms) –
-    der wahrscheinlichere Faktor ist eher die Kombination mit dem
-    PipeWire-Neustart mitten in einer offenen Anfrage, oder generell zu
-    viele parallele Zugriffe auf verschiedene Interfaces desselben
-    Composite-Geräts gleichzeitig.
-  - **Eingedämmt (nicht behoben – der Stall selbst ist ein
-    Kernel/WirePlumber-Verhalten, kein g8-control-Bug):**
+- **Schwerwiegender Vorfall gefunden – vermutlich NICHT durch die G8
+  verursacht.** Beim Testen (Umschalten Kopfhörer/Lautsprecher + aktives
+  Volume Sync) blieb `wireplumber` im Kernel hängen: `cat
+  /proc/<pid>/wchan` zeigte **`usb_control_msg`** – ein
+  USB-Control-Transfer kam nie zurück, der Prozess landete im `D`-State
+  (uninterruptible sleep) und war nicht mal per `SIGKILL` zu beenden.
+  Jeder `wpctl`-Aufruf (auch von außerhalb der App) hängte sich daran
+  auf; `systemctl restart` half nicht, da der Dienst zwar "aktiv" ist,
+  aber der Kernel-Aufruf blockiert bleibt.
+  **Auflösung:** Der Nutzer hat daraufhin das CORSAIR HS80 MAX
+  WIRELESS-Headset-Dongle abgezogen (nicht die G8!) – Sound funktionierte
+  danach sofort wieder. Das deutet stark darauf hin, dass **der Corsair-
+  USB-Dongle** der eigentlich im `usb_control_msg` feststeckende
+  Client war, nicht die G8 – der ursprüngliche Verdacht (viele
+  gleichzeitige G8-USB-Zugriffe durch g8-control) ist damit NICHT
+  bestätigt und eher unwahrscheinlich. Wireless-Dongles wie der Corsair
+  sind für gelegentliche Firmware-/USB-Hänger bekannt; da `wireplumber`
+  alle Audiogeräte über denselben Prozess verwaltet, reicht ein
+  hängender Control-Transfer zu IRGENDEINEM Gerät, um `wpctl` global
+  einzufrieren (nicht nur für das betroffene Gerät).
+  - Trotzdem als generelle Härtung sinnvoll und beibehalten (schadet
+    nicht, hilft bei jedem künftigen Stall – egal welches Gerät ihn
+    auslöst):
     `src/proc_util.rs::run_with_timeout()` – neuer gemeinsamer Wrapper um
     `amixer`/`wpctl`-Aufrufe (mixer.rs, virtual_surround.rs) mit
     Timeout (500ms bzw. 3s) statt des blockierenden
@@ -356,9 +355,11 @@ miteinander verknüpft sind:
     durch eine dauerhaft offene ALSA-Verbindung zu ersetzen (siehe
     unten) statt bei jedem Tick neue Prozesse zu starten.
 - Ein zusätzliches, davor beobachtetes "Springen auf 100 %" beim Drehen
-  des Knopfs bei aktivem Sync war vermutlich derselbe zugrundeliegende
-  Effekt (PipeWire/WirePlumber unter Last durch dichte USB-Zugriffe),
-  nicht ein separates Phänomen – mit dem Skalen-Fix und den Härtungs-
+  des Knopfs bei aktivem Sync könnte ebenfalls mit dem Corsair-Dongle-
+  Stall zusammenhängen (WirePlumber unter Last durch das hängende
+  fremde Gerät) statt ein g8-control-spezifisches Problem zu sein –
+  unklar, ob überhaupt reproduzierbar ohne den Corsair-Dongle. Mit dem
+  Skalen-Fix und den Härtungs-
   maßnahmen oben sollte es deutlich seltener/gar nicht mehr auftreten.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar

@@ -32,7 +32,7 @@ Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-P
 Weiterhin bekannt:
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber nachvollziehbar
 - Die übrigen Mixer-Regler (Line In, SPDIF, What U Hear) sind noch nicht live synchronisiert, nur Lautsprecher und externes Mikrofon
-- Ein zusätzliches, nicht zuverlässig reproduzierbares Springen der Lautstärke beim Drehen des Knopfs bei aktivem Sync ist noch nicht abschließend geklärt (vermutlich WirePlumber-seitig, nicht im eigenen Code gefunden) – siehe HANDOFF.md Abschnitt 7 für die Details der Untersuchung.
+- Ein zusätzliches, nicht zuverlässig reproduzierbares Springen der Lautstärke beim Drehen des Knopfs bei aktivem Sync hing vermutlich mit einem hängenden Corsair-Wireless-Dongle zusammen (WirePlumber friert bei einem USB-Stall auf IRGENDEINEM Audiogerät global ein), nicht mit einem g8-control-spezifischen Bug – siehe HANDOFF.md Abschnitt 7 für die Details der Untersuchung.
 
 USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl; das ist eine PipeWire/ALSA-Architekturfrage (mehrere echte Lautstärke-Ebenen), siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
 
