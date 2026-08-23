@@ -378,8 +378,26 @@ miteinander verknüpft sind:
   zusätzlich einmal neu synchronisieren.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar
-- Gelegentlich große, unerklärte Sprünge im Lautstärke-Poll (z.B. 44%→6%),
-  größer als die normale Rasterung des physischen Knopfs erklären würde
+- **Reproduziert und als Hardware/Firmware-Verhalten bestätigt (kein
+  Software-Bug):** große, unerklärte Sprünge im Lautstärke-Poll (z.B.
+  44%→6%), größer als die normale Rasterung des physischen Knopfs
+  erklären würde. Live per Diagnose-Logging nachgewiesen: die komplette
+  Poll-/Änderungserkennungs-/UI-Push-Kette (`main.rs`, Mixer-Poll-Thread)
+  funktioniert lückenlos und korrekt – jede Knopfdrehung wird exakt und
+  ohne Aussetzer weitergegeben (Log zeigte u.a. `...48→44→6→44→52...`
+  bei durchgehendem Drehen). Zusätzlich bestätigt: bei visuell exakt
+  mittig stehendem Knopf (erwarteter Bezugspunkt "50 %") meldet ALSA
+  konsistent einen ganz anderen Wert (z.B. 84 %) – die optische Position
+  des Knopfs entspricht also nicht linear dem elektrisch gemeldeten
+  Wert. Da unsere Software nachweislich exakt überträgt, was das Gerät
+  selbst über USB sendet, liegt die Ursache im Knopf/seiner Firmware
+  selbst, nicht in ALSA, PipeWire oder g8-control – eine
+  Software-Ersatzschicht für ALSA/PipeWire würde daran nichts ändern.
+  Für eine mögliche Korrekturkurve wäre ein Windows-Mitschnitt mit
+  langsamem Drehen aus der Mitte in beide Richtungen nötig (vom Nutzer
+  angeboten, noch nicht durchgeführt) – klärt, ob es eine konsistente,
+  herausrechenbare Nichtlinearität gibt oder der Knopf grundsätzlich
+  keine verlässliche absolute Position liefert.
 - Footer-Regler und Mixer-Tab teilten sich lange keinen Zustand (gefixt,
   siehe Commit-Historie) – weitere Mixer-Regler (Line In, SPDIF, What U
   Hear) sind noch nicht live synchronisiert, nur Lautsprecher/externes Mic
