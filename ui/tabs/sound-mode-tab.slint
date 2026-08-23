@@ -1,5 +1,5 @@
 import { CompactEffectRow, CompactComboBox } from "../effect-slider.slint";
-import { ComboBox, Switch, Slider } from "std-widgets.slint";
+import { ComboBox, Switch, Slider, Palette } from "std-widgets.slint";
 
 // Sound-Modus: der Original-Hub in einem Tab – kombiniertes Preset aus
 // Acoustic Engine + Equalizer oben (echte Original-Presets aus
@@ -101,7 +101,7 @@ export component SoundModeTab inherits VerticalLayout {
     }
 
     Rectangle {
-        background: #f2f2f2;
+        background: Palette.color-scheme == ColorScheme.dark ? #454749 : #f2f2f2;
         border-radius: 8px;
 
         VerticalLayout {
@@ -154,7 +154,7 @@ export component SoundModeTab inherits VerticalLayout {
                 Text {
                     text: svm-on ? "\{round(svm-level)}" : "Aus";
                     width: 32px;
-                    color: svm-on ? #333333 : #999999;
+                    color: svm-on ? Palette.foreground : #999999;
                     horizontal-alignment: right;
                     vertical-alignment: center;
                 }
@@ -188,7 +188,7 @@ export component SoundModeTab inherits VerticalLayout {
                         }
                     }
                     Text {
-                        text: "☀";
+                        text: "☀️";
                         font-size: 16px;
                         color: svm-mode == 1 ? #3d7fd9 : #999999;
                         horizontal-alignment: center;

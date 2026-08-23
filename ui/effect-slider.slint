@@ -1,4 +1,4 @@
-import { Slider, Switch } from "std-widgets.slint";
+import { Slider, Switch, Palette } from "std-widgets.slint";
 
 // Ein Regler-Block wie in der Acoustic-Engine-/CrystalVoice-Seite des
 // Originals: Titel, Zahlenwert, vertikaler Slider, darunter ein Toggle.
@@ -90,7 +90,7 @@ export component CompactEffectRow inherits HorizontalLayout {
     Text {
         text: effect-enabled ? "\{round(value)}" : "Aus";
         width: 32px;
-        color: effect-enabled ? #333333 : #999999;
+        color: effect-enabled ? Palette.foreground : #999999;
         horizontal-alignment: right;
         vertical-alignment: center;
     }

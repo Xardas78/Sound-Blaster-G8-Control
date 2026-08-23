@@ -466,6 +466,34 @@ pub mod special {
         buf[3] = 0x03;
         buf
     }
+
+    /// Fragt die Firmware-Version ab (GET, kein SET). Antwort-Format
+    /// `5a 07 10 <ASCII-Versionsstring>`, per Windows-Capture bestätigt
+    /// (siehe HANDOFF.md Abschnitt 2/3).
+    pub fn get_firmware_version() -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x07;
+        buf[2] = 0x01;
+        buf[3] = 0x02;
+        buf
+    }
+
+    /// Liest aus der Antwort auf get_firmware_version() den ASCII-
+    /// Versionsstring (z.B. "1.2.250819.0903"). None, falls der Report
+    /// kein Treffer auf "5a 07 10" ist.
+    pub fn firmware_version_from_reply(buf: &[u8; 64]) -> Option<String> {
+        if buf[0] != 0x5a || buf[1] != 0x07 || buf[2] != 0x10 {
+            return None;
+        }
+        let end = buf[3..].iter().position(|&b| b == 0).map(|p| p + 3).unwrap_or(64);
+        let s = std::str::from_utf8(&buf[3..end]).ok()?.trim();
+        if s.is_empty() {
+            None
+        } else {
+            Some(s.to_string())
+        }
+    }
 }
 
 #[cfg(test)]

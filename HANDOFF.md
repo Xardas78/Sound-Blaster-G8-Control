@@ -698,25 +698,35 @@ mehr.
     Soft-Mixer-Regel wurde wieder entfernt: wir WOLLEN das automatische
     Hardware-Spiegeln jetzt aktiv, nicht verhindern. Live verifiziert
     (App+Daemon beide aktiv): Regler läuft stabil, kein Zurückspringen
-    mehr, `wpctl get-volume`/ALSA bleiben synchron. **Bedeutung für die
-    Features "Volume Sync" und "Hintergrunddienst":** Beide sind dadurch
-    aktuell funktional ohne Wirkung (reine No-op-Schleifen/Schalter,
-    Gerätebefehl `setting_id::VOLUME_SYNC` wird bei Volume Sync weiterhin
-    gesendet) – PipeWire koppelt PC-Lautstärke und Regler bereits von
-    selbst, ganz ohne dass g8-control etwas tun muss. Absichtlich noch
-    nicht aus der UI entfernt (Nutzer-Entscheidung offen, siehe
-    Abschnitt 8).
+    mehr, `wpctl get-volume`/ALSA bleiben synchron.
+
+    **Entscheidung getroffen und umgesetzt (2026-08-23):** "Volume Sync"
+    und "Hintergrunddienst" komplett aus der App entfernt (Settings-Tab-
+    Schalter, `src/daemon.rs` gelöscht, `setting_id::VOLUME_SYNC`-Report
+    nicht mehr gesendet, systemd-Dienst deinstalliert) – PipeWire koppelt
+    PC-Lautstärke und Regler bereits von selbst, kein eigener Mechanismus
+    mehr nötig. An der Stelle des früheren Hintergrunddienst-Schalters
+    steht jetzt ein Hinweistext dazu.
+
+    **Bekannte Einschränkung (kosmetisch, Fix für 2026-08-24 geplant):**
+    Die App zeigt weiterhin die lineare (taper-korrigierte) Reglerposition
+    (z.B. 44%), während PipeWire/KDE die kubische Lautstärke-Skala zeigt
+    (z.B. 60%) – zwei unterschiedliche, beide korrekte Zahlen für
+    denselben Rohwert, da wir nicht mehr aktiv in PipeWire hineinschreiben.
+    Geplanter Fix: nur die App-Anzeige auf die kubische Skala umrechnen
+    (rein kosmetisch, kein Zurückschreiben zu PipeWire – das würde den
+    gerade behobenen Bug wieder einführen).
 
 ## 8. Offene Punkte
 
-- **Entscheidung offen: "Volume Sync" und "Hintergrunddienst" in der UI
-  entfernen?** Beide sind seit dem Fix in Abschnitt 7 (Nachtrag 2)
-  funktional wirkungslos – PipeWire spiegelt die G8-Lautstärke bereits
-  automatisch, kein eigener PipeWire-Push mehr nötig oder vorhanden.
-  Aktuell bewusst nur als No-op-Schleifen/Schalter belassen statt
-  entfernt, bis der Nutzer entscheidet, ob die UI-Elemente (Settings-Tab
-  Schalter, systemd-Dienst-Infrastruktur in daemon.rs) ganz gestrichen
-  werden sollen.
+- **Sonnen-Icon (☀️) im Sound-Modus-Tab wird nicht dargestellt** (leeres
+  Kästchen/Tofu-Glyph, 2026-08-23 getestet) – Font auf dem Testsystem hat
+  offenbar keine Glyphe für U+2600+FE0F, anders als der Mond (🌙), der
+  korrekt farbig rendert. Fix für 2026-08-24 geplant: anderes Icon oder
+  eigene Path-Zeichnung statt Font-Glyphe (wie schon bei den Pfeilen in
+  `CompactSpinBox`, siehe effect-slider.slint).
+- **App-Anzeige auf kubische PipeWire-Skala umstellen** (siehe Abschnitt 7
+  oben) – rein kosmetisch, für 2026-08-24 geplant.
 
 - **Kein Auto-Reconnect nach Geräteverlust**: `G8Device::open()` wird nur
   einmal beim Programmstart aufgerufen. Verliert das Gerät die Verbindung

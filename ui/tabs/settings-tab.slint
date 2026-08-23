@@ -2,155 +2,131 @@ import { Button, Switch, Palette } from "std-widgets.slint";
 
 // Entspricht der "Einstellungen"-Seite im Original, aber ohne die
 // Gerät/Anwendung-Unterreiter des Originals – auf Wunsch flach in einem
-// Reiter zusammengefasst. Reset ist über den proprietären Kanal noch
-// nicht reverse-engineert (kein Capture vorhanden, Risiko eines
-// Bricking) – der Button ist vorbereitet, löst aber noch keinen echten
-// Befehl aus, siehe HANDOFF.md. Energieeinsparung und Logo-LED sind
-// implementiert (special::setting_id, siehe main.rs).
-// Firmware-Update bewusst NICHT implementiert: Update-Ablauf/Netzwerk-
-// Traffic der Original-Software nicht reverse-engineert, zu riskant, um
-// zu raten – siehe HANDOFF.md. Bei Bedarf unter Windows aktualisieren.
-// Volume Sync IST implementiert (siehe main.rs): spiegelt den
-// Lautstärkeknopf-Prozentwert live auf die PipeWire-Sink-Lautstärke.
-// Dark Mode ist reiner UI-Zustand (Slint-Standard-Widgets über die
-// eingebaute Palette-Umschaltung), braucht keine Rust-Anbindung.
+// Reiter zusammengefasst. Energieeinsparung und Logo-LED sind
+// implementiert (special::setting_id, siehe main.rs). Gerät zurücksetzen
+// ist implementiert und live bestätigt (siehe HANDOFF.md Abschnitt 5a).
+// Firmware-Update-*Flash* bleibt bewusst NICHT implementiert (Bricking-
+// Risiko), der Versions-*Check* dagegen schon (reiner HTTP-GET, kein
+// USB-Risiko) – bei vorhandenem Update wird auf die Windows-Software
+// verwiesen. Dark Mode ist reiner UI-Zustand (Slint-Standard-Widgets
+// über die eingebaute Palette-Umschaltung), braucht keine Rust-Anbindung.
+// Volume Sync/Hintergrunddienst wurden entfernt: PipeWire spiegelt die
+// G8-Hardware-Lautstärke bereits von selbst, beide Features waren
+// dadurch wirkungslos (siehe HANDOFF.md Abschnitt 7, Nachtrag 2).
 export component SettingsTab inherits HorizontalLayout {
     in property <bool> device-connected: false;
-    // Live vom Poll-Thread in main.rs gefüllt (derselbe Wert, der auch den
-    // Fußleisten-Regler mitlaufen lässt) – damit kann der Bestätigungs-
-    // Dialog unten die tatsächliche Reglerposition anzeigen, statt den
-    // Nutzer blind auf 50% stellen zu lassen.
-    in property <float> footer-speaker-level: 49;
+    in property <string> serial-number: "";
+    in property <string> firmware-version: "";
+    in property <bool> firmware-update-available: false;
+    in property <bool> firmware-check-failed: false;
+    in property <string> firmware-latest-version: "";
+    // Rust setzt das kurz auf true, nachdem firmware-version/
+    // -update-available/-latest-version aktuell sind, um den
+    // Ergebnis-Dialog zu öffnen (siehe changed-Handler unten).
+    in-out property <bool> show-firmware-result: false;
 
-    // Default false (erster Start ohne gespeicherte Einstellungen). Rust
-    // setzt das beim Programmstart auf den zuletzt gespeicherten Wert
-    // (siehe persist.rs/main.rs) – dabei OHNE den Bestätigungsdialog
-    // unten (der ist nur für bewusstes manuelles Umschalten mitten in
-    // der Nutzung gedacht, main.rs sichert den Start stattdessen per
-    // "erst stumm, dann Reglerstand" ab).
-    in-out property <bool> volume-sync-on: false;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
     in-out property <bool> dark-mode-on: false;
     in-out property <bool> autostart-on: false;
     // 0 = Schließen (Programm beenden), 1 = In den Tray minimieren
     in-out property <int> close-behavior: 0;
-    // Hintergrunddienst (systemd --user): hält die Lautstärke-Kopplung
-    // (Knopf↔PipeWire) auch am Laufen, wenn die App komplett beendet
-    // wird (nicht nur in den Tray minimiert) – siehe daemon.rs.
-    in-out property <bool> daemon-on: false;
     // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
     in property <string> app-version: "";
 
     callback reset-clicked();
-    callback volume-sync-toggled(bool);
+    callback firmware-check-clicked();
     callback power-saving-toggled(bool);
     callback logo-led-toggled(bool);
     callback autostart-toggled(bool);
     callback close-behavior-changed(int);
     callback dark-mode-toggled(bool);
-    callback daemon-toggled(bool);
 
     padding: 16px;
     spacing: 48px;
     alignment: start;
+
+    changed show-firmware-result => {
+        if show-firmware-result {
+            firmware-result-popup.show();
+            show-firmware-result = false;
+        }
+    }
+
+    firmware-result-popup := PopupWindow {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+
+        Rectangle {
+            background: #00000066;
+
+            Rectangle {
+                width: 380px;
+                height: firmware-update-available ? 220px : 160px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : white;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: #cccccc;
+                drop-shadow-blur: 16px;
+                drop-shadow-color: #00000055;
+
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Text {
+                        text: firmware-check-failed ? "Prüfung fehlgeschlagen" : firmware-update-available ? "Update verfügbar" : "Keine neue Firmware";
+                        font-weight: 700;
+                        font-size: 17px;
+                    }
+                    Text {
+                        wrap: word-wrap;
+                        text: firmware-check-failed
+                            ? "Der Update-Server war nicht erreichbar (keine Internetverbindung?). Bitte später erneut versuchen."
+                            : firmware-update-available
+                            ? "Eine neuere Firmware (" + firmware-latest-version + ") ist verfügbar. Firmware-Updates werden von dieser App nicht unterstützt – bitte dafür die offizielle Creative-Software unter Windows verwenden."
+                            : "Es ist keine neuere Firmware verfügbar.";
+                        font-size: 14px;
+                        color: gray;
+                    }
+
+                    Rectangle { height: 4px; }
+
+                    HorizontalLayout {
+                        alignment: end;
+                        Button { text: "OK"; clicked => { firmware-result-popup.close(); } }
+                    }
+                }
+            }
+        }
+    }
 
     VerticalLayout {
         spacing: 12px;
         alignment: start;
         Text { text: "Sound Blaster G8"; font-weight: 700; }
         Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
+        if device-connected && serial-number != "": Text { text: "S/N: " + serial-number; font-size: 12px; color: gray; }
+
+        Rectangle { height: 16px; }
+
         Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
+        Button { text: "Nach Firmware-Update suchen"; clicked => { firmware-check-clicked(); } }
+        if firmware-version != "": Text { text: "Firmware: " + firmware-version; font-size: 12px; color: gray; }
+
+        Rectangle { height: 8px; }
+
         Text { text: "Version " + app-version; font-size: 12px; color: gray; }
     }
 
     VerticalLayout {
         spacing: 12px;
         alignment: start;
-        HorizontalLayout {
-            spacing: 8px;
-            Switch {
-                checked: volume-sync-on;
-                toggled => {
-                    if self.checked {
-                        // Nicht sofort aktivieren: erst per Dialog
-                        // bestätigen lassen, dass der Regler auf 50%
-                        // steht (verhindert einen Lautstärke-Sprung).
-                        volume-sync-confirm.show();
-                    } else {
-                        volume-sync-on = false;
-                        volume-sync-toggled(false);
-                    }
-                }
-            }
-            VerticalLayout {
-                Text { text: "Volume Sync"; font-weight: 600; }
-                Text {
-                    wrap: word-wrap;
-                    width: 260px;
-                    text: "Der Lautstärkeknopf steuert Geräte- und PC-Lautstärke gemeinsam.";
-                    color: gray;
-                }
-            }
-        }
-        volume-sync-confirm := PopupWindow {
-            x: 0px;
-            y: 0px;
-            width: root.width;
-            height: root.height;
-
-            Rectangle {
-                background: #00000066;
-
-                Rectangle {
-                    width: 380px;
-                    height: 240px;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                    background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : white;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: #cccccc;
-                    drop-shadow-blur: 16px;
-                    drop-shadow-color: #00000055;
-
-                    VerticalLayout {
-                        padding: 20px;
-                        spacing: 12px;
-                        alignment: start;
-
-                        Text { text: "Volume Sync aktivieren"; font-weight: 700; font-size: 17px; }
-                        Text {
-                            wrap: word-wrap;
-                            text: "Stelle den Lautstärkeknopf am Gerät auf 50%, bevor du bestätigst – sonst springt die PC-Lautstärke sofort auf den aktuellen Reglerstand.";
-                            font-size: 14px;
-                            color: gray;
-                        }
-                        Text {
-                            text: "Aktueller Reglerstand: " + round(footer-speaker-level) + "%";
-                            font-weight: 700;
-                            color: abs(footer-speaker-level - 50) < 3 ? #2ecc71 : #e07b2a;
-                        }
-
-                        Rectangle { height: 4px; }
-
-                        HorizontalLayout {
-                            spacing: 12px;
-                            alignment: end;
-                            Button { text: "Abbrechen"; clicked => { volume-sync-confirm.close(); } }
-                            Button {
-                                text: "OK, aktivieren";
-                                clicked => {
-                                    volume-sync-on = true;
-                                    volume-sync-toggled(true);
-                                    volume-sync-confirm.close();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
         HorizontalLayout {
             spacing: 8px;
             Switch { checked: power-saving-on; toggled => { power-saving-on = self.checked; power-saving-toggled(self.checked); } }
@@ -229,20 +205,17 @@ export component SettingsTab inherits HorizontalLayout {
             }
         }
 
-        HorizontalLayout {
-            spacing: 8px;
-            Switch {
-                checked: daemon-on;
-                toggled => { daemon-on = self.checked; daemon-toggled(self.checked); }
-            }
-            VerticalLayout {
-                Text { text: "Lautstärke-Hintergrunddienst"; font-weight: 600; }
-                Text {
-                    wrap: word-wrap;
-                    width: 260px;
-                    text: "Hält den Lautstärkeknopf auch dann mit der PC-Lautstärke verbunden, wenn die App komplett beendet ist (nicht nur im Tray).";
-                    color: gray;
-                }
+        // Ersetzt den früheren "Lautstärke-Hintergrunddienst"-Schalter:
+        // das Feature ist überflüssig, PipeWire hält Gerät- und PC-
+        // Lautstärke bereits von selbst synchron, auch komplett ohne
+        // laufende App (siehe HANDOFF.md Abschnitt 7, Nachtrag 2).
+        VerticalLayout {
+            Text { text: "Lautstärke-Synchronisierung"; font-weight: 600; }
+            Text {
+                wrap: word-wrap;
+                width: 260px;
+                text: "Wird nicht benötigt: dein System hält Gerät- und PC-Lautstärke bereits automatisch synchron, auch wenn diese App nicht läuft.";
+                color: gray;
             }
         }
     }

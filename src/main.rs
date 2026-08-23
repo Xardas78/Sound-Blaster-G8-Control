@@ -1,6 +1,6 @@
 mod autostart;
-mod daemon;
 mod device;
+mod firmware;
 mod mixer;
 mod persist;
 mod proc_util;
@@ -13,22 +13,12 @@ use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_r
 use slint::{ModelRc, VecModel};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // `g8-control --daemon` läuft ohne Fenster/Tray-Icon als systemd-
-    // Nutzerdienst (siehe daemon.rs, ausgelöst über den Schalter im
-    // Einstellungen-Tab) – muss vor jeder Slint-Initialisierung
-    // abgezweigt werden, da dieser Modus keine Anzeige braucht.
-    if std::env::args().any(|a| a == "--daemon") {
-        daemon::run();
-    }
-
     let ui = AppWindow::new()?;
     ui.set_app_version(env!("CARGO_PKG_VERSION").into());
 
@@ -42,6 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device: Rc<RefCell<Option<Rc<G8Device>>>> = Rc::new(RefCell::new(match G8Device::open() {
         Ok(d) => {
             ui.set_device_connected(true);
+            ui.set_serial_number(d.serial_number().unwrap_or_default().into());
             Some(Rc::new(d))
         }
         Err(e) => {
@@ -69,10 +60,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         reconnect_timer.start(slint::TimerMode::Repeated, Duration::from_secs(2), move || {
             if let Ok(d) = G8Device::open() {
                 let was_connected = device.borrow().is_some();
+                let serial = d.serial_number().unwrap_or_default().to_string();
                 *device.borrow_mut() = Some(Rc::new(d));
                 if !was_connected {
                     if let Some(ui) = weak.upgrade() {
                         ui.set_device_connected(true);
+                        ui.set_serial_number(serial.into());
                     }
                 }
             }
@@ -144,7 +137,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     ui.set_autostart_on(autostart::is_enabled());
-    ui.set_daemon_on(daemon::is_enabled());
 
     {
         let device = device.clone();
@@ -524,58 +516,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Volume Sync (Einstellungen-Reiter): spiegelt den Lautstärkeknopf
-    // zusätzlich auf die PipeWire-Sink-Lautstärke (die separate
-    // Software-Pegelstufe oberhalb der ALSA-Hardwarelautstärke, die
-    // set_level/get_level ansprechen – vergleichbar mit "PC-Lautstärke"
-    // unter Windows). Original-Software verlangt vor dem Einschalten den
-    // Regler auf 50%, sonst springt die PC-Lautstärke beim Aktivieren
-    // sofort auf den aktuellen Reglerstand – das bilden wir hier 1:1 nach.
-    let volume_sync_enabled = Arc::new(AtomicBool::new(false));
-    {
-        let flag = volume_sync_enabled.clone();
-        let device = device.clone();
-        let settings = settings.clone();
-        ui.on_volume_sync_toggled(move |on| {
-            flag.store(on, Ordering::SeqCst);
-            {
-                let mut s = settings.borrow_mut();
-                s.volume_sync_on = on;
-                persist::save(&s);
-            }
-            // Kein eigener PipeWire-Push mehr hier (siehe Kommentar beim
-            // Poll-Thread unten, HANDOFF.md 2026-08-23): PipeWire spiegelt
-            // das ALSA-Hardware-Register bereits von selbst.
-            // Per Windows-Capture bestätigt: eigener Geräte-Befehl
-            // (setting_id::VOLUME_SYNC) zusätzlich zu unserem PipeWire-
-            // Mirroring – was er intern genau bewirkt, ist unklar, aber
-            // die Original-Software sendet ihn beim Umschalten.
-            if let Some(dev) = device.borrow().clone() {
-                let report = special::device_setting(special::setting_id::VOLUME_SYNC, on);
-                if let Err(e) = dev.send_report(&report) {
-                    eprintln!("Senden fehlgeschlagen: {e}");
-                }
-            }
-        });
-    }
-    // Volume Sync beim Start automatisch wiederherstellen, wenn es beim
-    // letzten Mal aktiv war – ohne den Bestätigungsdialog (der ist nur
-    // für bewusstes manuelles Umschalten mitten in der Nutzung gedacht,
-    // ein Sprung direkt nach dem Programmstart ist unkritischer). Als
-    // Sicherheitsmaßnahme gegen einen möglichen Lautstärkeschock: erst
-    // stumm schalten, dann erst auf den tatsächlich ausgelesenen
-    // Reglerstand setzen – falls PipeWire zuvor zufällig sehr laut stand.
-    if settings.borrow().volume_sync_on {
-        volume_sync_enabled.store(true, Ordering::SeqCst);
-        ui.set_volume_sync_on(true);
-        if let Some(dev) = device.borrow().clone() {
-            let report = special::device_setting(special::setting_id::VOLUME_SYNC, true);
-            if let Err(e) = dev.send_report(&report) {
-                eprintln!("Senden fehlgeschlagen: {e}");
-            }
-        }
-    }
-
     // Der Lautstärkeknopf am Gerät schreibt direkt in dasselbe ALSA-
     // Feature-Unit-Register wie unser Slider (per USB-Capture bestätigt,
     // siehe HANDOFF.md) – es gibt aber keine Push-Benachrichtigung dafür,
@@ -592,19 +532,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let changed = last_speaker.map(|prev| (prev - v).abs() > 0.5).unwrap_or(true);
                     if changed {
                         last_speaker = Some(v);
-                        // KEIN eigener PipeWire-Push mehr (weder hier noch in
-                        // daemon.rs): live verifiziert (2026-08-23, siehe
-                        // HANDOFF.md), dass PipeWire das ALSA-Hardware-
-                        // Register für die G8 bereits von selbst spiegelt
-                        // (wpctl get-volume folgt dem Regler exakt, auch
-                        // ganz ohne g8-control/Daemon). Ein eigener Push
-                        // schrieb denselben Wert nur unnötig ein zweites Mal
-                        // – mit leicht verzögerter/veralteter Ablesung, was
-                        // sich als kurzes "auf 0% zurückspringen" zeigte statt
-                        // zu helfen. `volume_sync_enabled`/"Volume Sync" bleibt
-                        // als Schalter bestehen (persistiert, Gerätebefehl
-                        // wird weiterhin gesendet), hat aber keinen PipeWire-
-                        // Effekt mehr, da keiner nötig ist.
+                        // Bewusst kein eigener PipeWire-Push mehr: live
+                        // verifiziert (2026-08-23, siehe HANDOFF.md), dass
+                        // PipeWire das ALSA-Hardware-Register für die G8
+                        // bereits von selbst spiegelt (wpctl get-volume
+                        // folgt dem Regler exakt, auch komplett ohne
+                        // g8-control). Ein eigener Push (früher hier plus im
+                        // inzwischen entfernten Hintergrunddienst) schrieb
+                        // denselben Wert nur unnötig ein zweites Mal, mit
+                        // leicht verzögerter Ablesung – das zeigte sich als
+                        // kurzes "auf 0% zurückspringen" statt zu helfen.
                         let weak = weak.clone();
                         let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));
                     }
@@ -655,6 +592,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
     }
+    // Firmware-Check: liest die aktuelle Version vom Gerät (5a-Kanal) und
+    // die neueste verfügbare Version über Creatives Update-Feed (reiner
+    // HTTP-GET, siehe firmware.rs) – beides in einem Hintergrund-Thread,
+    // damit ein langsames/fehlendes Netzwerk die UI nicht einfriert.
+    // Nur der Versions-Check ist implementiert, kein Firmware-Flash
+    // (Bricking-Risiko) – bei verfügbarem Update wird auf die offizielle
+    // Windows-Software verwiesen, siehe HANDOFF.md Abschnitt 5.
+    {
+        let device = device.clone();
+        let weak = ui.as_weak();
+        ui.on_firmware_check_clicked(move || {
+            if device.borrow().is_none() {
+                return eprintln!("Ignoriert – kein Gerät verbunden");
+            }
+            let weak = weak.clone();
+            // Eigenes, kurzlebiges Handle statt des geteilten `device.
+            // borrow().clone()`: Rc<G8Device> ist nicht Send, kann also
+            // nicht in thread::spawn hinein – gleiches Muster wie beim
+            // Schalterstand-Poller weiter oben.
+            thread::spawn(move || {
+                let current = (|| {
+                    let dev = G8Device::open().ok()?;
+                    while dev.read_report(20).ok().flatten().is_some() {}
+                    dev.send_report(&special::get_firmware_version()).ok()?;
+                    let buf = dev.read_report(500).ok().flatten()?;
+                    special::firmware_version_from_reply(&buf)
+                })();
+                let Some(current) = current else {
+                    return eprintln!("Firmware-Check: aktuelle Version nicht auslesbar");
+                };
+                let latest = firmware::latest_version();
+                let _ = weak.upgrade_in_event_loop(move |ui| {
+                    ui.set_firmware_version(current.clone().into());
+                    match latest {
+                        Some(latest) if latest != current => {
+                            ui.set_firmware_update_available(true);
+                            ui.set_firmware_latest_version(latest.into());
+                            ui.set_firmware_check_failed(false);
+                        }
+                        Some(_) => {
+                            ui.set_firmware_update_available(false);
+                            ui.set_firmware_check_failed(false);
+                        }
+                        None => {
+                            eprintln!("Firmware-Check: Update-Feed nicht erreichbar");
+                            ui.set_firmware_update_available(false);
+                            ui.set_firmware_check_failed(true);
+                        }
+                    }
+                    ui.set_show_firmware_result(true);
+                });
+            });
+        });
+    }
     {
         let device = device.clone();
         let settings = settings.clone();
@@ -697,9 +688,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     ui.on_autostart_toggled(move |on| {
         autostart::set_enabled(on);
-    });
-    ui.on_daemon_toggled(move |on| {
-        daemon::set_enabled(on);
     });
     let close_behavior = Rc::new(Cell::new(settings.borrow().close_behavior));
     {

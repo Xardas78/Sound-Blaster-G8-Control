@@ -10,6 +10,10 @@ const VENDOR_INTERFACE: i32 = 4;
 
 pub struct G8Device {
     handle: HidDevice,
+    /// Aus dem USB-Deskriptor (iSerialNumber), nicht über den 5a-Kanal
+    /// erfragt – hidapi liest das schon beim Auflisten der Geräte mit,
+    /// kein eigener Report nötig.
+    serial_number: Option<String>,
 }
 
 impl G8Device {
@@ -19,8 +23,13 @@ impl G8Device {
             .device_list()
             .find(|d| d.vendor_id() == VID && d.product_id() == PID && d.interface_number() == VENDOR_INTERFACE)
             .ok_or_else(|| "G8 Vendor-HID-Interface nicht gefunden (Gerät angeschlossen?)".to_string())?;
+        let serial_number = info.serial_number().map(str::to_string);
         let handle = info.open_device(&api).map_err(|e| e.to_string())?;
-        Ok(Self { handle })
+        Ok(Self { handle, serial_number })
+    }
+
+    pub fn serial_number(&self) -> Option<&str> {
+        self.serial_number.as_deref()
     }
 
     /// Sendet einen 64-Byte-Report per SET_REPORT (Report-ID 0) an Interface 4.

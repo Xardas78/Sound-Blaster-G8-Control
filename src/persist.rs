@@ -8,13 +8,6 @@
 //! Bewusst kein serde/JSON: die paar Felder hier sind einfach genug für
 //! ein simples "schlüssel=wert"-Textformat, spart eine schwere
 //! Abhängigkeit für eine Handvoll Zahlen/Bools.
-//!
-//! Volume Sync wird gespeichert und beim Start automatisch wieder
-//! aktiviert (ohne den Bestätigungsdialog, den die manuelle Umschaltung
-//! zeigt) – dafür setzt main.rs beim Wiederherstellen zuerst die
-//! PipeWire-Lautstärke auf 0% und danach erst auf den ausgelesenen Wert,
-//! damit kein alter (ggf. lauter) PipeWire-Stand kurz hörbar wird, bevor
-//! der echte Reglerstand übernommen ist.
 
 use std::fs;
 use std::path::PathBuf;
@@ -39,7 +32,6 @@ pub struct Settings {
     pub logo_led_on: bool,
     pub dark_mode_on: bool,
     pub close_behavior: i32,
-    pub volume_sync_on: bool,
     // -1 = kein Sound-Modus-Preset gewählt ("Im Gerät"), sonst Index in
     // sound_mode::PRESETS. Rein software-seitig gemerkt (übersteht App-
     // Neustart) – das Gerät selbst hat keinen Rücklese-Mechanismus dafür
@@ -69,7 +61,6 @@ impl Default for Settings {
             logo_led_on: false,
             dark_mode_on: false,
             close_behavior: 0,
-            volume_sync_on: false,
             sound_mode_preset_index: -1,
         }
     }
@@ -115,7 +106,6 @@ pub fn load() -> Settings {
             "logo_led_on" => s.logo_led_on = value == "1",
             "dark_mode_on" => s.dark_mode_on = value == "1",
             "close_behavior" => s.close_behavior = value.parse().unwrap_or(s.close_behavior),
-            "volume_sync_on" => s.volume_sync_on = value == "1",
             "sound_mode_preset_index" => {
                 s.sound_mode_preset_index = value.parse().unwrap_or(s.sound_mode_preset_index)
             }
@@ -133,7 +123,7 @@ pub fn save(s: &Settings) {
         .collect::<Vec<_>>()
         .join(",");
     let text = format!(
-        "ae_surround_on={}\nae_surround_level={}\nae_crystalizer_on={}\nae_crystalizer_level={}\nae_bass_on={}\nae_bass_level={}\nae_svm_on={}\nae_svm_level={}\nae_svm_mode={}\nae_dialog_on={}\nae_dialog_level={}\nae_eq_on={}\nae_eq_preamp={}\nae_eq_bands={}\npower_saving_on={}\nlogo_led_on={}\ndark_mode_on={}\nclose_behavior={}\nvolume_sync_on={}\nsound_mode_preset_index={}\n",
+        "ae_surround_on={}\nae_surround_level={}\nae_crystalizer_on={}\nae_crystalizer_level={}\nae_bass_on={}\nae_bass_level={}\nae_svm_on={}\nae_svm_level={}\nae_svm_mode={}\nae_dialog_on={}\nae_dialog_level={}\nae_eq_on={}\nae_eq_preamp={}\nae_eq_bands={}\npower_saving_on={}\nlogo_led_on={}\ndark_mode_on={}\nclose_behavior={}\nsound_mode_preset_index={}\n",
         s.ae_surround_on as i32,
         s.ae_surround_level,
         s.ae_crystalizer_on as i32,
@@ -152,7 +142,6 @@ pub fn save(s: &Settings) {
         s.logo_led_on as i32,
         s.dark_mode_on as i32,
         s.close_behavior,
-        s.volume_sync_on as i32,
         s.sound_mode_preset_index,
     );
     let path = config_path();

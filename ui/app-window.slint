@@ -87,25 +87,27 @@ export component AppWindow inherits Window {
     callback mute-changed(int, bool);
     callback capture-source-changed(int);
     callback reset-clicked();
-    callback volume-sync-toggled(bool);
+    callback firmware-check-clicked();
     callback power-saving-toggled(bool);
     callback logo-led-toggled(bool);
     callback autostart-toggled(bool);
     callback close-behavior-changed(int);
     callback dark-mode-toggled(bool);
-    callback daemon-toggled(bool);
 
     in-out property <bool> autostart-on: false;
     in-out property <int> close-behavior: 0;
-    in-out property <bool> daemon-on: false;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
     in-out property <bool> dark-mode-on: false;
-    // Von Rust beim Start gesetzt, wenn Volume Sync zuletzt aktiv war
-    // (siehe main.rs) – zeigt den Schalter korrekt an, ohne den
-    // Bestätigungsdialog auszulösen (der nur bei manuellem Umschalten
-    // in settings-tab.slint kommt).
-    in-out property <bool> volume-sync-on: false;
+    // Von Rust beim Start gesetzt (device.rs, USB-Deskriptor der G8).
+    in-out property <string> serial-number: "";
+    // Von Rust gesetzt, sobald "Nach Firmware-Update suchen" geklickt
+    // wurde (main.rs, protocol::special::get_firmware_version()).
+    in-out property <string> firmware-version: "";
+    in-out property <bool> firmware-update-available: false;
+    in-out property <bool> firmware-check-failed: false;
+    in-out property <string> firmware-latest-version: "";
+    in-out property <bool> show-firmware-result: false;
 
     // Persistierter Dark-Mode-Wert von Rust beim Start gesetzt (siehe
     // main.rs) – `changed` feuert nicht bei der initialen Konstruktion,
@@ -175,22 +177,24 @@ export component AppWindow inherits Window {
                 SettingsTab {
                     device-connected: device-connected;
                     app-version: app-version;
-                    footer-speaker-level: footer-speaker-level;
+                    serial-number: serial-number;
+                    firmware-version: firmware-version;
+                    firmware-update-available: firmware-update-available;
+                    firmware-check-failed: firmware-check-failed;
+                    firmware-latest-version: firmware-latest-version;
+                    show-firmware-result: show-firmware-result;
                     autostart-on: autostart-on;
                     close-behavior: close-behavior;
-                    daemon-on: daemon-on;
                     power-saving-on: power-saving-on;
                     logo-led-on: logo-led-on;
                     dark-mode-on: dark-mode-on;
                     reset-clicked => { reset-clicked(); }
-                    volume-sync-on: volume-sync-on;
-                    volume-sync-toggled(on) => { volume-sync-toggled(on); }
+                    firmware-check-clicked => { firmware-check-clicked(); }
                     power-saving-toggled(on) => { power-saving-toggled(on); }
                     logo-led-toggled(on) => { logo-led-toggled(on); }
                     autostart-toggled(on) => { autostart-on = on; autostart-toggled(on); }
                     close-behavior-changed(m) => { close-behavior = m; close-behavior-changed(m); }
                     dark-mode-toggled(on) => { dark-mode-toggled(on); }
-                    daemon-toggled(on) => { daemon-on = on; daemon-toggled(on); }
                 }
             }
         }
