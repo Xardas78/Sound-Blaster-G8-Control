@@ -22,7 +22,7 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 
 Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md) für die vollständigen Hex-Funde und Analyse).
 
-**Funktioniert:** Acoustic Engine, Equalizer, CrystalVoice, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, Kopfhörer/Lautsprecher-Statusanzeige (Auslesen), virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich jetzt denselben Wert für Lautsprecher/Mikrofon).
+**Funktioniert:** Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz), CrystalVoice inkl. korrekter Voice-Morph-/Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
 
 **Baustelle – Lautstärke-Synchronisierung:** Es gibt mehrere Stellen, an denen Lautstärke geändert werden kann (ALSA-Hardwareregister, PipeWire-Sink-Lautstärke, unsere eigenen UI-Regler), die nicht vollständig miteinander verknüpft sind. Bekannte Probleme:
 - Volume Sync (Einstellungen) spiegelt aktuell nur in eine Richtung (ALSA → PipeWire); Änderungen an der PC-Lautstärke über andere Wege (System-Lautstärkeregler, Medientasten) fließen nicht zurück
@@ -33,12 +33,9 @@ Wird noch untersucht (weiterer USB-Capture-Vergleich mit dem Original unter Wind
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
 - Sound-Modus-Presets im Gerät speichern/laden
-- Firmware-Versionsanzeige/-Update-Check
-- Energiesparen, Logo-LED, Gerät zurücksetzen
-- Smart Volume auf der Mikrofonseite (CrystalVoice)
+- Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen
+- Voice-Morph-Charaktere und Mikrofon-Equalizer-Presets senden noch keine echten Profilwerte (die exakten Daten liegen als JSON in der Windows-Installation vor, siehe [HANDOFF.md](HANDOFF.md) Abschnitt 6 – nur die Übernahme fehlt noch)
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
-
-**Bekannte Hardware-Grenze:** Der physische Kopfhörer/Lautsprecher-Schalter am Gerät ist ein mechanisches Relais – auslesbar, aber nicht per Software fernsteuerbar (mehrfach am echten Gerät verifiziert).
 
 ## Voraussetzungen
 

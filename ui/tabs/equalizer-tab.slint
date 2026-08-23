@@ -45,25 +45,27 @@ export component EqualizerTab inherits VerticalLayout {
     // Werte sind plausible Klangbilder, keine reverse-engineerten
     // Original-Presets (die liegen im Gerät, Format unbekannt).
     property <[string]> builtin-preset-names: ["Flach", "Rock", "Pop", "Jazz", "Klassik", "Bass-Boost", "Höhen-Boost", "Vocal"];
+    // 10 Werte je Preset, 31 Hz zuerst (siehe HANDOFF.md: das unterste
+    // 31-Hz-Band fehlte in einer früheren Version komplett).
     property <[EqPreset]> builtin-presets: [
-        { preamp: 0, bands: [0, 0, 0, 0, 0, 0, 0, 0, 0] },
-        { preamp: 0, bands: [5, 3, -2, -4, -2, 2, 5, 6, 6] },
-        { preamp: 0, bands: [-2, -1, 0, 2, 4, 4, 2, 0, -1] },
-        { preamp: 0, bands: [3, 2, 1, 1, -1, -1, 1, 2, 3] },
-        { preamp: 0, bands: [4, 3, 2, 0, 0, 0, -2, -3, -4] },
-        { preamp: 0, bands: [8, 6, 4, 1, 0, 0, 0, 0, 0] },
-        { preamp: 0, bands: [0, 0, 0, 0, 0, 1, 4, 6, 8] },
-        { preamp: 0, bands: [-3, -2, 0, 3, 5, 5, 2, 0, -2] },
+        { preamp: 0, bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { preamp: 0, bands: [6, 5, 3, -2, -4, -2, 2, 5, 6, 6] },
+        { preamp: 0, bands: [-3, -2, -1, 0, 2, 4, 4, 2, 0, -1] },
+        { preamp: 0, bands: [4, 3, 2, 1, 1, -1, -1, 1, 2, 3] },
+        { preamp: 0, bands: [5, 4, 3, 2, 0, 0, 0, -2, -3, -4] },
+        { preamp: 0, bands: [9, 8, 6, 4, 1, 0, 0, 0, 0, 0] },
+        { preamp: 0, bands: [0, 0, 0, 0, 0, 0, 1, 4, 6, 8] },
+        { preamp: 0, bands: [-4, -3, -2, 0, 3, 5, 5, 2, 0, -2] },
     ];
     property <string> custom1-name: "Eigenes 1";
     property <float> custom1-preamp: 0;
-    property <[float]> custom1-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <[float]> custom1-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     property <string> custom2-name: "Eigenes 2";
     property <float> custom2-preamp: 0;
-    property <[float]> custom2-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <[float]> custom2-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     property <string> custom3-name: "Eigenes 3";
     property <float> custom3-preamp: 0;
-    property <[float]> custom3-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    property <[float]> custom3-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     property <[string]> preset-names: [
         builtin-preset-names[0], builtin-preset-names[1], builtin-preset-names[2], builtin-preset-names[3],
         builtin-preset-names[4], builtin-preset-names[5], builtin-preset-names[6], builtin-preset-names[7],
@@ -95,6 +97,7 @@ export component EqualizerTab inherits VerticalLayout {
         param-changed(17, bands[6]);
         param-changed(18, bands[7]);
         param-changed(19, bands[8]);
+        param-changed(20, bands[9]);
     }
 
     // Gemeinsame Höhe für die 9-Band-Kurve UND die Vorver/Bass/Höhen-Box
@@ -110,8 +113,8 @@ export component EqualizerTab inherits VerticalLayout {
     property <length> slider-column-width: 74px;
     property <length> band-spacing: 12px;
     property <length> band-pitch: slider-column-width + band-spacing;
-    // Gesamtbreite des 9-Band-Charts = 9 Spalten + 8 Zwischenräume.
-    property <length> chart-width: 9 * slider-column-width + 8 * band-spacing;
+    // Gesamtbreite des 10-Band-Charts = 10 Spalten + 9 Zwischenräume.
+    property <length> chart-width: 10 * slider-column-width + 9 * band-spacing;
 
     // X-Position (Spaltenmitte) je Band, siehe Erklärung oben.
     property <length> x0: 0 * band-pitch + slider-column-width / 2;
@@ -123,6 +126,7 @@ export component EqualizerTab inherits VerticalLayout {
     property <length> x6: 6 * band-pitch + slider-column-width / 2;
     property <length> x7: 7 * band-pitch + slider-column-width / 2;
     property <length> x8: 8 * band-pitch + slider-column-width / 2;
+    property <length> x9: 9 * band-pitch + slider-column-width / 2;
 
     // Kurven-Y je Band in Pixeln, inkl. Vorverstärkung (die verschiebt die
     // ganze Kurve nach oben/unten, wie im Original). Gleiche Formel wie
@@ -136,6 +140,7 @@ export component EqualizerTab inherits VerticalLayout {
     property <length> y6: (12 - (bands[6] + preamp)) / 24 * chart-height;
     property <length> y7: (12 - (bands[7] + preamp)) / 24 * chart-height;
     property <length> y8: (12 - (bands[8] + preamp)) / 24 * chart-height;
+    property <length> y9: (12 - (bands[9] + preamp)) / 24 * chart-height;
 
     // param-id (0x0a=Preamp, 0x0b..0x14=Bänder), value
     callback param-changed(int, float);
@@ -192,7 +197,7 @@ export component EqualizerTab inherits VerticalLayout {
                         height: 1px;
                         background: db == 0 ? #cccccc : #e6e6e6;
                     }
-                    for gx in [x0, x1, x2, x3, x4, x5, x6, x7, x8]: Rectangle {
+                    for gx in [x0, x1, x2, x3, x4, x5, x6, x7, x8, x9]: Rectangle {
                         x: gx;
                         y: 0;
                         width: 1px;
@@ -221,8 +226,9 @@ export component EqualizerTab inherits VerticalLayout {
                         QuadraticTo { control-x: x5 / 1px; control-y: y5 / 1px; x: (x5 + x6) / 2 / 1px; y: (y5 + y6) / 2 / 1px; }
                         QuadraticTo { control-x: x6 / 1px; control-y: y6 / 1px; x: (x6 + x7) / 2 / 1px; y: (y6 + y7) / 2 / 1px; }
                         QuadraticTo { control-x: x7 / 1px; control-y: y7 / 1px; x: (x7 + x8) / 2 / 1px; y: (y7 + y8) / 2 / 1px; }
-                        LineTo { x: x8 / 1px; y: y8 / 1px; }
-                        LineTo { x: x8 / 1px; y: chart-height / 1px; }
+                        QuadraticTo { control-x: x8 / 1px; control-y: y8 / 1px; x: (x8 + x9) / 2 / 1px; y: (y8 + y9) / 2 / 1px; }
+                        LineTo { x: x9 / 1px; y: y9 / 1px; }
+                        LineTo { x: x9 / 1px; y: chart-height / 1px; }
                         LineTo { x: x0 / 1px; y: chart-height / 1px; }
                         Close { }
                     }
@@ -244,7 +250,8 @@ export component EqualizerTab inherits VerticalLayout {
                         QuadraticTo { control-x: x5 / 1px; control-y: y5 / 1px; x: (x5 + x6) / 2 / 1px; y: (y5 + y6) / 2 / 1px; }
                         QuadraticTo { control-x: x6 / 1px; control-y: y6 / 1px; x: (x6 + x7) / 2 / 1px; y: (y6 + y7) / 2 / 1px; }
                         QuadraticTo { control-x: x7 / 1px; control-y: y7 / 1px; x: (x7 + x8) / 2 / 1px; y: (y7 + y8) / 2 / 1px; }
-                        LineTo { x: x8 / 1px; y: y8 / 1px; }
+                        QuadraticTo { control-x: x8 / 1px; control-y: y8 / 1px; x: (x8 + x9) / 2 / 1px; y: (y8 + y9) / 2 / 1px; }
+                        LineTo { x: x9 / 1px; y: y9 / 1px; }
                     }
                 }
             }
@@ -256,7 +263,7 @@ export component EqualizerTab inherits VerticalLayout {
             HorizontalLayout {
                 spacing: band-spacing;
                 padding-left: db-label-width + 4px;
-                for freq[i] in ["62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
+                for freq[i] in ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]: VerticalLayout {
                     width: slider-column-width;
                     spacing: 10px;
                     Slider {
@@ -358,10 +365,10 @@ export component EqualizerTab inherits VerticalLayout {
                             Slider {
                                 orientation: vertical;
                                 minimum: -12; maximum: 12;
-                                value: bands[8];
+                                value: bands[9];
                                 enabled: eq-on;
                                 height: chart-height;
-                                changed(v) => { bands[8] = v; param-changed(19, v); }
+                                changed(v) => { bands[9] = v; param-changed(20, v); }
                             }
                         }
                     }
@@ -396,9 +403,9 @@ export component EqualizerTab inherits VerticalLayout {
                         spacing: 4px;
                         CompactSpinBox {
                             minimum: -12; maximum: 12;
-                            value: round(bands[8]);
+                            value: round(bands[9]);
                             enabled: eq-on;
-                            edited(v) => { bands[8] = v; param-changed(19, v); }
+                            edited(v) => { bands[9] = v; param-changed(20, v); }
                         }
                         Text { text: "Höhen"; horizontal-alignment: center; }
                     }

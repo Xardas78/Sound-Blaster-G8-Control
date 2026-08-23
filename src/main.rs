@@ -137,18 +137,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mixer::set_capture_source(index);
     });
 
-    // Kopfhörer/Lautsprecher ist NICHT per USB steuerbar (der physische
-    // Schalter lässt sich nicht fernauslösen), aber per gezielter Anfrage
-    // auslesbar – siehe protocol.rs::special::query_output_target(). Der
-    // Klick hier steuert deshalb nur unseren eigenen virtuellen
-    // HRTF-Surround, siehe virtual_surround.rs.
-    ui.on_output_target_changed(move |target| {
-        if target == 0 {
-            virtual_surround::enable();
-        } else {
-            virtual_surround::disable();
-        }
-    });
+    // Kopfhörer/Lautsprecher: per Windows-Capture UND Live-Test am echten
+    // Gerät bestätigt doch fernsteuerbar (hörbares Relais-Klicken,
+    // LED-Wechsel) – der ursprüngliche Fehlschlag lag an einem falschen
+    // Byte (0x01 statt 0x00), siehe special::set_output_target(). Steuert
+    // zusätzlich unseren eigenen virtuellen HRTF-Surround.
+    {
+        let device = device.clone();
+        ui.on_output_target_changed(move |target| {
+            if target == 0 {
+                virtual_surround::enable();
+            } else {
+                virtual_surround::disable();
+            }
+            let Some(dev) = &device else {
+                return eprintln!("Ignoriert – kein Gerät verbunden");
+            };
+            if let Err(e) = dev.send_report(&special::set_output_target(target == 0)) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
 
     // Live-Anzeige des tatsächlichen physischen Schalterstands: es gibt
     // keine Push-Benachrichtigung dafür (siehe device.rs::read_report),
@@ -196,11 +205,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let volume_sync_enabled = Arc::new(AtomicBool::new(false));
     {
         let flag = volume_sync_enabled.clone();
+        let device = device.clone();
         ui.on_volume_sync_toggled(move |on| {
             flag.store(on, Ordering::SeqCst);
             if on {
                 if let Some(v) = mixer::get_level(0) {
                     mixer::set_pipewire_sink_volume(v);
+                }
+            }
+            // Per Windows-Capture bestätigt: eigener Geräte-Befehl
+            // (setting_id::VOLUME_SYNC) zusätzlich zu unserem PipeWire-
+            // Mirroring – was er intern genau bewirkt, ist unklar, aber
+            // die Original-Software sendet ihn beim Umschalten.
+            if let Some(dev) = &device {
+                let report = special::device_setting(special::setting_id::VOLUME_SYNC, on);
+                if let Err(e) = dev.send_report(&report) {
+                    eprintln!("Senden fehlgeschlagen: {e}");
                 }
             }
         });
@@ -243,6 +263,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    {
+        let device = device.clone();
+        ui.on_spdif_direct_toggled(move |on| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let report = special::device_setting(special::setting_id::SPDIF_OUT_DIRECT_MODE, on);
+            if let Err(e) = dev.send_report(&report) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
+
     ui.on_speaker_test_clicked(move |channel| {
         speaker_test::test_position(channel as usize);
     });
@@ -251,20 +282,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         speaker_test::test_cycle();
     });
 
-    // Reset, Energieeinsparung und Logo-LED sind über den proprietären
-    // Kanal noch nicht reverse-engineert (kein Capture vorhanden) – siehe
-    // HANDOFF.md "Offene Punkte". Controls existieren im UI, lösen aber
-    // bewusst noch keinen (geratenen) Befehl aus. Volume Sync ist weiter
-    // oben echt angebunden (PipeWire-Sink-Lautstärke).
+    // Reset ist weiterhin unbekannt (kein Capture vorhanden, bewusst nicht
+    // spekulativ implementiert – Risiko eines Bricking). Energiesparen und
+    // Logo-LED per Windows-Capture bestätigt (special::setting_id).
     ui.on_reset_clicked(move || {
         eprintln!("Gerät zurücksetzen: Report-Format noch nicht reverse-engineert");
     });
-    ui.on_power_saving_toggled(move |_on| {
-        eprintln!("Energieeinsparung: Report-Format noch nicht reverse-engineert");
-    });
-    ui.on_logo_led_toggled(move |_on| {
-        eprintln!("Logo-LED: Report-Format noch nicht reverse-engineert");
-    });
+    {
+        let device = device.clone();
+        ui.on_power_saving_toggled(move |on| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let report = special::device_setting(special::setting_id::POWER_SAVING, on);
+            if let Err(e) = dev.send_report(&report) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
+    {
+        let device = device.clone();
+        ui.on_logo_led_toggled(move |on| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let report = special::device_setting(special::setting_id::LOGO_LED, on);
+            if let Err(e) = dev.send_report(&report) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
 
     ui.run()?;
     Ok(())

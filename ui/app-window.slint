@@ -42,6 +42,7 @@ export component AppWindow inherits Window {
     // Report-Builder-Funktionen pro Namespace.
     callback playback-param-changed(int, float);
     callback output-target-changed(int);
+    callback spdif-direct-toggled(bool);
     callback speaker-test-clicked(int);
     callback speaker-test-cycle-clicked();
     callback recording-param-changed(int, float);
@@ -80,6 +81,7 @@ export component AppWindow inherits Window {
                 PlaybackSettingsTab {
                     output-target: output-target;
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
+                    spdif-direct-toggled(on) => { spdif-direct-toggled(on); }
                     speaker-test-clicked(ch) => { speaker-test-clicked(ch); }
                     speaker-test-cycle-clicked() => { speaker-test-cycle-clicked(); }
                 }

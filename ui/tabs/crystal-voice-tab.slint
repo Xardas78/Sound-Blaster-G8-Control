@@ -73,7 +73,9 @@ export component CrystalVoiceTab inherits VerticalLayout {
     EffectToggle {
         label: "Smart Volume";
         checked: smart-volume-on;
-        toggled(on) => { smart-volume-on = on; /* Param-ID noch nicht bestätigt */ }
+        // Param-ID per Windows-Capture bestätigt (0x2c) – vorher fälschlich
+        // für Voice Morph gehalten, siehe HANDOFF.md.
+        toggled(on) => { smart-volume-on = on; param-changed(44, on ? 1.0 : 0.0); }
     }
     Text {
         text: "Gut verstanden werden, ohne rufen oder flüstern zu müssen.";
@@ -87,7 +89,9 @@ export component CrystalVoiceTab inherits VerticalLayout {
             width: profile-label-width;
             label: "Voice Morph";
             checked: voice-morph-on;
-            toggled(on) => { voice-morph-on = on; param-changed(44, on ? 1.0 : 0.0); }
+            // Param-ID per Windows-Capture korrigiert: 0x0a (10), nicht 0x2c
+            // (das ist Smart Volume, siehe oben) – siehe HANDOFF.md.
+            toggled(on) => { voice-morph-on = on; param-changed(10, on ? 1.0 : 0.0); }
         }
         CompactComboBox {
             width: profile-box-width;

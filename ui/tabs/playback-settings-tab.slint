@@ -11,10 +11,14 @@
 // Umschaltung – gemeinsamer Zustand mit dem Schalter auf der
 // Acoustic-Engine-Seite (siehe app-window.slint), steuert den virtuellen
 // HRTF-Surround-Sink (virtual_surround.rs).
+import { Switch } from "std-widgets.slint";
+
 export component PlaybackSettingsTab inherits VerticalLayout {
     in property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
+    in-out property <bool> spdif-direct-on: false;
 
     callback output-target-changed(int);
+    callback spdif-direct-toggled(bool);
     callback speaker-test-clicked(int);
     callback speaker-test-cycle-clicked();
 
@@ -74,6 +78,17 @@ export component PlaybackSettingsTab inherits VerticalLayout {
                 wrap: word-wrap;
                 font-size: 14px;
                 color: gray;
+            }
+
+            // Nur bei Lautsprecher relevant (SPDIF-Out ist ein separater
+            // physischer Ausgang), passend zum Original nur dort gezeigt.
+            if output-target == 1: HorizontalLayout {
+                spacing: 8px;
+                Switch {
+                    checked: spdif-direct-on;
+                    toggled => { spdif-direct-on = self.checked; spdif-direct-toggled(self.checked); }
+                }
+                Text { text: "SPDIF-Out Direct Mode"; vertical-alignment: center; }
             }
         }
 

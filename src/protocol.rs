@@ -166,16 +166,26 @@ pub mod crystal_voice {
     pub const NOISE_REDUCTION_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x04 };
     pub const NOISE_REDUCTION_LEVEL: LevelParam = LevelParam { namespace: Namespace::Recording, param_id: 0x05 };
 
-    pub const VOICE_MORPH_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x2c };
-    /// Profilabhängiger Parameterblock (Pitch/Formant), 9 Werte pro Charakter.
-    pub const VOICE_MORPH_PROFILE_IDS: [u8; 9] = [0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12];
+    /// Per Windows-Capture ("mic voicemorph ein-aus.pcapng") korrigiert:
+    /// 0x0a, nicht 0x2c wie zuvor angenommen (0x2c ist Smart Volume Mic).
+    pub const VOICE_MORPH_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x0a };
+    /// Profilabhängiger Parameterblock (Pitch/Formant), 8 Werte pro
+    /// Charakter (nicht 9 – 0x0a ist der Toggle selbst, kein Profilwert).
+    /// Exakte Werte je Charakter liegen als JSON in der Windows-Install
+    /// (`VoiceFxProfile\*.json`, 18 Presets) – siehe HANDOFF.md Abschnitt 6.
+    pub const VOICE_MORPH_PROFILE_IDS: [u8; 8] = [0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12];
 
     pub const MIC_EQ_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x13 };
-    /// Profilabhängiger Parameterblock, 10 Werte pro Preset (z.B. Pitch-Reduzierung).
+    /// Profilabhängiger Parameterblock, 10 Werte pro Preset (z.B. Pitch-
+    /// Reduzierung). Exakte Werte je Preset liegen als JSON in der
+    /// Windows-Install (`MicEqProfile\*.json`, 9 Presets) – siehe
+    /// HANDOFF.md Abschnitt 6.
     pub const MIC_EQ_PROFILE_IDS: [u8; 10] =
         [0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d];
 
-    // Smart Volume (Mic) Toggle noch nicht isoliert bestätigt – TODO: verifizieren.
+    /// Per Windows-Capture bestätigt (vorher "Smart Volume (Mic)" fälschlich
+    /// für Voice Morph gehalten).
+    pub const MIC_SMART_VOLUME_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x2c };
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +272,47 @@ pub mod special {
         } else {
             None
         }
+    }
+
+    /// Schaltet den physischen Kopfhörer/Lautsprecher-Schalter per Software
+    /// um – per Windows-Capture ("umschalten in software_hp-spk-und
+    /// zurück.pcapng") UND Live-Test am echten Gerät bestätigt (hörbares
+    /// Relais-Klicken, LED wechselt). Byte[3]=0x00 markiert den Befehl
+    /// (Host→Gerät), das Gerät bestätigt mit demselben Report aber
+    /// Byte[3]=0x01 (siehe output_target_from_reply/query_output_target)
+    /// – frühere Versuche mit Byte[3]=0x01 als Befehl waren der Fehler,
+    /// deshalb schien der Schalter lange nicht fernsteuerbar.
+    pub fn set_output_target(headphones: bool) -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x2c;
+        buf[2] = 0x05;
+        buf[3] = 0x00;
+        buf[4] = if headphones { 0x04 } else { 0x02 };
+        buf
+    }
+
+    /// Geräte-/Einstellungen-Befehlsfamilie (eigenes Schema, nicht das
+    /// Toggle/Level-Schema von build_toggle_report). Per Windows-Capture
+    /// bestätigt für mehrere zuvor unbekannte Einstellungen.
+    pub fn device_setting(setting_id: u8, on: bool) -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x39;
+        buf[2] = 0x03;
+        buf[3] = 0x00;
+        buf[4] = setting_id;
+        buf[5] = if on { 0x01 } else { 0x00 };
+        buf
+    }
+
+    /// IDs für device_setting(), per Windows-Capture bestätigt.
+    pub mod setting_id {
+        pub const DIRECT_MODE: u8 = 0x05;
+        pub const SPDIF_OUT_DIRECT_MODE: u8 = 0x0d;
+        pub const LOGO_LED: u8 = 0x0e;
+        pub const POWER_SAVING: u8 = 0x11;
+        pub const VOLUME_SYNC: u8 = 0x1c;
     }
 }
 
