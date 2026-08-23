@@ -73,6 +73,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.set_power_saving_on(s.power_saving_on);
         ui.set_logo_led_on(s.logo_led_on);
         ui.set_dark_mode_on(s.dark_mode_on);
+        // Zeigt nur den zuletzt gewählten Preset-Namen wieder im Sound-
+        // Modus-Dropdown an – die dahinterliegenden Acoustic-Engine-/EQ-
+        // Werte sind schon über s.ae_* oben abgedeckt (on_sound_mode_-
+        // preset_selected() schreibt beim Anwenden eines Presets dieselben
+        // Felder mit).
+        if s.sound_mode_preset_index >= 0 {
+            ui.set_sound_mode_selected_index(s.sound_mode_preset_index + 1);
+        }
 
         if let Some(dev) = &device {
             let send = |report: [u8; 64]| {
@@ -178,12 +186,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Abschnitt 7/8), also muss die App ihre eigene Anzeige nachziehen.
     {
         let device = device.clone();
+        let settings = settings.clone();
         let weak = ui.as_weak();
         ui.on_sound_mode_preset_selected(move |index| {
             let Some((name, p)) = sound_mode::PRESETS.get(index as usize) else {
                 return eprintln!("Unbekannter Sound-Modus-Index {index}");
             };
             let ui_handle = weak.unwrap();
+
+            // Sound-Modus-Preset software-seitig merken (siehe persist.rs):
+            // dieselben Felder wie playback-param-changed, damit der
+            // normale Start-Wiederherstellungscode oben (s.ae_*) beim
+            // nächsten App-Start automatisch dieselben Werte ans Gerät
+            // sendet – kein eigener Restore-Pfad nötig.
+            {
+                let mut s = settings.borrow_mut();
+                s.ae_surround_on = p.surround_on;
+                s.ae_surround_level = p.surround_level;
+                s.ae_crystalizer_on = p.crystalizer_on;
+                s.ae_crystalizer_level = p.crystalizer_level;
+                s.ae_bass_on = p.bass_on;
+                s.ae_bass_level = p.bass_level;
+                s.ae_svm_on = p.svm_on;
+                s.ae_svm_level = p.svm_level;
+                s.ae_svm_mode = p.svm_mode as i32;
+                s.ae_dialog_on = p.dialog_on;
+                s.ae_dialog_level = p.dialog_level;
+                s.ae_eq_on = true;
+                s.sound_mode_preset_index = index;
+                persist::save(&s);
+            }
             // acoustic_engine-Level-Parameter sind 0.0-1.0-Floats fürs
             // Gerät, die UI-Slider laufen aber auf 0-100 (siehe
             // acoustic-engine-tab.slint) – deshalb hier *100 für die Anzeige.
@@ -335,9 +367,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    ui.on_mixer_level_changed(move |entity_id, value| {
-        mixer::set_level(entity_id, value);
-    });
+    // Balance ist bewusst rein lokaler UI-Zustand (siehe mixer-tab.slint),
+    // deshalb hier gemeinsam als [f32; 8] gehalten statt in persist.rs: ein
+    // Pegel-Wechsel (Slider) soll die zuletzt gesetzte Balance nicht
+    // stillschweigend auf Mitte zurücksetzen, und umgekehrt braucht ein
+    // Balance-Wechsel den zuletzt bekannten Pegel, um beide ALSA-Kanäle
+    // korrekt gemeinsam zu setzen (amixer kennt keine separate
+    // Balance-Control).
+    let mixer_balance: Rc<RefCell<[f32; 8]>> = Rc::new(RefCell::new([0.0; 8]));
+
+    {
+        let mixer_balance = mixer_balance.clone();
+        ui.on_mixer_level_changed(move |entity_id, value| {
+            let balance = usize::try_from(entity_id)
+                .ok()
+                .and_then(|i| mixer_balance.borrow().get(i).copied())
+                .unwrap_or(0.0);
+            mixer::set_balance(entity_id, value, balance);
+        });
+    }
+
+    {
+        let mixer_balance = mixer_balance.clone();
+        ui.on_mixer_balance_changed(move |entity_id, balance| {
+            if let Ok(i) = usize::try_from(entity_id) {
+                if let Some(slot) = mixer_balance.borrow_mut().get_mut(i) {
+                    *slot = balance;
+                }
+            }
+            let level = mixer::get_level(entity_id).unwrap_or(50.0);
+            mixer::set_balance(entity_id, level, balance);
+        });
+    }
 
     ui.on_mute_changed(move |entity_id, muted| {
         mixer::set_mute(entity_id, muted);

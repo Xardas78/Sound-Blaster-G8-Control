@@ -38,7 +38,10 @@ export component SoundModeTab inherits VerticalLayout {
 
     // 0 = "Im Gerät" (kein festes Preset gewählt, aktuelle Live-Werte,
     // entspricht dem Original-Screenshot), 1..60 = sound_mode::PRESETS.
-    property <int> selected-sound-mode-index: 0;
+    // in-out (nicht mehr rein lokal): main.rs setzt das beim Start auf den
+    // zuletzt gewählten Wert zurück (siehe persist.rs), damit die Anzeige
+    // stimmt, nicht nur die dahinterliegenden Acoustic-Engine-/EQ-Werte.
+    in-out property <int> selected-sound-mode-index: 0;
 
     padding: 16px;
     spacing: 14px;

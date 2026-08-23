@@ -1,13 +1,24 @@
-import { Slider } from "std-widgets.slint";
+import { Slider, Palette } from "std-widgets.slint";
 
 // Alle Regler hier sind Standard-USB-Audio-Class Feature-Unit SET_CUR –
 // kein 5a-Report nötig. entity-id ordnet Rust-seitig dem passenden
 // Feature-Unit-Entity zu (0x03, 0x04, 0x05, 0x06, 0x09, 0x0a, 0x0c).
+//
+// Balance (L/R) ist bewusst rein lokaler UI-Zustand, nicht persistiert –
+// genau wie die übrigen sechs nicht-footer-gebundenen Pegel dieses Tabs
+// (Line In/External Mic/SPDIF/What U Hear) auch schon keine gespeicherten
+// Werte haben, siehe persist.rs. Setzt beim Ändern immer beide ALSA-
+// Kanäle neu (per amixer "L%,R%"), verifiziert per `amixer sget Speaker`
+// u.a.: alle acht Controls haben unabhängige Front-Left/Front-Right-
+// Kanäle, auch die (Feature-Unit-seitig eigentlich mono gedachten)
+// Mikrofoneingänge.
 export component MixerRow inherits HorizontalLayout {
     in property <string> label;
     in property <int> entity-id;
     in-out property <float> level: 50;
+    in-out property <float> balance: 0;
     callback level-changed(int, float);
+    callback balance-changed(int, float);
 
     spacing: 8px;
     Text { text: label; width: 100px; vertical-alignment: center; }
@@ -17,6 +28,61 @@ export component MixerRow inherits HorizontalLayout {
         changed(v) => { level = v; level-changed(entity-id, v); }
     }
     Text { text: round(level) + "%"; width: 40px; }
+
+    balance-button := Rectangle {
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        background: balance-area.has-hover ? Palette.alternate-background : transparent;
+        Text {
+            text: "⋯";
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        balance-area := TouchArea {
+            clicked => { balance-popup.show(); }
+        }
+    }
+
+    balance-popup := PopupWindow {
+        x: balance-button.x - 196px;
+        y: balance-button.y + 28px;
+        width: 220px;
+        height: 96px;
+
+        Rectangle {
+            background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : white;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: #cccccc;
+            drop-shadow-blur: 12px;
+            drop-shadow-color: #00000044;
+
+            VerticalLayout {
+                padding: 10px;
+                spacing: 6px;
+                Text { text: "Balance"; font-weight: 600; font-size: 13px; }
+                HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: "L"; vertical-alignment: center; }
+                    Slider {
+                        minimum: -100; maximum: 100;
+                        value: balance;
+                        changed(v) => { balance = v; balance-changed(entity-id, v); }
+                    }
+                    Text { text: "R"; vertical-alignment: center; }
+                }
+                Text {
+                    horizontal-alignment: center;
+                    font-size: 11px;
+                    color: gray;
+                    text: abs(balance) < 1 ? "Mitte" : balance < 0 ? round(-balance) + "% links" : round(balance) + "% rechts";
+                }
+            }
+        }
+    }
 }
 
 export component MixerTab inherits VerticalLayout {
@@ -30,6 +96,7 @@ export component MixerTab inherits VerticalLayout {
     in-out property <float> rec-what-u-hear: 65;
 
     callback level-changed(int, float);
+    callback balance-changed(int, float);
 
     spacing: 16px;
     padding: 16px;
@@ -38,16 +105,16 @@ export component MixerTab inherits VerticalLayout {
     // (mixer.rs) – die G8 exponiert diese Standard-UAC-Feature-Units bereits
     // als Kernel-Mixer-Controls (Karte "USB1"), kein eigener USB-Report nötig.
     Text { text: "Wiedergabe"; font-weight: 700; }
-    MixerRow { label: "Lautsprecher"; entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "Lautsprecher"; entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
 
     Text { text: "Überwachung"; font-weight: 700; }
-    MixerRow { label: "Line In"; entity-id: 1; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } }
-    MixerRow { label: "External Mic"; entity-id: 2; level: monitor-ext-mic; level-changed(id, v) => { level-changed(id, v); } }
-    MixerRow { label: "SPDIF In"; entity-id: 3; level: monitor-spdif-in; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "Line In"; entity-id: 1; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    MixerRow { label: "External Mic"; entity-id: 2; level: monitor-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    MixerRow { label: "SPDIF In"; entity-id: 3; level: monitor-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
 
     Text { text: "Aufnahme"; font-weight: 700; }
-    MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } }
-    MixerRow { label: "Line In"; entity-id: 5; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } }
-    MixerRow { label: "External Mic"; entity-id: 6; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } }
-    MixerRow { label: "What U Hear"; entity-id: 7; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } }
+    MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    MixerRow { label: "Line In"; entity-id: 5; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    MixerRow { label: "External Mic"; entity-id: 6; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    MixerRow { label: "What U Hear"; entity-id: 7; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
 }

@@ -63,6 +63,9 @@ export component AppWindow inherits Window {
     in-out property <float> ae-eq-preamp: 0;
     in-out property <[float]> ae-eq-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     in-out property <int> ae-eq-preset-index: 0;
+    // Von Rust beim Start gesetzt (persist.rs) – zeigt das zuletzt
+    // gewählte Sound-Modus-Preset wieder im Dropdown an.
+    in-out property <int> sound-mode-selected-index: 0;
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
@@ -79,6 +82,7 @@ export component AppWindow inherits Window {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback mixer-balance-changed(int, float);
     callback sound-mode-preset-selected(int);
     callback mute-changed(int, bool);
     callback capture-source-changed(int);
@@ -135,6 +139,7 @@ export component AppWindow inherits Window {
                     ae-eq-preamp: ae-eq-preamp;
                     ae-eq-bands: ae-eq-bands;
                     ae-eq-preset-index: ae-eq-preset-index;
+                    sound-mode-selected-index: sound-mode-selected-index;
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }
@@ -145,6 +150,7 @@ export component AppWindow inherits Window {
                     direct-mode-toggled(on) => { direct-mode-toggled(on); }
                     decoder-mode-changed(m) => { decoder-mode-changed(m); }
                     mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
+                    mixer-balance-changed(id, v) => { mixer-balance-changed(id, v); }
                     sound-mode-preset-selected(i) => { sound-mode-preset-selected(i); }
                 }
             }

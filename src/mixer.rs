@@ -142,6 +142,36 @@ pub fn set_level(entity_id: i32, percent: f32) {
     run_amixer(&["sset", simple, direction, "--", &format!("{alsa_percent}%")]);
 }
 
+/// Balance in Prozent, -100 (nur links) .. 0 (Mitte) .. 100 (nur rechts).
+/// Senkt nur die leisere Seite proportional zum eingestellten Pegel (wie bei
+/// PulseAudio/Windows üblich) – hebt die lautere Seite nie über den Pegel
+/// hinaus. `level_percent` ist der "gefühlte" Wert wie bei set_level(). Per
+/// `amixer sget` verifiziert: alle acht CONTROLS-Einträge haben unabhängige
+/// Front-Left/Front-Right-Kanäle (auch die Mikrofoneingänge), Balance ist
+/// also für jede Mixer-Zeile technisch möglich.
+pub fn set_balance(entity_id: i32, level_percent: f32, balance: f32) {
+    let Some(&name) = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i)) else {
+        eprintln!("Unbekannte Mixer-Entity-ID {entity_id}");
+        return;
+    };
+    let Some((simple, direction)) = simple_name_and_direction(name) else {
+        eprintln!("Mixer-Control-Name nicht erkannt: {name}");
+        return;
+    };
+    let alsa_percent = if entity_id == 0 { taper_uncorrect(level_percent) } else { level_percent };
+    let alsa_percent = alsa_percent.clamp(0.0, 100.0);
+    let balance = balance.clamp(-100.0, 100.0);
+    let left = alsa_percent * if balance > 0.0 { 1.0 - balance / 100.0 } else { 1.0 };
+    let right = alsa_percent * if balance < 0.0 { 1.0 + balance / 100.0 } else { 1.0 };
+    run_amixer(&[
+        "sset",
+        simple,
+        direction,
+        "--",
+        &format!("{}%,{}%", left.round() as i32, right.round() as i32),
+    ]);
+}
+
 /// Jeder Pegel-Control aus CONTROLS hat eine gleichnamige "...Switch"-Control
 /// für Stummschaltung (z.B. "Speaker Playback Volume" -> "Speaker Playback
 /// Switch"), per `amixer -c USB1 controls` verifiziert. Läuft über `cset

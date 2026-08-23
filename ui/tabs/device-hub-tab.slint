@@ -47,6 +47,11 @@ export component DeviceHubTab inherits TabWidget {
     in-out property <float> ae-eq-preamp: 0;
     in-out property <[float]> ae-eq-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     in-out property <int> ae-eq-preset-index: 0;
+    // Anzeige-Index im Sound-Modus-Dropdown (0="Im Gerät", 1..60=Presets).
+    // Anders als ae-eq-preset-index bis nach AppWindow durchgereicht: Rust
+    // muss das beim Programmstart selbst setzen können (persist.rs), es
+    // gibt keinen anderen Zustand, aus dem main.rs das ableiten könnte.
+    in-out property <int> sound-mode-selected-index: 0;
 
     callback playback-param-changed(int, float);
     callback output-target-changed(int);
@@ -58,6 +63,7 @@ export component DeviceHubTab inherits TabWidget {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback mixer-balance-changed(int, float);
     callback sound-mode-preset-selected(int);
 
     Tab {
@@ -78,6 +84,7 @@ export component DeviceHubTab inherits TabWidget {
             eq-on: ae-eq-on;
             eq-preset-names: eq-tab.preset-names;
             eq-selected-preset-index: ae-eq-preset-index;
+            selected-sound-mode-index: sound-mode-selected-index;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
             preset-selected(i) => { sound-mode-preset-selected(i); }
@@ -134,6 +141,7 @@ export component DeviceHubTab inherits TabWidget {
             playback-speaker: footer-speaker-level;
             rec-ext-mic: footer-mic-level;
             level-changed(id, v) => { mixer-level-changed(id, v); }
+            balance-changed(id, v) => { mixer-balance-changed(id, v); }
         }
     }
 }

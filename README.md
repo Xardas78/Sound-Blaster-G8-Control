@@ -39,7 +39,7 @@ USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit akti
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
 - Sound-Modus-Presets im Gerät speichern/laden (Anwenden funktioniert, Auslesen/Persistieren eines aktiven Presets nicht)
 - Bass-Crossover-Frequenz aus den Sound-Modus-Presets (kein bekannter Geräteparameter)
-- Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen
+- Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen – **bewusst dauerhaft nicht implementiert** (Bricking-Risiko bei falscher Byte-Sequenz, kein Capture vorhanden), nicht nur vorläufig offen; siehe [HANDOFF.md](HANDOFF.md) Abschnitt 5
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
 
 **Bekannte Einschränkung:** Windows führt für Equalizer-Presets separate Kopfhörer-/Lautsprecher-Kurven; unser Equalizer hat nur eine gemeinsame Kurve unabhängig vom Kopfhörer/Lautsprecher-Umschalter (wir übernehmen nur die Kopfhörer-Variante der Original-Presets).
