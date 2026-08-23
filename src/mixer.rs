@@ -26,6 +26,89 @@ const CONTROLS: [&str; 8] = [
     "What U Hear Capture Volume",
 ];
 
+// Der Lautsprecher-Drehregler der G8 (entity-id 0) ist ein analoges
+// Potentiometer mit "Audio-Taper"-Kennlinie: gleich große Drehschritte
+// verändern den rohen ALSA-Wert (0-128) sehr ungleichmäßig – unten viel,
+// oben wenig. Aus einem Windows-USB-Capture einer langsamen, kompletten
+// Minimum->Maximum-Drehung extrahiert (`vol min-max-min_mit
+// sync.pcapng`, siehe HANDOFF.md): 24 tatsächlich durchlaufene Rohwerte
+// in der Reihenfolge, wie das Gerät sie beim Drehen meldet. Angenommen,
+// die Drehung war einigermaßen gleichmäßig, entspricht der Index in
+// dieser Liste (0..23) der gefühlten/linearen Position (0-100%) –
+// dieselbe Kalibrierung, die auch live am Gerät nachgemessen wurde
+// (optische Mitte = Rohwert 107 ≈ Tabellenindex 12 ≈ 52%, sehr nah an
+// den erwarteten 50%). Die anderen Mixer-Regler (Line In, External Mic,
+// SPDIF, ...) sind rein digitale ALSA-Gains ohne physisches Poti
+// dahinter, deshalb gilt die Korrektur NUR für entity-id 0.
+const TAPER_TABLE: [(u8, f32); 24] = [
+    (8, 0.0000),
+    (56, 4.3478),
+    (62, 8.6957),
+    (71, 13.0435),
+    (78, 17.3913),
+    (84, 21.7391),
+    (88, 26.0870),
+    (92, 30.4348),
+    (96, 34.7826),
+    (99, 39.1304),
+    (102, 43.4783),
+    (105, 47.8261),
+    (107, 52.1739),
+    (110, 56.5217),
+    (112, 60.8696),
+    (114, 65.2174),
+    (116, 69.5652),
+    (118, 73.9130),
+    (120, 78.2609),
+    (121, 82.6087),
+    (123, 86.9565),
+    (124, 91.3043),
+    (126, 95.6522),
+    (128, 100.0000),
+];
+
+/// Roher ALSA-Prozentwert -> gefühlter Prozentwert (stückweise linear
+/// über TAPER_TABLE, in Rohwert-Einheiten interpoliert).
+fn taper_correct(alsa_pct: f32) -> f32 {
+    let raw = (alsa_pct / 100.0 * 128.0).clamp(0.0, 128.0);
+    if raw <= TAPER_TABLE[0].0 as f32 {
+        return 0.0;
+    }
+    if raw >= TAPER_TABLE[TAPER_TABLE.len() - 1].0 as f32 {
+        return 100.0;
+    }
+    for w in TAPER_TABLE.windows(2) {
+        let (r0, p0) = (w[0].0 as f32, w[0].1);
+        let (r1, p1) = (w[1].0 as f32, w[1].1);
+        if raw >= r0 && raw <= r1 {
+            return p0 + (raw - r0) / (r1 - r0) * (p1 - p0);
+        }
+    }
+    100.0
+}
+
+/// Umkehrfunktion zu taper_correct(): gefühlter Prozentwert -> roher
+/// ALSA-Prozentwert, zum Schreiben (set_level()).
+fn taper_uncorrect(display_pct: f32) -> f32 {
+    let display_pct = display_pct.clamp(0.0, 100.0);
+    if display_pct <= TAPER_TABLE[0].1 {
+        return TAPER_TABLE[0].0 as f32 / 128.0 * 100.0;
+    }
+    let last = TAPER_TABLE[TAPER_TABLE.len() - 1];
+    if display_pct >= last.1 {
+        return last.0 as f32 / 128.0 * 100.0;
+    }
+    for w in TAPER_TABLE.windows(2) {
+        let (r0, p0) = (w[0].0 as f32, w[0].1);
+        let (r1, p1) = (w[1].0 as f32, w[1].1);
+        if display_pct >= p0 && display_pct <= p1 {
+            let raw = r0 + (display_pct - p0) / (p1 - p0) * (r1 - r0);
+            return raw / 128.0 * 100.0;
+        }
+    }
+    100.0
+}
+
 /// `amixer sset` (simple mixer) kennt nur den "einfachen" Basisnamen ohne
 /// " Playback"/" Capture Volume"-Suffix (z.B. "Speaker" statt "Speaker
 /// Playback Volume") plus ein Richtungswort, wenn ein Control (wie
@@ -51,8 +134,12 @@ pub fn set_level(entity_id: i32, percent: f32) {
         eprintln!("Mixer-Control-Name nicht erkannt: {name}");
         return;
     };
-    let percent = percent.clamp(0.0, 100.0) as i32;
-    run_amixer(&["sset", simple, direction, "--", &format!("{percent}%")]);
+    // Taper-Korrektur nur für den Lautsprecher-Regler (entity-id 0, siehe
+    // Kommentar oben bei TAPER_MIN_ALSA_PCT) – percent kommt hier als
+    // "gefühlter" Wert vom Slider, amixer braucht aber den rohen Wert.
+    let alsa_percent = if entity_id == 0 { taper_uncorrect(percent) } else { percent };
+    let alsa_percent = alsa_percent.clamp(0.0, 100.0) as i32;
+    run_amixer(&["sset", simple, direction, "--", &format!("{alsa_percent}%")]);
 }
 
 /// Jeder Pegel-Control aus CONTROLS hat eine gleichnamige "...Switch"-Control
@@ -107,27 +194,8 @@ pub fn get_level(entity_id: i32) -> Option<f32> {
     if let Some(first) = capitalized.get_mut(0..1) {
         first.make_ascii_uppercase();
     }
-    extract_percent(&text, &capitalized)
-}
-
-/// Liest den aktuellen dB-Wert einer Mixer-Entity (analog zu get_level(),
-/// aber dB statt Prozent). Für Volume Sync gedacht, siehe
-/// set_pipewire_sink_volume_db() weiter unten – ALSA-Prozent und
-/// PipeWire-Prozent sind NICHT dieselbe Skala.
-pub fn get_level_db(entity_id: i32) -> Option<f32> {
-    let name = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i))?;
-    let (simple, direction) = simple_name_and_direction(name)?;
-
-    let out = run_with_timeout("amixer", &["-c", CARD, "sget", simple], CMD_TIMEOUT)?;
-    if !out.status.success() {
-        return None;
-    }
-    let text = String::from_utf8_lossy(&out.stdout);
-    let mut capitalized = direction.to_string();
-    if let Some(first) = capitalized.get_mut(0..1) {
-        first.make_ascii_uppercase();
-    }
-    extract_db(&text, &capitalized)
+    let alsa_pct = extract_percent(&text, &capitalized)?;
+    Some(if entity_id == 0 { taper_correct(alsa_pct) } else { alsa_pct })
 }
 
 /// Sucht die Wertzeile (z.B. "Front Left: Playback 128 [88%] [0.00dB] [off]
@@ -150,48 +218,19 @@ fn extract_percent(text: &str, direction: &str) -> Option<f32> {
     None
 }
 
-/// Wie extract_percent(), liest aber den dB-Wert aus dem zweiten
-/// Klammerpaar ("[-46.50dB]") statt des Prozentwerts.
-fn extract_db(text: &str, direction: &str) -> Option<f32> {
-    for line in text.lines() {
-        if !line.contains("dB]") {
-            continue;
-        }
-        if let Some(idx) = line.find(direction) {
-            let rest = &line[idx + direction.len()..];
-            let start = rest.find("dB]")?;
-            // Rückwärts vom "dB]" bis zur öffnenden Klammer suchen, statt
-            // vorwärts vom "[" – dazwischen liegt zuerst noch "[NN%]".
-            let before = &rest[..start];
-            let open = before.rfind('[')?;
-            return before[open + 1..].trim().parse().ok();
-        }
-    }
-    None
-}
-
-/// Setzt die PipeWire-Sink-Lautstärke über den dB-Wert – das ist NICHT
-/// dieselbe Stellgröße wie set_level()/get_level() (ALSA-Hardwareregister
-/// der G8 selbst), sondern die zusätzliche Software-Pegelstufe, die
-/// PipeWire on top of jedem Sink führt (vergleichbar mit der
-/// "PC-Lautstärke" unter Windows). Für "Volume Sync", siehe main.rs.
-///
-/// WICHTIG: ALSA-Prozent (get_level()) und PipeWire-Prozent (`wpctl
-/// get-volume`) sind NICHT dieselbe Skala – empirisch am laufenden Gerät
-/// bestätigt (z.B. ALSA 27% == PipeWire 17%, ALSA 65% == PipeWire 42%).
-/// ALSA zeigt hier einen dB-basierten Prozentwert, PipeWire/PulseAudio
-/// verwendet die "kubische" Lautstärke-Konvention (Prozent = dritte
-/// Wurzel des linearen Gain-Faktors). Einen ALSA-Prozentwert 1:1 als
-/// PipeWire-Prozent zu übernehmen (wie eine frühere Version tat) erzeugt
-/// deshalb bei jeder Synchronisierung sofort eine sichtbar falsche
-/// Lautstärke. Der gemeinsame Nenner ist dB/linearer Gain – deshalb hier
-/// über get_level_db() synchronisieren, nicht über get_level().
-pub fn set_pipewire_sink_volume_db(db: f32) {
-    let gain = 10f32.powf(db / 20.0);
-    let cubic_percent = (gain.max(0.0).powf(1.0 / 3.0) * 100.0).clamp(0.0, 100.0);
+/// Setzt die PipeWire-Sink-Lautstärke direkt auf einen linearen
+/// Prozentwert (kein dB/kubische Umrechnung) – für den Lautsprecher-
+/// Regler (entity-id 0) gedacht, dessen get_level() bereits taper-
+/// korrigiert ist (siehe TAPER_TABLE oben). Der Zweck von Volume Sync
+/// ist, dass die PC-Lautstärke *gefühlt* zum Reglerstand passt – dafür
+/// ist der bereits korrigierte "gefühlte" Prozentwert die richtige
+/// Zielgröße, nicht der physikalisch exakte dB-Wert (der würde wieder
+/// bei ~84% statt ~50% in der Mitte landen, siehe HANDOFF.md).
+pub fn set_pipewire_sink_volume_percent(percent: f32) {
+    let percent = percent.clamp(0.0, 100.0);
     run_with_timeout(
         "wpctl",
-        &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{cubic_percent}%")],
+        &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{percent}%")],
         CMD_TIMEOUT,
     );
 }

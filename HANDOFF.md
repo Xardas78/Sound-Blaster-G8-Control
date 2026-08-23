@@ -297,20 +297,52 @@ Mehrere Stellen können Lautstärke ändern (ALSA-Hardwareregister,
 PipeWire-Sink-Lautstärke, unsere UI-Regler), die nicht vollständig
 miteinander verknüpft sind:
 
-- **Gefunden und behoben:** ALSA-Prozent (`amixer`/`get_level()`) und
+- **Gefunden und behoben (Zwischenstand, siehe Taper-Korrektur unten für
+  die finale Lösung):** ALSA-Prozent (`amixer`/`get_level()`) und
   PipeWire-Sink-Prozent (`wpctl get-volume`) sind für die G8 **zwei
   unterschiedliche Skalen**, keine austauschbaren Zahlen – am laufenden
   Gerät empirisch bestätigt: ALSA 27 % entspricht PipeWire 17 %, ALSA
   65 % entspricht PipeWire 42 %. PipeWire/PulseAudio verwenden die
   "kubische" Lautstärke-Konvention (Prozent = dritte Wurzel des linearen
   Gain-Faktors), ALSA zeigt einen dB-basierten Prozentwert. Volume Sync
-  kopierte bisher den rohen ALSA-Prozentwert 1:1 in die PipeWire-API
+  kopierte ursprünglich den rohen ALSA-Prozentwert 1:1 in die PipeWire-API
   (`wpctl set-volume`) – das erzeugte bei *jeder* Synchronisierung
   garantiert eine falsche PC-Lautstärke (genau das "System 100 % vs.
-  Lautsprecher 27 %"-Verhalten). Fix: `mixer.rs::get_level_db()` +
-  `set_pipewire_sink_volume_db()` rechnen jetzt über dB/linearen Gain um
-  (`cubic_percent = gain^(1/3) * 100`), Formel gegen echte Gerätewerte
-  verifiziert (exakte Übereinstimmung bei beiden Testpunkten oben).
+  Lautsprecher 27 %"-Verhalten).
+- **Gefunden und behoben: der Lautsprecher-Drehregler hat eine
+  "Audio-Taper"-Kennlinie (analog-Poti), keine lineare Entsprechung
+  zwischen Drehposition und Rohwert.** Live kalibriert (Anschläge +
+  optische Mitte angefahren) UND aus einem Windows-Capture einer
+  kompletten langsamen Minimum→Maximum-Drehung verifiziert
+  (`vol min-max-min_mit sync.pcapng`, 24 tatsächlich durchlaufene
+  Rohwerte): der rohe ALSA-Wert (raw/128, linear zu dB:
+  `dB = (raw-128)*0.5`, min=-64dB/max=0dB per `amixer cget` bestätigt)
+  steigt am unteren Ende sehr schnell (große Rohwert-Sprünge pro
+  Dreh-Klick) und flacht zum oberen Ende stark ab (nur noch 1-2 Rohwert-
+  Einheiten pro Klick) – bei optischer Mitte steht der rohe ALSA-Wert
+  bereits bei ~84 % statt bei 50 %. Das ist eine reine Hardware-
+  Charakteristik (bestätigt: die komplette Poll-/Änderungserkennungs-
+  Kette funktioniert lückenlos korrekt, siehe unten), kein Software-Bug.
+  Fix in zwei Teilen:
+  1. `mixer.rs::TAPER_TABLE` – 24-Punkte-Stützstellentabelle aus dem
+     Capture, `taper_correct()`/`taper_uncorrect()` interpolieren
+     stückweise linear zwischen den Rohwerten. `get_level(0)` gibt jetzt
+     den "gefühlten" (korrigierten) statt den rohen linearen Prozentwert
+     zurück, `set_level(0, ...)` rechnet beim Schreiben zurück. Gilt NUR
+     für entity-id 0 (Lautsprecher-Poti) – die übrigen Mixer-Regler sind
+     rein digitale ALSA-Gains ohne physisches Poti dahinter.
+  2. Volume Sync sendet jetzt den bereits korrigierten linearen Prozent-
+     wert direkt an PipeWire (`mixer.rs::set_pipewire_sink_volume_percent()`,
+     ersetzt die frühere dB/kubische Umrechnung `get_level_db()`/
+     `set_pipewire_sink_volume_db()`, die deshalb entfernt wurden) – Ziel
+     ist, dass die PC-Lautstärke *gefühlt* zum Reglerstand passt, nicht
+     dass sie physikalisch exakt denselben Gain repräsentiert. Bewusste
+     Design-Entscheidung, mit dem Nutzer abgestimmt: eine systemweite
+     ALSA-/PipeWire-Konfigurationsänderung (würde alle Programme
+     betreffen) wurde als zu riskant verworfen – die Korrektur bleibt auf
+     die App selbst und den optionalen, expliziten Volume-Sync-Schalter
+     beschränkt (der schon eine Bestätigung verlangt, bevor er aktiviert
+     wird).
 - **Schwerwiegender Vorfall gefunden – vermutlich NICHT durch die G8
   verursacht.** Beim Testen (Umschalten Kopfhörer/Lautsprecher + aktives
   Volume Sync) blieb `wireplumber` im Kernel hängen: `cat
@@ -378,26 +410,18 @@ miteinander verknüpft sind:
   zusätzlich einmal neu synchronisieren.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar
-- **Reproduziert und als Hardware/Firmware-Verhalten bestätigt (kein
-  Software-Bug):** große, unerklärte Sprünge im Lautstärke-Poll (z.B.
-  44%→6%), größer als die normale Rasterung des physischen Knopfs
-  erklären würde. Live per Diagnose-Logging nachgewiesen: die komplette
-  Poll-/Änderungserkennungs-/UI-Push-Kette (`main.rs`, Mixer-Poll-Thread)
-  funktioniert lückenlos und korrekt – jede Knopfdrehung wird exakt und
-  ohne Aussetzer weitergegeben (Log zeigte u.a. `...48→44→6→44→52...`
-  bei durchgehendem Drehen). Zusätzlich bestätigt: bei visuell exakt
-  mittig stehendem Knopf (erwarteter Bezugspunkt "50 %") meldet ALSA
-  konsistent einen ganz anderen Wert (z.B. 84 %) – die optische Position
-  des Knopfs entspricht also nicht linear dem elektrisch gemeldeten
-  Wert. Da unsere Software nachweislich exakt überträgt, was das Gerät
-  selbst über USB sendet, liegt die Ursache im Knopf/seiner Firmware
-  selbst, nicht in ALSA, PipeWire oder g8-control – eine
-  Software-Ersatzschicht für ALSA/PipeWire würde daran nichts ändern.
-  Für eine mögliche Korrekturkurve wäre ein Windows-Mitschnitt mit
-  langsamem Drehen aus der Mitte in beide Richtungen nötig (vom Nutzer
-  angeboten, noch nicht durchgeführt) – klärt, ob es eine konsistente,
-  herausrechenbare Nichtlinearität gibt oder der Knopf grundsätzlich
-  keine verlässliche absolute Position liefert.
+- **Geklärt und korrigiert (siehe Taper-Korrektur oben):** große,
+  unerklärte Sprünge im Lautstärke-Poll (z.B. 44%→6%) sind die normale
+  Rasterung des physischen Audio-Taper-Potis, kein Software-Bug. Live
+  per Diagnose-Logging nachgewiesen: die komplette Poll-/Änderungs-
+  erkennungs-/UI-Push-Kette (`main.rs`, Mixer-Poll-Thread) funktioniert
+  lückenlos und korrekt – jede Knopfdrehung wird exakt und ohne
+  Aussetzer weitergegeben (Log zeigte u.a. `...48→44→6→44→52...` bei
+  durchgehendem Drehen, genau die großen Rohwert-Sprünge am unteren
+  Ende der Taper-Kurve). Der ursprünglich gewünschte Windows-Mitschnitt
+  mit langsamem Drehen war bereits vorhanden (`vol min-max-min_mit
+  sync.pcapng`) und lieferte die 24-Punkte-Kalibriertabelle für
+  `TAPER_TABLE`.
 - Footer-Regler und Mixer-Tab teilten sich lange keinen Zustand (gefixt,
   siehe Commit-Historie) – weitere Mixer-Regler (Line In, SPDIF, What U
   Hear) sind noch nicht live synchronisiert, nur Lautsprecher/externes Mic

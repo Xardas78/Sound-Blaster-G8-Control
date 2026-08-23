@@ -25,16 +25,14 @@ Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-P
 
 **Funktioniert:** Sound-Modus (60 echte kombinierte Presets, 1:1 aus der Windows-Preset-Bibliothek), Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz) mit allen 71 echten Original-Presets, CrystalVoice inkl. korrekter Voice-Morph- (18 echte Charaktere) und Mikrofon-Equalizer-Presets (9 echte Presets) sowie Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
 
-**Baustelle – Lautstärke-Synchronisierung:** Es gibt mehrere Stellen, an denen Lautstärke geändert werden kann (ALSA-Hardwareregister, PipeWire-Sink-Lautstärke, unsere eigenen UI-Regler), die nicht vollständig miteinander verknüpft sind.
-
-**Gefunden und behoben:** ALSA-Prozent und PipeWire-Sink-Prozent sind für die G8 zwei unterschiedliche Skalen (am Gerät bestätigt: ALSA 27 % = PipeWire 17 %, ALSA 65 % = PipeWire 42 %). Volume Sync kopierte bisher den ALSA-Wert 1:1 in die PipeWire-Lautstärke – das erzeugte garantiert eine falsche PC-Lautstärke bei jeder Synchronisierung. Jetzt wird über dB/linearen Gain umgerechnet, siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
+**Gelöst – Lautstärkeregler-Kennlinie:** Der Lautsprecher-Drehregler ist ein analoges Poti mit "Audio-Taper"-Kennlinie – gleich große Drehschritte verändern den elektrischen Wert sehr ungleichmäßig (unten viel, oben wenig; bei optischer Mitte lag der rohe Wert bei ~84 % statt 50 %). Aus einem Windows-USB-Capture einer kompletten langsamen Drehung wurde eine 24-Punkte-Korrekturkurve extrahiert, live am Gerät verifiziert – App-Anzeige und (bei aktivem Volume Sync) die PipeWire-Systemlautstärke zeigen jetzt den gefühlt-richtigen Wert statt des rohen linearen ALSA-Werts. Details siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
 
 Weiterhin bekannt:
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber nachvollziehbar
 - Die übrigen Mixer-Regler (Line In, SPDIF, What U Hear) sind noch nicht live synchronisiert, nur Lautsprecher und externes Mikrofon
-- Ein zusätzliches, nicht zuverlässig reproduzierbares Springen der Lautstärke beim Drehen des Knopfs bei aktivem Sync hing vermutlich mit einem hängenden Corsair-Wireless-Dongle zusammen (WirePlumber friert bei einem USB-Stall auf IRGENDEINEM Audiogerät global ein), nicht mit einem g8-control-spezifischen Bug – siehe HANDOFF.md Abschnitt 7 für die Details der Untersuchung.
+- Ein einmalig beobachtetes, nicht zuverlässig reproduzierbares Springen der Lautstärke bei aktivem Sync hing vermutlich mit einem hängenden Corsair-Wireless-Dongle zusammen (WirePlumber friert bei einem USB-Stall auf IRGENDEINEM Audiogerät global ein), nicht mit einem g8-control-spezifischen Bug – siehe HANDOFF.md Abschnitt 7 für die Details der Untersuchung.
 
-USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl; das ist eine PipeWire/ALSA-Architekturfrage (mehrere echte Lautstärke-Ebenen), siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
+USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl.
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
 - Sound-Modus-Presets im Gerät speichern/laden (Anwenden funktioniert, Auslesen/Persistieren eines aktiven Presets nicht)

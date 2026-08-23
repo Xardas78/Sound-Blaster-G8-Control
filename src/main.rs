@@ -325,8 +325,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.on_volume_sync_toggled(move |on| {
             flag.store(on, Ordering::SeqCst);
             if on {
-                if let Some(db) = mixer::get_level_db(0) {
-                    mixer::set_pipewire_sink_volume_db(db);
+                if let Some(pct) = mixer::get_level(0) {
+                    mixer::set_pipewire_sink_volume_percent(pct);
                 }
             }
             // Per Windows-Capture bestätigt: eigener Geräte-Befehl
@@ -360,16 +360,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if changed {
                         last_speaker = Some(v);
                         if volume_sync_enabled.load(Ordering::SeqCst) {
-                            // Über dB synchronisieren, nicht über den
-                            // ALSA-Prozentwert v: ALSA-% und PipeWire-%
-                            // sind unterschiedliche Skalen (siehe
-                            // set_pipewire_sink_volume_db()), ein direktes
-                            // Übernehmen von v hätte bei jeder
-                            // Synchronisierung eine falsche PC-Lautstärke
-                            // gesetzt.
-                            if let Some(db) = mixer::get_level_db(0) {
-                                mixer::set_pipewire_sink_volume_db(db);
-                            }
+                            // v ist bereits taper-korrigiert (get_level()
+                            // für entity-id 0, siehe mixer.rs) – direkt als
+                            // linearen PipeWire-Prozentwert übernehmen, damit
+                            // die PC-Lautstärke denselben "gefühlten" Wert
+                            // zeigt wie unser eigener Regler.
+                            mixer::set_pipewire_sink_volume_percent(v);
                         }
                         let weak = weak.clone();
                         let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));
