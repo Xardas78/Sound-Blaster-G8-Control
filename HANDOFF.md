@@ -203,10 +203,19 @@ Geräte-Statusabfragen.
   starten (neues Öffnen/Schließen des ALSA-Mixer-Handles). Es gibt keinen
   separaten "Positions-Abfrage"-Befehl – GET_CUR auf genau dieser Feature
   Unit IST die Positionsabfrage, und ALSA nutzt intern denselben
-  Mechanismus (deshalb liefert unser `get_level()`/`get_level_db()` über
-  `amixer` dieselbe Information ohne einen eigenen 5a- oder Rohzugriff).
+  Mechanismus (deshalb liefert unser `get_level()` über `amixer`
+  dieselbe Information ohne einen eigenen 5a- oder Rohzugriff).
 - **Mixer**: 7 Feature-Unit-Entities für 8 Regler (Wiedergabe/Überwachung/
-  Aufnahme), siehe `mixer.rs::CONTROLS`.
+  Aufnahme), siehe `mixer.rs::CONTROLS`. **Bestätigt:** "Speaker Playback
+  Volume" (entity-id 0) dämpft nicht nur den analogen Line-Out, sondern
+  auch den digitalen S/PDIF-/optischen Ausgang – kein bit-perfekter
+  Passthrough, wie man bei USB-Audio-Interfaces sonst oft erwarten würde.
+  Live bestätigt: Lautsprecher-Modus über Optical-Out an eine Sonos
+  Playbase, unser Regler ändert hörbar deren Lautstärke. Es gibt keine
+  separate ALSA-Control für den S/PDIF-Ausgang (nur "S/PDIF In
+  Playback/Capture Volume" für den Eingang/das Monitoring) – die
+  Dämpfung läuft also intern über dieselbe Speaker-Volume-Stufe wie der
+  analoge Ausgang.
 - **Bit-Tiefe/Abtastrate**: SET_INTERFACE mit Alt-Setting. ALSA/PipeWire
   handelt das automatisch aus – kein expliziter Befehl nötig, deshalb kein
   Dropdown dafür im UI (wäre ohne Wirkung irreführend).
