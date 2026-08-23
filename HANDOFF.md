@@ -191,7 +191,20 @@ Geräte-Statusabfragen.
 ## 3. Standard-USB-Audio-Class (kein Reverse Engineering nötig)
 
 - **Lautstärke**: normale UAC Feature-Unit SET_CUR/GET_CUR. Encoding:
-  Int16 little-endian, Wert ÷ 256 = dB.
+  Int16 little-endian, Wert ÷ 256 = dB. Per Capture bestätigt (`vol
+  min-max-min_mit sync.pcapng`): `GET_CUR` ist `bmRequestType=0xa1,
+  bRequest=0x01, wValue=(CS=0x02 VOLUME_CONTROL)<<8|Kanal(1=L/2=R),
+  wIndex=(Entity=0x01)<<8|Interface=0`. Windows fragt das während aktiver
+  Wiedergabe alle ~32ms ab (beide Kanäle abwechselnd) – also deutlich
+  öfter als unser eigener 120ms-Mixer-Poll (main.rs). Das bestätigt: die
+  reine Abfragehäufigkeit ist nicht das Problem (siehe USB-Stall-Vorfall
+  unten) – Windows nutzt dafür aber eine schlanke, dauerhaft offene
+  Verbindung, während wir bei jedem Tick einen neuen `amixer`-Prozess
+  starten (neues Öffnen/Schließen des ALSA-Mixer-Handles). Es gibt keinen
+  separaten "Positions-Abfrage"-Befehl – GET_CUR auf genau dieser Feature
+  Unit IST die Positionsabfrage, und ALSA nutzt intern denselben
+  Mechanismus (deshalb liefert unser `get_level()`/`get_level_db()` über
+  `amixer` dieselbe Information ohne einen eigenen 5a- oder Rohzugriff).
 - **Mixer**: 7 Feature-Unit-Entities für 8 Regler (Wiedergabe/Überwachung/
   Aufnahme), siehe `mixer.rs::CONTROLS`.
 - **Bit-Tiefe/Abtastrate**: SET_INTERFACE mit Alt-Setting. ALSA/PipeWire
@@ -298,20 +311,55 @@ miteinander verknüpft sind:
   `set_pipewire_sink_volume_db()` rechnen jetzt über dB/linearen Gain um
   (`cubic_percent = gain^(1/3) * 100`), Formel gegen echte Gerätewerte
   verifiziert (exakte Übereinstimmung bei beiden Testpunkten oben).
-- **Noch nicht abschließend geklärt:** ein zusätzliches, nicht zuverlässig
-  reproduzierbares "Springen auf 100 %" beim Drehen des Knopfs bei
-  aktivem Sync wurde live getestet (wiederholtes gezieltes Setzen von
-  ALSA-Werten bei laufender App, `wpctl status`/`journalctl -u
-  wireplumber` beobachtet) – unter identischen Bedingungen mal
-  reproduzierbar, mal nicht. Keine erkennbare Ursache im eigenen Code
-  gefunden (kein Feedback zwischen Slint-`Slider.changed` und
-  Programmwerten – laut `slider-base.slint` feuert `changed` nur bei
-  Nutzerinteraktion, nicht bei extern gesetzten Werten). Verdacht:
-  WirePlumbers eigene Stream-Volume-Restore-Logik reagiert unter
-  bestimmten Bedingungen selbst auf externe ALSA-Änderungen. Mit dem
-  Skalen-Fix oben sollte das Hauptproblem verschwinden; falls das
-  Springen danach weiterhin auftritt, ist es ein separates
-  WirePlumber-seitiges Verhalten, kein g8-control-Bug.
+- **Schwerwiegender Vorfall gefunden und eingedämmt: PipeWire-USB-Stall.**
+  Beim Testen (Umschalten Kopfhörer/Lautsprecher + aktives Volume Sync)
+  blieb `wireplumber` im Kernel hängen: `cat /proc/<pid>/wchan` zeigte
+  **`usb_control_msg`** – ein USB-Control-Transfer (fast sicher zur G8)
+  kam nie zurück, der Prozess landete im `D`-State (uninterruptible
+  sleep) und war nicht mal per `SIGKILL` zu beenden. Jeder `wpctl`-Aufruf
+  (auch von außerhalb der App) hängte sich daran auf; `systemctl
+  restart` half nicht, da der Dienst zwar "aktiv" ist, aber der
+  Kernel-Aufruf blockiert bleibt. **Einziger Ausweg: Gerät physisch
+  aus-/einstecken** (oder Neustart) – kein Software-Fix möglich, sobald
+  der Prozess im `D`-State feststeckt.
+  - Wahrscheinlicher Auslöser: viele gleichzeitige/dichte
+    USB-Zugriffe auf dasselbe Gerät kurz hintereinander – 120ms-Polling
+    (Lautstärke), mehrere gleichzeitig offene HID-Handles (Hauptgerät +
+    Schalterstand-Poll-Thread) und ein PipeWire-Neustart
+    (`virtual_surround::restart_pipewire()`) fielen zeitlich zusammen.
+    Der Windows-Capture (siehe oben) zeigt aber, dass reine
+    Abfragehäufigkeit unproblematisch ist (Windows pollt alle ~32ms) –
+    der wahrscheinlichere Faktor ist eher die Kombination mit dem
+    PipeWire-Neustart mitten in einer offenen Anfrage, oder generell zu
+    viele parallele Zugriffe auf verschiedene Interfaces desselben
+    Composite-Geräts gleichzeitig.
+  - **Eingedämmt (nicht behoben – der Stall selbst ist ein
+    Kernel/WirePlumber-Verhalten, kein g8-control-Bug):**
+    `src/proc_util.rs::run_with_timeout()` – neuer gemeinsamer Wrapper um
+    `amixer`/`wpctl`-Aufrufe (mixer.rs, virtual_surround.rs) mit
+    Timeout (500ms bzw. 3s) statt des blockierenden
+    `Command::output()`. Verhindert, dass ein zukünftiger Stall auch
+    unsere eigenen Threads (Mixer-Poll, virtueller Surround) für immer
+    mitreißt – der ursprüngliche Prozess bleibt zwar trotzdem hängen
+    (Kernel-Problem), aber die App friert nicht mit ein.
+    `on_output_target_changed` (main.rs) ignoriert jetzt außerdem
+    Klicks auf das bereits aktive Ziel (`last_output_target`-Guard) –
+    vorher löste JEDER Klick auf Kopfhörer/Lautsprecher einen vollen
+    PipeWire-Neustart aus, auch wenn schon ausgewählt (mehrere Tabs
+    zeigen denselben Umschalter), was unnötige Neustarts und damit
+    zusätzliches Stall-Risiko bedeutete.
+  - **Noch offen:** die eigentliche Ursache im Kernel/WirePlumber ist
+    nicht abschließend geklärt – falls der Stall trotz obiger
+    Eindämmung wieder auftritt, wäre der nächste Schritt, `amixer`/HID-
+    Zugriffe zeitlich zu entkoppeln (z.B. Mixer-Poll und
+    Ausgabe-Umschaltung nie überlappend), oder amixer/wpctl komplett
+    durch eine dauerhaft offene ALSA-Verbindung zu ersetzen (siehe
+    unten) statt bei jedem Tick neue Prozesse zu starten.
+- Ein zusätzliches, davor beobachtetes "Springen auf 100 %" beim Drehen
+  des Knopfs bei aktivem Sync war vermutlich derselbe zugrundeliegende
+  Effekt (PipeWire/WirePlumber unter Last durch dichte USB-Zugriffe),
+  nicht ein separates Phänomen – mit dem Skalen-Fix und den Härtungs-
+  maßnahmen oben sollte es deutlich seltener/gar nicht mehr auftreten.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar
 - Gelegentlich große, unerklärte Sprünge im Lautstärke-Poll (z.B. 44%→6%),
@@ -340,6 +388,13 @@ mehr.
 
 ## 8. Offene Punkte
 
+- Mixer-Zugriff (`mixer.rs`) startet für jedes Poll-Tick einen neuen
+  `amixer`-Prozess statt eine dauerhafte ALSA-Verbindung offen zu halten
+  (wie Windows/PipeWire es intern tun, siehe Abschnitt 3/7). Funktioniert,
+  ist aber unnötig schwergewichtig und ein Faktor beim beobachteten
+  USB-Stall (Abschnitt 7). Sauberer wäre ein persistentes Mixer-Handle
+  über die `alsa`-Crate statt Prozess-Spawning pro Tick – bisher nicht
+  umgesetzt (neue Abhängigkeit, größerer Umbau).
 - Smart Volume Modus-Bestätigung nur für Wiedergabe-Seite, nicht Mic-Seite
 - Abtastrate/Sample-Rate-Wechsel (Clock Source) noch nicht direkt beobachtet
 - Sound-Modus-Presets speichern/laden im Gerät weiterhin unbekannt (nur

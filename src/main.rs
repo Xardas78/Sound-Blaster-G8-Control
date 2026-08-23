@@ -1,5 +1,6 @@
 mod device;
 mod mixer;
+mod proc_util;
 mod protocol;
 mod speaker_test;
 mod virtual_surround;
@@ -243,9 +244,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LED-Wechsel) – der ursprüngliche Fehlschlag lag an einem falschen
     // Byte (0x01 statt 0x00), siehe special::set_output_target(). Steuert
     // zusätzlich unseren eigenen virtuellen HRTF-Surround.
+    // last_output_target: verhindert einen unnötigen PipeWire-Neustart
+    // (virtual_surround::enable/disable, ~1-2s), wenn output-target-changed
+    // mit dem bereits aktiven Ziel feuert (z.B. Klick auf die schon
+    // ausgewählte Kopfhörer/Lautsprecher-Option) – kam vor, als mehrere
+    // Tabs (Sound-Modus, Acoustic Engine, Wiedergabe) denselben Umschalter
+    // zeigen und jeder Klick ungefiltert den Callback auslöst. Jeder
+    // zusätzliche Neustart ist ein Risikofaktor für den USB-Stall, den wir
+    // live beobachtet haben (WirePlumber blockiert in usb_control_msg).
+    let last_output_target = Rc::new(std::cell::Cell::new(-1i32));
     {
         let device = device.clone();
+        let last_output_target = last_output_target.clone();
         ui.on_output_target_changed(move |target| {
+            if last_output_target.get() == target {
+                return;
+            }
+            last_output_target.set(target);
             if target == 0 {
                 virtual_surround::enable();
             } else {

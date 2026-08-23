@@ -14,6 +14,7 @@
 // Session – das passiert hier im Hintergrund-Thread, damit die UI nicht
 // für die ein bis zwei Sekunden einfriert.
 
+use crate::proc_util::run_with_timeout;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -85,7 +86,7 @@ fn restart_pipewire() {
 // matchen.
 fn find_node_id(section: &str, name_fragment: &str) -> Option<String> {
     const SECTIONS: [&str; 5] = ["Devices:", "Sinks:", "Sources:", "Filters:", "Streams:"];
-    let out = Command::new("wpctl").arg("status").output().ok()?;
+    let out = run_with_timeout("wpctl", &["status"], Duration::from_secs(3))?;
     let text = String::from_utf8_lossy(&out.stdout);
     let mut in_section = false;
     for line in text.lines() {
@@ -111,7 +112,7 @@ fn set_default_sink(section: &str, name_fragment: &str) {
     // im Graph auftaucht.
     for _ in 0..20 {
         if let Some(id) = find_node_id(section, name_fragment) {
-            let _ = Command::new("wpctl").args(["set-default", &id]).status();
+            run_with_timeout("wpctl", &["set-default", &id], Duration::from_secs(3));
             return;
         }
         thread::sleep(Duration::from_millis(300));

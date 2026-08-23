@@ -4,9 +4,15 @@
 //! HANDOFF.md, "Standard-USB-Audio-Class"). Namen per `amixer -c USB1
 //! controls` verifiziert.
 
-use std::process::Command;
+use crate::proc_util::run_with_timeout;
+use std::time::Duration;
 
 const CARD: &str = "USB1";
+// amixer/wpctl laufen auf dem 120ms-Poll-Thread (siehe main.rs) – ein
+// Timeout deutlich unter dem Poll-Intervall verhindert, dass ein
+// hängender Aufruf (z.B. bei einem PipeWire-USB-Stall, siehe HANDOFF.md)
+// den Thread und damit die komplette Lautstärke-Anzeige einfriert.
+const CMD_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Index = entity-id aus ui/tabs/mixer-tab.slint.
 const CONTROLS: [&str; 8] = [
@@ -89,10 +95,7 @@ pub fn get_level(entity_id: i32) -> Option<f32> {
     let name = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i))?;
     let (simple, direction) = simple_name_and_direction(name)?;
 
-    let out = Command::new("amixer")
-        .args(["-c", CARD, "sget", simple])
-        .output()
-        .ok()?;
+    let out = run_with_timeout("amixer", &["-c", CARD, "sget", simple], CMD_TIMEOUT)?;
     if !out.status.success() {
         return None;
     }
@@ -115,10 +118,7 @@ pub fn get_level_db(entity_id: i32) -> Option<f32> {
     let name = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i))?;
     let (simple, direction) = simple_name_and_direction(name)?;
 
-    let out = Command::new("amixer")
-        .args(["-c", CARD, "sget", simple])
-        .output()
-        .ok()?;
+    let out = run_with_timeout("amixer", &["-c", CARD, "sget", simple], CMD_TIMEOUT)?;
     if !out.status.success() {
         return None;
     }
@@ -189,20 +189,21 @@ fn extract_db(text: &str, direction: &str) -> Option<f32> {
 pub fn set_pipewire_sink_volume_db(db: f32) {
     let gain = 10f32.powf(db / 20.0);
     let cubic_percent = (gain.max(0.0).powf(1.0 / 3.0) * 100.0).clamp(0.0, 100.0);
-    let _ = Command::new("wpctl")
-        .args(["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{cubic_percent}%")])
-        .output();
+    run_with_timeout(
+        "wpctl",
+        &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{cubic_percent}%")],
+        CMD_TIMEOUT,
+    );
 }
 
 fn run_amixer(args: &[&str]) {
     let mut full_args = vec!["-c", CARD];
     full_args.extend_from_slice(args);
-    let result = Command::new("amixer").args(&full_args).output();
-    match result {
-        Ok(out) if !out.status.success() => {
+    match run_with_timeout("amixer", &full_args, CMD_TIMEOUT) {
+        Some(out) if !out.status.success() => {
             eprintln!("amixer fehlgeschlagen ({args:?}): {}", String::from_utf8_lossy(&out.stderr));
         }
-        Err(e) => eprintln!("amixer nicht aufrufbar ({args:?}): {e}"),
+        None => eprintln!("amixer nicht aufrufbar oder hängt fest ({args:?})"),
         _ => {}
     }
 }
