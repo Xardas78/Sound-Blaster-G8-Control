@@ -39,6 +39,8 @@ export component SettingsTab inherits HorizontalLayout {
     // (Knopf↔PipeWire) auch am Laufen, wenn die App komplett beendet
     // wird (nicht nur in den Tray minimiert) – siehe daemon.rs.
     in-out property <bool> daemon-on: false;
+    // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
+    in property <string> app-version: "";
 
     callback reset-clicked();
     callback volume-sync-toggled(bool);
@@ -59,6 +61,7 @@ export component SettingsTab inherits HorizontalLayout {
         Text { text: "Sound Blaster G8"; font-weight: 700; }
         Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
         Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
+        Text { text: "Version " + app-version; font-size: 12px; color: gray; }
     }
 
     VerticalLayout {

@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let ui = AppWindow::new()?;
+    ui.set_app_version(env!("CARGO_PKG_VERSION").into());
 
     let device = match G8Device::open() {
         Ok(d) => {

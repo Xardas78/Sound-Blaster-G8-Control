@@ -24,6 +24,8 @@ export component AppWindow inherits Window {
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
     in-out property <string> device-status: "Suche Gerät …";
+    // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
+    in property <string> app-version: "";
 
     // Gemeinsamer Kopfhörer/Lautsprecher-Zustand für Acoustic-Engine- und
     // Wiedergabe-Seite (0=Kopfhörer, 1=Lautsprecher). Steuert den
@@ -166,6 +168,7 @@ export component AppWindow inherits Window {
                 title: "Einstellungen";
                 SettingsTab {
                     device-connected: device-connected;
+                    app-version: app-version;
                     footer-speaker-level: footer-speaker-level;
                     autostart-on: autostart-on;
                     close-behavior: close-behavior;
