@@ -78,7 +78,7 @@ die falschen Bänder. Jetzt korrekt: "Bass" dockt an Band 0 (31 Hz),
 | Noise Reduction | 0x04 | Level=0x05 |
 | Voice Morph | 0x0a | Profilblock 0x0b–0x12 (8 Werte je Charakter) |
 | Mikrofon-Equalizer | 0x13 | Profilblock 0x14–0x1d (10 Werte je Preset) |
-| Smart Volume (Mic) | 0x2c | |
+| Smart Volume (Mic) | 0x2c | reines An/Aus, **kein** Modus-Parameter (anders als Wiedergabe-SVM `0x06`) – per Capture bestätigt 2026-08-23 |
 
 **Bug gefunden und gefixt:** Voice Morph und Smart Volume (Mic) waren
 vertauscht – Voice Morph benutzte fälschlich `0x2c`, Smart Volume war
@@ -188,6 +188,82 @@ Nur das erste Paar (0x2c) ist bei uns angebunden. Die anderen (0x26 Rest,
 0x39, 0x6c, 0x10) sind unentschlüsselt – wirken wie weitere
 Geräte-Statusabfragen.
 
+### Namespace 0x09 – Geräteinformationen (neu entdeckt, 2026-08-23)
+
+Per Capture (`schrit 1 bis 5 nach claudes vorgabe.pcapng`) beim
+App-Start/Reconnect gefunden, taucht in exakt derselben Reihenfolge bei
+jedem Verbindungsaufbau auf, direkt vor der 0x07/0x2c/0x26/0x39/0x10/0x6c-
+Sequenz:
+
+```
+5a 09 01 02      → 5a 09 12 02 10 "1.2.250819.0903"   (Firmware, andere Rahmung als 0x07)
+5a 09 01 03      → 5a 09 14 03 "<Seriennummer>"       (Seriennummer – neu! Per Screenshot Einstellungen-Tab
+                                                        gegengeprüft, echter Wert in SB1900/device_info_private.md,
+                                                        bewusst nicht hier im öffentlichen Repo-Verlauf)
+5a 09 01         → 5a 09 11 00 9b 32 01 02 1e 04 00 00 00 00 00 00 00 00 00 39
+5a 09 02 01      → 5a 09 08 01 00 23 4d 4c 21 22 04
+5a 09 02 01 01   → 5a 09 08 01 01 20 04 18 20 08 02
+```
+
+Die letzten drei Antworten sind binäre Blöcke unbekannter Bedeutung
+(vermutlich Hardware-Revision/Capability-Flags o.ä.) – bisher nicht
+implementiert, da ohne bekannten Nutzen für die App. Byte nach dem
+Namespace (0x12/0x14/0x11/0x08) wirkt wie eine Längenangabe der
+folgenden Nutzdaten.
+
+### Periodischer Status-Heartbeat, Wire-Format entschlüsselt (2026-08-23)
+
+Der in Abschnitt "Kopfhörer/Lautsprecher-Umschaltung" erwähnte
+unaufgeforderte Heartbeat sendet nicht nur den HP/SPK-Status, sondern in
+schneller Folge mehrere 64-Byte-Reports mit Namespace/Param/Wert-Tripeln:
+
+```
+5a 11 32 08 00  [ns][param][float32] [ns][param][float32] ...   (volle Reports, ~9 Tripel)
+5a 11 14 03 00  [ns][param][float32] ...                        (letzter, kürzerer Report)
+```
+
+Jedes Tripel ist 6 Byte: 1 Byte Namespace (0x95/0x96/0x97), 1 Byte
+Parameter-ID, 4 Byte Float32 LE-Wert – identisches Format zu den
+einzelnen GET-Antworten (`5a 11 08 01 00 <ns> <param> <float>`), nur
+mehrere hintereinander ohne das `08 01 00`-Zwischenstück. Deckt bei
+einem vollständigen Burst praktisch den kompletten Acoustic-
+Engine/EQ/CrystalVoice-Parametersatz ab. Tritt u. a. unmittelbar nach
+dem Verbindungsaufbau auf sowie periodisch danach (siehe oben,
+ca. alle 1,5–2,5s).
+
+Im selben Burst zwei weitere, bisher unbekannte unaufgeforderte
+Pushes gefunden (nur je einmal beobachtet, keine zugehörige Anfrage
+gesehen – vermutlich Statusänderungs-Events statt Abfrage-Antworten):
+
+```
+5a 6e 02 01   – Bedeutung unklar
+5a 1a 02 02   – Bedeutung unklar, evtl. Jack-Sensing/Output-Status
+```
+
+Für beide braucht es einen gezielten Capture (z. B. Kopfhörer ein-/
+ausstecken, LED/Ausgangs-Zustand gezielt ändern), um sie einer Aktion
+zuzuordnen.
+
+### Sound-Modus-Preset-Auslesen – Frage aus Abschnitt 8 beantwortet (2026-08-23)
+
+Capture-Ergebnis (`schrit 1 bis 5 nach claudes vorgabe.pcapng`): Preset
+"Baldur's Gate 3" gewählt (t≈47s im Capture), Software geschlossen und
+neu verbunden (t≈107,6s). Beim Reconnect gibt es **keine** dedizierte
+"welches Preset ist aktiv"-Abfrage – die Software liest stattdessen
+jeden Einzelparameter per GET aus (`5a 11 03 01 96 0b` usw.), und die
+zurückgelesenen Rohwerte stimmen exakt mit den beim Preset-Wechsel
+gesetzten Werten überein. Das Gerät speichert also die rohen Acoustic-
+Engine/EQ-**Werte** dauerhaft selbst (übersteht App-Neustart), aber es
+gibt keinen Hinweis auf eine geräteseitige Speicherung der Preset-
+**Kennung/des Namens** – aus Sicht des Protokolls sieht "Baldur's Gate
+3" nur wie eine zufällig passende Kombination aus 71 EQ- und 60
+Sound-Modus-Werten aus. Die Namensanzeige im UI nach dem Neustart ist
+mit hoher Wahrscheinlichkeit reine lokale Software-Buchhaltung der
+Windows-App (vergleichbar mit unserem eigenen `persist.rs`-Ansatz für
+`sound_mode_preset_index`, siehe Abschnitt 4) – **bestätigt damit, dass
+der bereits gewählte Software-seitige Persistenz-Ansatz ausreichend
+ist, kein weiterer geräteseitiger Abgleich nötig.**
+
 ## 3. Standard-USB-Audio-Class (kein Reverse Engineering nötig)
 
 - **Lautstärke**: normale UAC Feature-Unit SET_CUR/GET_CUR. Encoding:
@@ -286,9 +362,33 @@ Geräte-Statusabfragen.
 ## 5. Bewusst nicht implementiert
 
 - **Firmware-Update**: Risiko eines Bricking bei falscher Byte-Sequenz,
-  Nutzer sollen dafür die offizielle Windows-App nutzen.
-- **Gerät zurücksetzen**: kein Capture vorhanden, nicht spekulativ
-  implementiert.
+  Nutzer sollen dafür die offizielle Windows-App nutzen. Der reine
+  Versions-*Check* (nicht der Flash-Vorgang) läuft rein über Netzwerk,
+  kein USB-Bezug: unauthentifizierter HTTP-GET auf `files.creative.com`
+  (`/creative/bin/firmware/fwureleases/SB1900/SB1900_release.json` für
+  die neueste Version, `/creative/res/firmware/releasenotes/SB1900/
+  {en,de}/releasenotes.json` für die Versionsgeschichte) – nur zur
+  Referenz notiert (2026-08-23), weiterhin nicht implementiert.
+- **Gerät zurücksetzen**: Button existiert (Einstellungen → Gerät, Label
+  "Gerät zurücksetzen"). Per Capture bestätigt (2026-08-23, `reset.pcapng`):
+  löst eine **echte USB-Neuenumeration** aus (`GET_DESCRIPTOR`, sichtbar
+  auch am Gerät selbst: alle LEDs blinken kurz, MODE-LED kurz rot), danach
+  (~1,1s später) schickt das Gerät einen vollen Status-Heartbeat mit
+  echten Werksdefaults: Equalizer-Toggle (`96 09`) und alle 10 Bänder +
+  Vorverstärkung (`96 0a`–`96 14`) auf 0.0/0dB, Crossover (`96 17`) auf
+  80Hz (statt z.B. 120Hz bei "Baldur's Gate 3"), Bass/Smart Volume/
+  Dialog+ aus, Surround an, Crystalizer bleibt an. **Vorsicht bei
+  eigenen Tests:** ein zu kurzes Capture fängt nur die Neuenumeration
+  ein, aber nicht den eigentlichen Werte-Reset-Burst, der erst 1-2s
+  danach kommt – mindestens 15-20s nach dem Klick weiterlaufen lassen.
+  Dreifach reproduziert (`reset.pcapng` Kopfhörer, `reset_spk.pcapng`
+  Lautsprecher, `rest mit Jack-Sensing.pcapng` Kopfhörer-Ausstecken+
+  Reset) – alle drei Male **byte-identischer** Werte-Burst, Reset ist
+  also zielunabhängig und deterministisch. Eine einzelne frühere
+  Beobachtung zeigte stattdessen "Gaming" mit sichtbarer Kurve und
+  eingeschaltetem Equalizer – da in drei sauberen Captures nicht
+  reproduzierbar, ein einmaliger UI-Ausreißer, keine echte
+  Zielabhängigkeit. **Damit abgeschlossen.**
 - **Decoder-Feintuning (DRC)**: G8 zeigt laut Original-UI nur Normal/Voll/
   Nacht, kein verstecktes Protokoll zu vermuten.
 
@@ -504,26 +604,22 @@ mehr.
 
 ## 8. Offene Punkte
 
-- **Sound-Modus-Preset auf dem Gerät auslesen** (geplanter nächster
-  USB-Capture, noch nicht gemacht): Ziel ist herauszufinden, ob das Gerät
-  oder die Windows-Software beim (Wieder-)Verbinden ein zuletzt aktives
-  Sound-Modus-Preset zurückmeldet – bisher unbekannt, nur Anwenden ist
-  implementiert (software-seitiges Merken über den App-Neustart hinweg IST
-  seit 2026-08-23 umgesetzt, siehe persist.rs/main.rs
-  `sound_mode_preset_index` – das hier ist nur für ein *echtes*, geräte-
-  seitiges Auslesen, z.B. auch von einem anderen Rechner/unter Windows
-  aus sichtbar). Capture-Rezept (USBPcap + Wireshark, wie die bisherigen
-  Captures in diesem Projekt):
-  1. Capture starten, Creative-Software öffnen.
-  2. Im Sound-Modus ein bestimmtes Preset wählen (Namen notieren).
-  3. Software komplett schließen (oder Gerät ab-/anstecken), dann neu
-     öffnen bzw. neu verbinden lassen – genau in diesem Moment würde ein
-     "welches Preset ist aktiv"-Abruf passieren, falls es ihn gibt.
-  4. Prüfen, ob die Software das zuvor gewählte Preset beim Neustart
-     wieder anzeigt (Screenshot zum Abgleich mit dem Capture).
-  5. .pcapng speichern, wie gehabt mit scapy/rdpcap auswerten (siehe
-     Abschnitt 3 für das Paket-Parsing-Vorgehen).
-  Ohne diesen Capture wird hier nichts spekulativ implementiert.
+- ~~Sound-Modus-Preset auf dem Gerät auslesen~~ **erledigt, 2026-08-23**
+  (`schrit 1 bis 5 nach claudes vorgabe.pcapng`) – siehe Abschnitt 2:
+  keine geräteseitige Preset-Kennung, nur rohe Parameterwerte werden vom
+  Gerät persistiert, Preset-Name ist reine Software-Buchhaltung.
+- **Namespace 0x09 (Geräteinfo), Sub-IDs `01`/`02 01`/`02 01 01`**: drei
+  binäre Antwortblöcke unbekannter Bedeutung (siehe Abschnitt 2) – noch
+  zu entschlüsseln, evtl. durch Vergleich mit einer zweiten G8 oder
+  Diff gegen andere Firmware-Stände.
+- **Unaufgeforderte Pushes `5a 6e 02 01` und `5a 1a 02 02`** (gefunden
+  2026-08-23): Auslöser identifiziert – treten immer gemeinsam mit
+  `5a 2c 05 01 <target>` auf, sowohl bei physischem Kopfhörer-Aus-/
+  Einstecken (Jack-Sensing) als auch nach einem Geräte-Reset/
+  Reconnect. Wirken wie generische "Ausgangsziel/Konfiguration hat
+  sich geändert"-Benachrichtigungen. Die konkrete Bedeutung der
+  Werte selbst (`02`/`01`) ist noch nicht weiter aufgeschlüsselt
+  (bisher nur je ein konstanter Wert beobachtet, keine Variation).
 - Mixer-Zugriff (`mixer.rs`) startet für jedes Poll-Tick einen neuen
   `amixer`-Prozess statt eine dauerhafte ALSA-Verbindung offen zu halten
   (wie Windows/PipeWire es intern tun, siehe Abschnitt 3/7). Funktioniert,
@@ -531,10 +627,9 @@ mehr.
   USB-Stall (Abschnitt 7). Sauberer wäre ein persistentes Mixer-Handle
   über die `alsa`-Crate statt Prozess-Spawning pro Tick – bisher nicht
   umgesetzt (neue Abhängigkeit, größerer Umbau).
-- Smart Volume Modus-Bestätigung nur für Wiedergabe-Seite, nicht Mic-Seite
-- Abtastrate/Sample-Rate-Wechsel (Clock Source) noch nicht direkt beobachtet
-- Sound-Modus-Presets speichern/laden im Gerät weiterhin unbekannt (nur
-  Anwenden implementiert, kein Auslesen/Persistieren eines aktiven Presets)
+- Abtastrate/Sample-Rate-Wechsel (Clock Source) noch nicht direkt
+  beobachtet – niedrige Priorität, da ALSA/PipeWire das ohnehin
+  automatisch aushandelt (siehe Abschnitt 3)
 - Bass-Crossover-Frequenz (`bass_xover` in den SoundMode-JSONs) hat keinen
   bekannten Geräteparameter, wird beim Anwenden eines Sound-Modus nicht
   gesendet
