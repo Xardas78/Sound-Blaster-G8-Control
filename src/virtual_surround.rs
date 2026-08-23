@@ -120,6 +120,29 @@ fn set_default_sink(section: &str, name_fragment: &str) {
     eprintln!("virtual_surround: '{name_fragment}' nach Neustart nicht gefunden");
 }
 
+// WirePlumber merkt sich die Lautstärke jedes Geräts dauerhaft in
+// ~/.local/state/wireplumber/default-routes und stellt sie bei jedem
+// Neu-Einlesen (z.B. nach restart_pipewire()) wieder her – auch wenn der
+// gespeicherte Wert längst veraltet ist. Live beobachtet: nach einem
+// Kopfhörer/Lautsprecher-Wechsel sprang die Lautstärke plötzlich auf
+// einen alten, unerklärlichen Wert zurück, obwohl weder der Knopf noch
+// unser eigener Code sie geändert hatten – genau dieser
+// Restore-Mechanismus war die Ursache. Fix: aktuellen ALSA-Pegel vor dem
+// Neustart merken und danach aktiv wieder setzen, damit WirePlumbers
+// veralteter gespeicherter Wert nicht gewinnt.
+fn restart_pipewire_preserving_volume() {
+    let saved_level = crate::mixer::get_level(0);
+    restart_pipewire();
+    if let Some(level) = saved_level {
+        // set_default_sink() unten wartet schon auf den neuen Sink; hier
+        // zusätzlich kurz warten, damit WirePlumber seinen eigenen
+        // Restore-Vorgang (der genau diesen Wert überschreiben würde)
+        // erst abgeschlossen hat, bevor wir zurückschreiben.
+        thread::sleep(Duration::from_millis(500));
+        crate::mixer::set_level(0, level);
+    }
+}
+
 pub fn enable() {
     if OPERATION_IN_PROGRESS.swap(true, Ordering::SeqCst) {
         eprintln!("virtual_surround: Umschaltung läuft bereits, ignoriere weiteren Klick");
@@ -146,7 +169,7 @@ pub fn enable() {
             return;
         }
 
-        restart_pipewire();
+        restart_pipewire_preserving_volume();
         set_default_sink(VIRTUAL_SINK_SECTION, VIRTUAL_SINK_MATCH);
     });
 }
@@ -159,7 +182,7 @@ pub fn disable() {
     thread::spawn(|| {
         let _guard = OperationGuard;
         let _ = fs::remove_file(conf_path());
-        restart_pipewire();
+        restart_pipewire_preserving_volume();
         set_default_sink(HARDWARE_SINK_SECTION, HARDWARE_SINK_MATCH);
     });
 }

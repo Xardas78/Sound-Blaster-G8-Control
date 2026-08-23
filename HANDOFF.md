@@ -354,13 +354,28 @@ miteinander verknüpft sind:
     Ausgabe-Umschaltung nie überlappend), oder amixer/wpctl komplett
     durch eine dauerhaft offene ALSA-Verbindung zu ersetzen (siehe
     unten) statt bei jedem Tick neue Prozesse zu starten.
-- Ein zusätzliches, davor beobachtetes "Springen auf 100 %" beim Drehen
-  des Knopfs bei aktivem Sync könnte ebenfalls mit dem Corsair-Dongle-
-  Stall zusammenhängen (WirePlumber unter Last durch das hängende
-  fremde Gerät) statt ein g8-control-spezifisches Problem zu sein –
-  unklar, ob überhaupt reproduzierbar ohne den Corsair-Dongle. Mit dem
-  Skalen-Fix und den Härtungs-
-  maßnahmen oben sollte es deutlich seltener/gar nicht mehr auftreten.
+- **Gefunden und behoben: WirePlumber überschreibt die Lautstärke bei
+  jedem PipeWire-Neustart mit einem alten gespeicherten Wert.** Live
+  bestätigt: nach Umschalten Kopfhörer/Lautsprecher sprang die
+  Lautstärke plötzlich auf einen alten, durch nichts erklärbaren Wert
+  zurück – weder der Knopf noch die App hatten sie geändert.
+  `~/.local/state/wireplumber/default-routes` enthält pro Gerät/Route
+  einen dauerhaft gespeicherten `channelVolumes`-Wert (z.B.
+  `alsa_card.usb-Creative_..._Sound_Blaster_G8_USB-1_F1006147691-00:
+  output:analog-output-speaker={"channelVolumes":[0.266082, ...]}`),
+  den WirePlumber bei jedem Neu-Einlesen des Geräts wiederherstellt –
+  und genau das passiert bei jedem `restart_pipewire()`-Aufruf (siehe
+  `virtual_surround.rs`, ausgelöst durch den Kopfhörer/Lautsprecher-
+  Umschalter für den virtuellen HRTF-Surround). Fix:
+  `restart_pipewire_preserving_volume()` merkt sich den aktuellen
+  ALSA-Pegel vor dem Neustart und schreibt ihn nach einer kurzen
+  Wartezeit (WirePlumbers eigener Restore muss zuerst fertig sein)
+  aktiv zurück – überschreibt damit WirePlumbers veralteten
+  gespeicherten Wert. Betrifft nur die ALSA-Hardware-Route; ob
+  WirePlumbers PipeWire-Sink-Lautstärke (die Volume-Sync-Zielgröße)
+  bei einem Neustart ebenfalls zurückgesetzt wird, ist nicht gesondert
+  geprüft – falls doch, müsste Volume Sync nach einem Neustart
+  zusätzlich einmal neu synchronisieren.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar
 - Gelegentlich große, unerklärte Sprünge im Lautstärke-Poll (z.B. 44%→6%),
