@@ -9,16 +9,24 @@ export component CrystalVoiceTab inherits VerticalLayout {
 
     in-out property <bool> smart-volume-on: false;
 
-    // Voice-Morph-/Mikrofon-Equalizer-Listen: nur "Roboter" bzw.
-    // "Pitch-Reduzierung" stammen aus dem Original-Screenshot, der Rest
-    // ist eine plausible Ergänzung (keine Capture-Bestätigung für die
-    // vollständige Liste/Reihenfolge) – bei Gelegenheit gegenprüfen.
+    // Voice-Morph-/Mikrofon-Equalizer-Listen: echte Namen und Reihenfolge
+    // 1:1 aus den Windows-JSON-Presets (VoiceFxProfile/MicEqProfile),
+    // siehe HANDOFF.md Abschnitt 6 – die tatsächlichen Bandwerte pro
+    // Eintrag sendet Rust (protocol.rs::crystal_voice::VOICE_MORPH_PRESETS/
+    // MIC_EQ_PRESETS), nicht mehr geraten.
     in-out property <bool> voice-morph-on: false;
-    in-out property <[string]> voice-morph-profiles: ["Roboter", "Alien", "Weiblich", "Männlich", "Baby", "Radio", "Telefon", "Höhle"];
+    in-out property <[string]> voice-morph-profiles: [
+        "Brute", "Chipmunk", "DeepVoice", "Demon", "Dwarf", "Elderly", "Elf", "Emo",
+        "Female", "FromUpNorth", "Infiltrator", "Kid", "Male", "Marine", "Neutral",
+        "Orc", "Robot", "Unstable",
+    ];
     in-out property <int> voice-morph-profile-index: 0;
 
     in-out property <bool> mic-eq-on: false;
-    in-out property <[string]> mic-eq-profiles: ["Pitch-Reduzierung", "Pitch-Erhöhung", "Nah", "Fern"];
+    in-out property <[string]> mic-eq-profiles: [
+        "Balanced", "Broadcast", "Communication", "PitchBoost", "PitchReduction",
+        "PublicAnnouncement", "Recording", "VoiceClarity", "VoiceWarmth",
+    ];
     in-out property <int> mic-eq-profile-index: 0;
 
     // Breite/Einrückung für Noise-Reduction-, Voice-Morph- und Mikrofon-

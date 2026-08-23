@@ -25,6 +25,8 @@ export component DeviceHubTab inherits TabWidget {
     callback playback-param-changed(int, float);
     callback output-target-changed(int);
     callback recording-param-changed(int, float);
+    callback voice-morph-profile-changed(int);
+    callback mic-eq-profile-changed(int);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
     callback direct-mode-toggled(bool);
@@ -49,6 +51,8 @@ export component DeviceHubTab inherits TabWidget {
         title: "CrystalVoice";
         CrystalVoiceTab {
             param-changed(id, v) => { recording-param-changed(id, v); }
+            voice-morph-profile-changed(i) => { voice-morph-profile-changed(i); }
+            mic-eq-profile-changed(i) => { mic-eq-profile-changed(i); }
         }
     }
     Tab {

@@ -12,7 +12,7 @@ import { QuickControlsBar } from "quick-controls-bar.slint";
 export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
     icon: @image-url("assets/app-icon.svg");
-    width: 1350px;
+    width: 1372px;
     height: 820px;
     // Dark-Mode-Hintergrund: dunkles Anthrazit zwischen RAL 9017
     // "Verkehrsschwarz" (#2a292a) und RAL 9007 "Graualuminium" (#878581),
@@ -46,6 +46,8 @@ export component AppWindow inherits Window {
     callback speaker-test-clicked(int);
     callback speaker-test-cycle-clicked();
     callback recording-param-changed(int, float);
+    callback voice-morph-profile-changed(int);
+    callback mic-eq-profile-changed(int);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
     callback direct-mode-toggled(bool);
@@ -69,6 +71,8 @@ export component AppWindow inherits Window {
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }
+                    voice-morph-profile-changed(i) => { voice-morph-profile-changed(i); }
+                    mic-eq-profile-changed(i) => { mic-eq-profile-changed(i); }
                     eq-param-changed(id, v) => { eq-param-changed(id, v); }
                     scout-toggled(on) => { scout-toggled(on); }
                     direct-mode-toggled(on) => { direct-mode-toggled(on); }

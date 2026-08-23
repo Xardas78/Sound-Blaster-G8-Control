@@ -186,6 +186,45 @@ pub mod crystal_voice {
     /// Per Windows-Capture bestätigt (vorher "Smart Volume (Mic)" fälschlich
     /// für Voice Morph gehalten).
     pub const MIC_SMART_VOLUME_TOGGLE: ToggleParam = ToggleParam { namespace: Namespace::Recording, param_id: 0x2c };
+
+    /// Echte Voice-Morph-Profile, 1:1 aus den Windows-JSON-Presets
+    /// (`VoiceFxProfile\*.json`) übernommen – nicht mehr geraten. Werte in
+    /// Preset-Reihenfolge = VOICE_MORPH_PROFILE_IDS-Reihenfolge.
+    pub const VOICE_MORPH_PRESETS: [(&str, [f32; 8]); 18] = [
+        ("Brute", [383.0, 1428.0, 2550.0, 0.65, 1.31138, 1.0, 0.03, 0.0]),
+        ("Chipmunk", [400.0, 1400.0, 2000.0, 1.0, 0.601627, 1.0, 0.0, 0.0]),
+        ("DeepVoice", [339.5443, 1362.496, 2046.0, 0.4291186, 1.201318, 1.0, 0.0, 0.0]),
+        ("Demon", [453.0, 1544.0, 2600.0, 0.69, 2.0, 1.0, 0.0, 0.0]),
+        ("Dwarf", [294.0, 1527.0, 2055.0, 0.77, 0.97, 1.0, 0.0, 0.0]),
+        ("Elderly", [713.0, 1500.0, 1800.0, 1.4, 1.45, 1.0, 0.1818, 0.0]),
+        ("Elf", [398.0, 1395.0, 2451.0, 1.11, 0.96, 1.0, 0.0, 0.0]),
+        ("Emo", [400.0, 1400.0, 2000.0, 1.0, 1.0, 0.2, 0.0, 0.0]),
+        ("Female", [400.0, 1400.0, 2220.0, 2.37, 0.92, 1.0, 0.0, 0.0]),
+        ("FromUpNorth", [400.0, 1400.0, 2000.0, 1.0, 1.0, -0.2066, 0.0, 0.264461]),
+        ("Infiltrator", [200.0, 1370.0, 2000.0, 1.24, 1.06, 1.0, 0.13, 0.0]),
+        ("Kid", [400.0, 1400.0, 2000.0, 3.0, 0.66, 1.0, 0.0, 0.0]),
+        ("Male", [400.0, 1400.0, 2000.0, 0.6, 1.05, 1.0, 0.0, 0.0]),
+        ("Marine", [388.0, 1155.0, 1848.0, 0.8, 1.08, 0.54, 0.0, 0.0]),
+        ("Neutral", [400.0, 1400.0, 2000.0, 1.0, 1.0, 1.0, 0.0, 0.0]),
+        ("Orc", [468.0, 1321.0, 2200.0, 0.66, 1.5, 1.0, 0.0, 0.0]),
+        ("Robot", [400.0, 1400.0, 2000.0, 1.394, 1.0, -0.00824, 0.0, 0.0]),
+        ("Unstable", [400.0, 1400.0, 2000.0, 2.37, 0.92, 2.5, 0.0, 0.0]),
+    ];
+
+    /// Echte Mikrofon-Equalizer-Presets aus `MicEqProfile\*.json`. Alle
+    /// PreAmp-Werte im Original sind 0.0, deshalb hier nicht separat
+    /// geführt. Bandreihenfolge 31Hz..16kHz = MIC_EQ_PROFILE_IDS-Reihenfolge.
+    pub const MIC_EQ_PRESETS: [(&str, [f32; 10]); 9] = [
+        ("Balanced", [0.0, 0.0, 2.0, 2.0, 3.0, -4.0, 2.0, 4.0, 0.0, 0.0]),
+        ("Broadcast", [0.0, 0.0, 2.0, 2.0, -2.0, 0.0, -4.0, 4.0, 0.0, 0.0]),
+        ("Communication", [-2.0, -3.0, 2.0, 4.0, 4.0, 0.0, -3.0, 3.0, 0.0, 0.0]),
+        ("PitchBoost", [0.0, 3.0, -2.0, -4.0, -4.0, -2.0, 5.0, 7.0, 0.0, 0.0]),
+        ("PitchReduction", [0.0, 0.0, 2.0, 2.0, -2.0, 0.0, -4.0, 4.0, 0.0, 0.0]),
+        ("PublicAnnouncement", [-3.0, -5.0, 0.0, 4.0, 4.0, -3.0, 0.0, 0.0, 0.0, 0.0]),
+        ("Recording", [-2.0, -3.0, 3.0, 4.0, 4.0, 0.0, 3.0, 2.0, 0.0, 0.0]),
+        ("VoiceClarity", [-3.0, -4.0, 0.0, 2.0, 4.0, -2.0, 2.0, 4.0, 0.0, 0.0]),
+        ("VoiceWarmth", [-2.0, -3.0, 3.0, 4.0, 4.0, -4.0, 3.0, 2.0, 0.0, 0.0]),
+    ];
 }
 
 // ---------------------------------------------------------------------------

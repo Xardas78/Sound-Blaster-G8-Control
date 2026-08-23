@@ -5,7 +5,7 @@ mod speaker_test;
 mod virtual_surround;
 
 use device::G8Device;
-use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, decoder, equalizer, special, Namespace};
+use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, special, Namespace};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -47,6 +47,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let report = build_report(Namespace::Recording, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
+
+    // Voice Morph / Mikrofon-Equalizer: echte Profilwerte aus den
+    // Windows-JSON-Presets (siehe protocol.rs::crystal_voice), nicht mehr
+    // geraten. Reihenfolge der Presets entspricht der Dropdown-Reihenfolge
+    // in crystal-voice-tab.slint.
+    {
+        let device = device.clone();
+        ui.on_voice_morph_profile_changed(move |index| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some((name, values)) = crystal_voice::VOICE_MORPH_PRESETS.get(index as usize) else {
+                return eprintln!("Unbekannter Voice-Morph-Index {index}");
+            };
+            for (i, &value) in values.iter().enumerate() {
+                let param = crystal_voice::VOICE_MORPH_PROFILE_IDS[i];
+                if let Err(e) = dev.send_report(&build_report(Namespace::Recording, param, value)) {
+                    eprintln!("Senden fehlgeschlagen ({name}): {e}");
+                }
+            }
+        });
+    }
+    {
+        let device = device.clone();
+        ui.on_mic_eq_profile_changed(move |index| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some((name, values)) = crystal_voice::MIC_EQ_PRESETS.get(index as usize) else {
+                return eprintln!("Unbekannter Mic-EQ-Index {index}");
+            };
+            for (i, &value) in values.iter().enumerate() {
+                let param = crystal_voice::MIC_EQ_PROFILE_IDS[i];
+                if let Err(e) = dev.send_report(&build_report(Namespace::Recording, param, value)) {
+                    eprintln!("Senden fehlgeschlagen ({name}): {e}");
+                }
             }
         });
     }

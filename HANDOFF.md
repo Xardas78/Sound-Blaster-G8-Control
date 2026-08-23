@@ -232,27 +232,32 @@ Neuaufbau nötig. Speicherorte (Windows):
 - `C:\ProgramData\Creative\CreativeApp\Product\SB1900\` – werkseitig
   mitgelieferte Standard-Presets
 
-**EQ-Presets** (`Presets\EQ\*.json`): Dutzende benannte Presets (Spiele,
-Genres). Format: `PreAmp` + `Bands[]` mit `Frequency`+`Value` (dB).
+**EQ-Presets** (`Presets\EQ\*.json`, 71 Stück: Spiele, Genres). Format:
+`PreAmp` + `Bands[]` mit `Frequency`+`Value` (dB), **zwei getrennte
+`Settings`-Einträge pro Datei** (`Type: "Speaker"` und `Type:
+"Headphone"`, unterschiedliche Kurven!). **Implementiert:** 8 davon (Flat,
+Rock, Pop, Jazz, Classical, Bass Boost, Treble Boost, Vocal) ersetzen
+unsere vorher frei erfundenen Sound-Modus-Presets in equalizer-tab.slint
+– jeweils die Headphone-Kurve übernommen (unser Equalizer kennt bislang
+keine getrennte Lautsprecher-Kurve). Die übrigen 63 (Spiele-Presets)
+sind nicht übernommen – unsere feste 8-Slot-UI müsste für eine
+Dropdown-Suche über alle 71 erweitert werden.
 
-**SoundMode-Presets** (`SoundMode\*.json`): Kombinierte Acoustic-Engine-
-Profile (Surround/Crystalizer/Bass/SVM/DialogPlus + Verweis auf ein
-EQ-Preset).
+**SoundMode-Presets** (`SoundMode\*.json`, 60 Stück): Kombinierte
+Acoustic-Engine-Profile (Surround/Crystalizer/Bass/SVM/DialogPlus +
+Verweis auf ein EQ-Preset). Nicht implementiert – unser Sound-Modus-Tab
+wurde mangels Speicherformat-Kenntnis entfernt (siehe oben), diese Presets
+könnten aber eine App-seitige Sound-Modus-Auswahl füllen, analog zu den
+EQ-Presets.
 
-**Voice-Morph-Presets** (`VoiceFxProfile\*.json`, 18 Stück: Brute,
-Chipmunk, DeepVoice, Demon, Dwarf, Elderly, Elf, Emo, Female, FromUpNorth,
-Infiltrator, Kid, Male, Marine, Neutral, Orc, Robot, Unstable): exaktes
-Mapping `Bands[Index].Value`, Index 0-7 = Parameter `0x0b`-`0x12` (z. B.
-"Male" = `[400, 1400, 2000, 0.6, 1.05, 1, 0, 0]`). **Noch nicht
-implementiert** – unsere Voice-Morph-Dropdown-Liste in
-crystal-voice-tab.slint ist aktuell nur teilweise geraten und sendet beim
-Charakterwechsel keine echten Werte. Diese JSON-Presets wären der direkte
-Weg, das sauber nachzuholen.
+**Voice-Morph-Presets** (`VoiceFxProfile\*.json`, 18 Stück) –
+**implementiert**: `protocol.rs::crystal_voice::VOICE_MORPH_PRESETS`,
+echte Werte je Charakter (z. B. "Male" = `[400, 1400, 2000, 0.6, 1.05, 1,
+0, 0]`), Dropdown in crystal-voice-tab.slint zeigt die echten 18 Namen,
+main.rs sendet beim Wechsel die vollen 8 Bandwerte.
 
-**Mic-EQ-Presets** (`MicEqProfile\*.json`, 9 Stück: Communication,
-PitchBoost, PitchReduction, PublicAnnouncement, Recording, VoiceClarity,
-VoiceWarmth, Balanced, Broadcast): 10-Band, direkt nutzbar für
-Parameterblock `0x14`-`0x1d`. Ebenfalls noch nicht implementiert.
+**Mic-EQ-Presets** (`MicEqProfile\*.json`, 9 Stück) – **implementiert**:
+`protocol.rs::crystal_voice::MIC_EQ_PRESETS`, analog zu Voice Morph.
 
 ## 7. Baustelle: Lautstärke-Synchronisierung
 
@@ -271,8 +276,23 @@ miteinander verknüpft sind:
   siehe Commit-Historie) – weitere Mixer-Regler (Line In, SPDIF, What U
   Hear) sind noch nicht live synchronisiert, nur Lautsprecher/externes Mic
 
-Weitere Untersuchung mit gezielten Windows-Captures pro Einzelfunktion
-geplant.
+**Volume-Sync-Captures ausgewertet** (`vol min-max-min_mit sync.pcapng`,
+`volsync aus min max-volsync-ein min max.pcapng`): Der Knopf am Gerät
+erzeugt beim Drehen – auch bei aktivem Volume Sync – **keinerlei
+zusätzlichen USB-Traffic** (weder auf dem proprietären 0x5a-Kanal noch
+als zusätzliches Standard-UAC SET_CUR). Volume Sync selbst ist nur der
+eine bestätigte `5a 39 03 00 1c <an|aus>`-Befehl (Gerät bestätigt mit
+`5a 02 0a 39 00 1c <wert>` – neu entdecktes generisches ACK-Format für
+die 0x39-Familie). Windows nutzt für die G8 einen eigenen Kernel-Treiber
+(`CTUSBa64`, siehe Abschnitt 1) statt des generischen UAC-Treibers – die
+eigentliche Kopplung Knopf↔Windows-Systemlautstärke passiert vermutlich
+treiberintern, unsichtbar auf dem USB-Kabel. **Schlussfolgerung:** Es
+gibt keinen fehlenden USB-Befehl zu finden, den wir noch senden müssten
+– das "kreuz und quer synchronisieren" ist eine PipeWire/ALSA-
+Architekturfrage (mehrere echte Lautstärke-Ebenen: Hardware-Register,
+PipeWire-Sink, ggf. App-Stream-Lautstärke), kein Protokoll-Rätsel. Weitere
+USB-Captures zu diesem Thema bringen vermutlich keine neuen Erkenntnisse
+mehr.
 
 ## 8. Offene Punkte
 
@@ -283,8 +303,11 @@ geplant.
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-vorbereitet, kein echter
   globaler Tastatur-Hook angebunden
 - GET-Anfrage-Familien 0x26 (teilweise), 0x39, 0x6c, 0x10 unentschlüsselt
-- Voice-Morph-/Mikrofon-Equalizer: echte Profilwerte aus den Windows-JSON-
-  Presets (siehe Abschnitt 6) noch nicht übernommen
+- 63 der 71 Windows-EQ-Presets (Spiele) und alle 60 SoundMode-Presets noch
+  nicht übernommen (siehe Abschnitt 6) – bräuchte eine Dropdown-Suche
+  statt der festen 8-Slot-UI
+- Equalizer kennt nur eine Kurve, keine getrennte Kopfhörer-/Lautsprecher-
+  Variante wie das Original (siehe Abschnitt 6, EQ-Presets)
 - Balance-Regler (L/R) im Mixer nicht implementiert (nice-to-have, gleicher
   UAC-Mechanismus wie Hauptlautstärke, nur anderer Channel)
 

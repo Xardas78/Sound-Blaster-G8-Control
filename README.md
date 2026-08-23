@@ -22,20 +22,21 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 
 Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md) für die vollständigen Hex-Funde und Analyse).
 
-**Funktioniert:** Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz), CrystalVoice inkl. korrekter Voice-Morph-/Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
+**Funktioniert:** Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz) mit echten Original-Presets (Flat/Rock/Pop/Jazz/Classical/Bass Boost/Treble Boost/Vocal, 1:1 aus der Windows-Preset-Bibliothek), CrystalVoice inkl. korrekter Voice-Morph- (18 echte Charaktere) und Mikrofon-Equalizer-Presets (9 echte Presets) sowie Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
 
 **Baustelle – Lautstärke-Synchronisierung:** Es gibt mehrere Stellen, an denen Lautstärke geändert werden kann (ALSA-Hardwareregister, PipeWire-Sink-Lautstärke, unsere eigenen UI-Regler), die nicht vollständig miteinander verknüpft sind. Bekannte Probleme:
 - Volume Sync (Einstellungen) spiegelt aktuell nur in eine Richtung (ALSA → PipeWire); Änderungen an der PC-Lautstärke über andere Wege (System-Lautstärkeregler, Medientasten) fließen nicht zurück
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber nachvollziehbar
 - Die übrigen Mixer-Regler (Line In, SPDIF, What U Hear) sind noch nicht live synchronisiert, nur Lautsprecher und externes Mikrofon
 
-Wird noch untersucht (weiterer USB-Capture-Vergleich mit dem Original unter Windows geplant).
+USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl; das ist eine PipeWire/ALSA-Architekturfrage (mehrere echte Lautstärke-Ebenen), siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
 - Sound-Modus-Presets im Gerät speichern/laden
 - Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen
-- Voice-Morph-Charaktere und Mikrofon-Equalizer-Presets senden noch keine echten Profilwerte (die exakten Daten liegen als JSON in der Windows-Installation vor, siehe [HANDOFF.md](HANDOFF.md) Abschnitt 6 – nur die Übernahme fehlt noch)
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
+
+**Bekannte Einschränkung:** Windows führt für Equalizer-Presets separate Kopfhörer-/Lautsprecher-Kurven; unser Equalizer hat nur eine gemeinsame Kurve unabhängig vom Kopfhörer/Lautsprecher-Umschalter (wir übernehmen nur die Kopfhörer-Variante der Original-Presets).
 
 ## Voraussetzungen
 
