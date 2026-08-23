@@ -228,24 +228,34 @@ pub fn get_level(entity_id: i32) -> Option<f32> {
     Some(if entity_id == 0 { taper_correct(alsa_pct) } else { alsa_pct })
 }
 
-/// Sucht die Wertzeile (z.B. "Front Left: Playback 128 [88%] [0.00dB] [off]
-/// Capture 48 [84%] [0.00dB] [on]") und liest den Prozentwert hinter dem
-/// gewünschten Richtungswort. Auf "%]" eingeschränkt, damit die vorherige
-/// "Capture channels: ..."-Zeile nicht fälschlich matcht.
+/// Sucht die Wertzeilen (z.B. "Front Left: Playback 128 [88%] [0.00dB]
+/// [off] Capture 48 [84%] [0.00dB] [on]" + eine gleichartige "Front
+/// Right"-Zeile) und liest den Prozentwert hinter dem gewünschten
+/// Richtungswort. Auf "%]" eingeschränkt, damit die vorherige "Capture
+/// channels: ..."-Zeile nicht fälschlich matcht.
+///
+/// Nimmt das MAXIMUM über beide Kanäle statt nur den ersten Treffer (früher
+/// immer "Front Left"): set_balance() dämpft gezielt nur die leisere Seite
+/// (siehe dort), der unangetastete Kanal zeigt also immer den wahren,
+/// vor der Balance gemeinten Pegel – ein reiner Left-Read würde bei
+/// aktiver Balance eine viel zu niedrige (im Extremfall 0%) Anzeige
+/// liefern, obwohl der tatsächlich hörbare Pegel stimmt.
 fn extract_percent(text: &str, direction: &str) -> Option<f32> {
+    let mut max: Option<f32> = None;
     for line in text.lines() {
         if !line.contains("%]") {
             continue;
         }
-        if let Some(idx) = line.find(direction) {
-            let rest = &line[idx + direction.len()..];
-            let start = rest.find('[')?;
-            let rest = &rest[start + 1..];
-            let end = rest.find('%')?;
-            return rest[..end].trim().parse().ok();
+        let Some(idx) = line.find(direction) else { continue };
+        let rest = &line[idx + direction.len()..];
+        let Some(start) = rest.find('[') else { continue };
+        let rest = &rest[start + 1..];
+        let Some(end) = rest.find('%') else { continue };
+        if let Ok(v) = rest[..end].trim().parse::<f32>() {
+            max = Some(max.map_or(v, |m: f32| m.max(v)));
         }
     }
-    None
+    max
 }
 
 /// Setzt die PipeWire-Sink-Lautstärke direkt auf einen linearen
