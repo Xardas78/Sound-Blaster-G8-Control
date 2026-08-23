@@ -617,6 +617,45 @@ PipeWire-Sink, ggf. App-Stream-Lautstärke), kein Protokoll-Rätsel. Weitere
 USB-Captures zu diesem Thema bringen vermutlich keine neuen Erkenntnisse
 mehr.
 
+- **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
+  Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
+  (mehrfache PipeWire-Profilwechsel `pro-audio`↔`analog-stereo`, mehrere
+  USB-Neuenumerationen durch den Reset-Befehl, parallel laufende
+  Wireshark/usbmon-Mitschnitte) reagierte der physische Lautstärkeknopf
+  irgendwann gar nicht mehr – das rohe ALSA-Register (`amixer -c USB1
+  sget Speaker`) blieb komplett statisch, selbst bei durchgehendem
+  Drehen. Systematisch ausgeschlossen, in dieser Reihenfolge:
+  - Eigene App/Balance-Feature: Anzeige-Bug gefunden und gefixt (`get_level()`
+    las nur den linken statt beider Kanäle), war aber nicht die Ursache
+    hier – beide Kanäle liefen immer synchron.
+  - PipeWire-Hardware-Lautstärke-Rückschreiben: WirePlumber hatte in
+    `~/.local/state/wireplumber/stream-properties` eine veraltete
+    Lautstärke (~13%) für den G8-Sink gecacht, die tatsächlich direkt ins
+    ALSA-Register durchschlug (bestätigt: `wpctl set-volume` bewegte den
+    ALSA-Rohwert). Per WirePlumber-Regel (`~/.config/wireplumber/
+    wireplumber.conf.d/51-g8-soft-mixer.conf`, `api.alsa.soft-mixer =
+    true` für alle G8-Nodes) behoben – PipeWire nutzt jetzt nur noch
+    Software-Lautstärke, schreibt nicht mehr ins Hardware-Register. Diese
+    Regel bleibt drin (sinnvolle Absicherung), war aber **nicht** die
+    Ursache des kompletten Ausfalls: Test mit komplett gestopptem
+    PipeWire+WirePlumber (`systemctl --user stop/mask`) zeigte das
+    Problem unverändert.
+  - Normaler PC-Neustart (Software-Reboot): keine Besserung.
+  - **Tatsächlicher Fix: Das USB-Kabel direkt am Gerät abgezogen (nicht
+    nur den PC aus-/eingeschaltet), danach funktionierte der Regler
+    sofort wieder einwandfrei** (sauberer, glatter Verlauf über den
+    ganzen Bereich, live verifiziert). Vermuteter Grund: das Mainboard
+    hält USB-Ports auch im ausgeschalteten Zustand unter Strom (ErP-
+    Energiesparmodus im BIOS war zum Testzeitpunkt aus/an in wechselnder
+    Kombination, nicht abschließend zugeordnet) – ein normaler Reboot
+    schneidet der G8 dadurch nie wirklich den Strom ab, ein interner
+    Firmware-/Register-Zustand blieb über den Software-Neustart hinweg
+    hängen. **Schlussfolgerung:** Kein Software-Bug in g8-control,
+    PipeWire oder WirePlumber – ein reiner Geräte-/Firmware-Zustand, der
+    nur durch echten Stromverlust am USB-Kabel selbst zurückgesetzt wird.
+    Falls das nochmal auftritt: zuerst Kabel direkt am Gerät (nicht am
+    PC/Hub) für 30+ Sekunden abziehen, bevor an der Software gesucht wird.
+
 ## 8. Offene Punkte
 
 - **Kein Auto-Reconnect nach Geräteverlust**: `G8Device::open()` wird nur
