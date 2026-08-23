@@ -32,7 +32,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = AppWindow::new()?;
     ui.set_app_version(env!("CARGO_PKG_VERSION").into());
 
-    let device = match G8Device::open() {
+    // Rc<RefCell<...>> statt eines einfachen Option<Rc<G8Device>>: das
+    // Handle muss zur Laufzeit ausgetauscht werden können, wenn das Gerät
+    // die Verbindung verliert und später wiederkommt (z.B. nach "Gerät
+    // zurücksetzen" – das löst eine echte USB-Neuenumeration aus, siehe
+    // HANDOFF.md Abschnitt 5a). Alle Callback-Handler lesen den aktuellen
+    // Stand über `device.borrow().clone()` statt eine einmal gecachte
+    // Kopie zu behalten, siehe reconnect_timer unten.
+    let device: Rc<RefCell<Option<Rc<G8Device>>>> = Rc::new(RefCell::new(match G8Device::open() {
         Ok(d) => {
             ui.set_device_connected(true);
             Some(Rc::new(d))
@@ -42,7 +49,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_device_status(format!("✗ {e}").into());
             None
         }
-    };
+    }));
+
+    // Reconnect-Timer: versucht alle 2s neu zu verbinden – bewusst nicht
+    // nur, wenn `device` gerade `None` ist: nach einem Reset (echte USB-
+    // Neuenumeration, siehe HANDOFF.md Abschnitt 5a) bleibt das ALTE
+    // Handle technisch "vorhanden", ist aber tot (`hidapi error: No such
+    // device` bei jedem Zugriff) – ohne aktives Neuöffnen würde das nie
+    // bemerkt. G8Device::open() ist günstig genug (ein HidApi-Scan +
+    // Öffnen), um alle 2s unbedingt versucht zu werden; ein Erfolg
+    // ersetzt das Handle immer. `slint::Timer` statt `thread::spawn`,
+    // weil `G8Device`/`hidapi::HidDevice` nicht `Send` sind (enthalten
+    // einen `Box<dyn HidDeviceBackend>` ohne `Sync`) – der Timer feuert
+    // im UI-Thread, kein Problem mit Rc/RefCell.
+    let reconnect_timer = slint::Timer::default();
+    {
+        let device = device.clone();
+        let weak = ui.as_weak();
+        reconnect_timer.start(slint::TimerMode::Repeated, Duration::from_secs(2), move || {
+            if let Ok(d) = G8Device::open() {
+                let was_connected = device.borrow().is_some();
+                *device.borrow_mut() = Some(Rc::new(d));
+                if !was_connected {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.set_device_connected(true);
+                    }
+                }
+            }
+        });
+    }
 
     // Zuletzt gespeicherte App-seitige Einstellungen laden: Anzeige UND
     // Gerät nachziehen, sonst würde die App nach jedem Neustart wieder
@@ -82,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui.set_sound_mode_selected_index(s.sound_mode_preset_index + 1);
         }
 
-        if let Some(dev) = &device {
+        if let Some(dev) = device.borrow().clone() {
             let send = |report: [u8; 64]| {
                 if let Err(e) = dev.send_report(&report) {
                     eprintln!("Senden fehlgeschlagen (gespeicherte Einstellungen): {e}");
@@ -137,7 +172,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 persist::save(&s);
             }
 
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = build_report(Namespace::Playback, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -148,7 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_recording_param_changed(move |id, value| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = build_report(Namespace::Recording, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -163,7 +198,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_voice_morph_profile_changed(move |index| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let Some((name, values)) = crystal_voice::VOICE_MORPH_PRESETS.get(index as usize) else {
                 return eprintln!("Unbekannter Voice-Morph-Index {index}");
             };
@@ -241,7 +276,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // statt nur die Kurve ohne erkennbaren Preset-Namen zu ändern.
             ui_handle.set_ae_eq_preset_index(p.eq_preset_index);
 
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let send = |report: [u8; 64]| {
                 if let Err(e) = dev.send_report(&report) {
                     eprintln!("Senden fehlgeschlagen ({name}): {e}");
@@ -268,7 +303,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_mic_eq_profile_changed(move |index| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let Some((name, values)) = crystal_voice::MIC_EQ_PRESETS.get(index as usize) else {
                 return eprintln!("Unbekannter Mic-EQ-Index {index}");
             };
@@ -298,7 +333,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 persist::save(&s);
             }
 
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = build_report(Namespace::Playback, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -309,7 +344,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_scout_toggled(move |on| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             if let Err(e) = dev.send_report(&special::scout_mode(on)) {
                 eprintln!("Senden fehlgeschlagen: {e}");
             }
@@ -326,7 +361,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_direct_mode_toggled(move |on| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             // Direct Mode und SBX sind derselbe zugrundeliegende Zustand,
             // invers zueinander (Direct Mode an = SBX-Effekte aus). Per
             // USB-Capture "g8 neu.pcapng" UND Live-Test bestätigt: die
@@ -353,7 +388,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_decoder_mode_changed(move |mode| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let value = match mode {
                 0 => decoder::DecoderMode::Normal,
                 2 => decoder::DecoderMode::Nacht,
@@ -435,7 +470,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 virtual_surround::disable();
             }
-            let Some(dev) = &device else {
+            let Some(dev) = device.borrow().clone() else {
                 return eprintln!("Ignoriert – kein Gerät verbunden");
             };
             if let Err(e) = dev.send_report(&special::set_output_target(target == 0)) {
@@ -448,30 +483,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // keine Push-Benachrichtigung dafür (siehe device.rs::read_report),
     // deshalb aktiv im Sekundentakt abfragen. Eigenes, drittes Geräte-
     // Handle aus demselben Grund wie beim Lautstärke-Poller: ein
-    // geteiltes Handle würde die UI beim Schreiben blockieren.
-    if device.is_some() {
+    // geteiltes Handle würde die UI beim Schreiben blockieren. Läuft
+    // unabhängig vom Start-Verbindungsstatus und öffnet sich bei Bedarf
+    // selbst neu (z.B. nach "Gerät zurücksetzen", siehe HANDOFF.md
+    // Abschnitt 5a) – bewusst NICHT über die geteilte `device`-Zelle,
+    // damit ein eigener, stabiler Handle für die read_report-Timing-
+    // Logik oben erhalten bleibt.
+    {
         let weak = ui.as_weak();
         thread::spawn(move || {
-            let dev = match G8Device::open() {
-                Ok(d) => d,
-                Err(e) => return eprintln!("Schalter-Abfrage: Gerät nicht geöffnet: {e}"),
-            };
+            let mut dev: Option<G8Device> = G8Device::open().ok();
             let mut last_target: Option<i32> = None;
             loop {
+                let Some(d) = &dev else {
+                    thread::sleep(Duration::from_secs(2));
+                    dev = G8Device::open().ok();
+                    continue;
+                };
                 // Erst liegen gebliebene Reports verwerfen (z.B. vom
                 // periodischen Status-Heartbeat, der zufällig dieselbe
                 // "5a 2c 05 01 xx"-Form hat) – sonst wird eine alte,
                 // ungültige Antwort mit der frischen Anfrage verwechselt.
-                while dev.read_report(20).ok().flatten().is_some() {}
+                while d.read_report(20).ok().flatten().is_some() {}
 
-                if dev.send_report(&special::query_output_target()).is_ok() {
-                    if let Ok(Some(buf)) = dev.read_report(300) {
-                        if let Some(target) = special::output_target_from_reply(&buf) {
-                            if last_target != Some(target) {
-                                last_target = Some(target);
-                                let weak = weak.clone();
-                                let _ = weak.upgrade_in_event_loop(move |ui| ui.set_output_target(target));
-                            }
+                if d.send_report(&special::query_output_target()).is_err() {
+                    dev = None; // Handle tot (z.B. nach Reset) – nächste Runde neu öffnen.
+                    continue;
+                }
+                if let Ok(Some(buf)) = d.read_report(300) {
+                    if let Some(target) = special::output_target_from_reply(&buf) {
+                        if last_target != Some(target) {
+                            last_target = Some(target);
+                            let weak = weak.clone();
+                            let _ = weak.upgrade_in_event_loop(move |ui| ui.set_output_target(target));
                         }
                     }
                 }
@@ -508,7 +552,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // (setting_id::VOLUME_SYNC) zusätzlich zu unserem PipeWire-
             // Mirroring – was er intern genau bewirkt, ist unklar, aber
             // die Original-Software sendet ihn beim Umschalten.
-            if let Some(dev) = &device {
+            if let Some(dev) = device.borrow().clone() {
                 let report = special::device_setting(special::setting_id::VOLUME_SYNC, on);
                 if let Err(e) = dev.send_report(&report) {
                     eprintln!("Senden fehlgeschlagen: {e}");
@@ -530,7 +574,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(pct) = mixer::get_level(0) {
             mixer::set_pipewire_sink_volume_percent(pct);
         }
-        if let Some(dev) = &device {
+        if let Some(dev) = device.borrow().clone() {
             let report = special::device_setting(special::setting_id::VOLUME_SYNC, true);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -583,7 +627,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_spdif_direct_toggled(move |on| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = special::device_setting(special::setting_id::SPDIF_OUT_DIRECT_MODE, on);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -607,7 +651,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let device = device.clone();
         ui.on_reset_clicked(move || {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             if let Err(e) = dev.send_report(&special::reset_device()) {
                 eprintln!("Senden fehlgeschlagen: {e}");
             }
@@ -622,7 +666,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 s.power_saving_on = on;
                 persist::save(&s);
             }
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = special::device_setting(special::setting_id::POWER_SAVING, on);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
@@ -638,7 +682,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 s.logo_led_on = on;
                 persist::save(&s);
             }
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = special::device_setting(special::setting_id::LOGO_LED, on);
             if let Err(e) = dev.send_report(&report) {
                 eprintln!("Senden fehlgeschlagen: {e}");
