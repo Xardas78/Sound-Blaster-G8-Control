@@ -599,12 +599,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         speaker_test::test_cycle();
     });
 
-    // Reset ist weiterhin unbekannt (kein Capture vorhanden, bewusst nicht
-    // spekulativ implementiert – Risiko eines Bricking). Energiesparen und
-    // Logo-LED per Windows-Capture bestätigt (special::setting_id).
-    ui.on_reset_clicked(move || {
-        eprintln!("Gerät zurücksetzen: Report-Format noch nicht reverse-engineert");
-    });
+    // Per Windows-Capture bestätigt (special::reset_device(), HANDOFF.md
+    // Abschnitt 5): löst eine echte USB-Neuenumeration mit Werksdefaults
+    // aus, das Gerät ist danach für mehrere Sekunden nicht erreichbar.
+    // Energiesparen und Logo-LED ebenfalls per Windows-Capture bestätigt
+    // (special::setting_id).
+    {
+        let device = device.clone();
+        ui.on_reset_clicked(move || {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            if let Err(e) = dev.send_report(&special::reset_device()) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        });
+    }
     {
         let device = device.clone();
         let settings = settings.clone();

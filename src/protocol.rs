@@ -448,6 +448,24 @@ pub mod special {
         pub const POWER_SAVING: u8 = 0x11;
         pub const VOLUME_SYNC: u8 = 0x1c;
     }
+
+    /// "Gerät zurücksetzen". Eigenes Befehlsschema (nicht Toggle/Level, nicht
+    /// device_setting) – per drei unabhängigen Windows-Captures
+    /// (`reset.pcapng`, `reset_spk.pcapng`, `rest mit Jack-Sensing.pcapng`,
+    /// 2026-08-23) byte-identisch bestätigt als der letzte an das Gerät
+    /// gesendete Report, unmittelbar bevor es für ~9s vom Bus verschwindet
+    /// und mit Werksdefaults neu enumeriert (siehe HANDOFF.md Abschnitt 5).
+    /// Löst eine ECHTE Neuenumeration aus, keine sofortige Antwort auf
+    /// diesen Report selbst zu erwarten – das Gerät ist danach für
+    /// mehrere Sekunden nicht ansprechbar.
+    pub fn reset_device() -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x9b;
+        buf[2] = 0x01;
+        buf[3] = 0x03;
+        buf
+    }
 }
 
 #[cfg(test)]

@@ -369,28 +369,43 @@ ist, kein weiterer geräteseitiger Abgleich nötig.**
   die neueste Version, `/creative/res/firmware/releasenotes/SB1900/
   {en,de}/releasenotes.json` für die Versionsgeschichte) – nur zur
   Referenz notiert (2026-08-23), weiterhin nicht implementiert.
-- **Gerät zurücksetzen**: Button existiert (Einstellungen → Gerät, Label
-  "Gerät zurücksetzen"). Per Capture bestätigt (2026-08-23, `reset.pcapng`):
-  löst eine **echte USB-Neuenumeration** aus (`GET_DESCRIPTOR`, sichtbar
-  auch am Gerät selbst: alle LEDs blinken kurz, MODE-LED kurz rot), danach
-  (~1,1s später) schickt das Gerät einen vollen Status-Heartbeat mit
-  echten Werksdefaults: Equalizer-Toggle (`96 09`) und alle 10 Bänder +
-  Vorverstärkung (`96 0a`–`96 14`) auf 0.0/0dB, Crossover (`96 17`) auf
-  80Hz (statt z.B. 120Hz bei "Baldur's Gate 3"), Bass/Smart Volume/
-  Dialog+ aus, Surround an, Crystalizer bleibt an. **Vorsicht bei
-  eigenen Tests:** ein zu kurzes Capture fängt nur die Neuenumeration
-  ein, aber nicht den eigentlichen Werte-Reset-Burst, der erst 1-2s
-  danach kommt – mindestens 15-20s nach dem Klick weiterlaufen lassen.
-  Dreifach reproduziert (`reset.pcapng` Kopfhörer, `reset_spk.pcapng`
-  Lautsprecher, `rest mit Jack-Sensing.pcapng` Kopfhörer-Ausstecken+
-  Reset) – alle drei Male **byte-identischer** Werte-Burst, Reset ist
-  also zielunabhängig und deterministisch. Eine einzelne frühere
-  Beobachtung zeigte stattdessen "Gaming" mit sichtbarer Kurve und
-  eingeschaltetem Equalizer – da in drei sauberen Captures nicht
-  reproduzierbar, ein einmaliger UI-Ausreißer, keine echte
-  Zielabhängigkeit. **Damit abgeschlossen.**
 - **Decoder-Feintuning (DRC)**: G8 zeigt laut Original-UI nur Normal/Voll/
   Nacht, kein verstecktes Protokoll zu vermuten.
+
+## 5a. "Gerät zurücksetzen" – implementiert und bestätigt (2026-08-23)
+
+Button in Einstellungen → Gerät. Auslöser-Report per drei unabhängigen
+Windows-Captures byte-identisch bestätigt (`reset.pcapng`, `reset_spk.pcapng`,
+`rest mit Jack-Sensing.pcapng`) und in `protocol.rs::special::reset_device()`
+umgesetzt:
+
+```
+5a 9b 01 03 00...00   (64 Byte, Rest Nullen)
+```
+
+Löst eine **echte USB-Neuenumeration** aus (`GET_DESCRIPTOR`, sichtbar auch
+am Gerät selbst: alle LEDs blinken kurz, MODE-LED kurz rot), danach (~1,1s
+später unter Windows) schickt das Gerät einen vollen Status-Heartbeat mit
+echten Werksdefaults: Equalizer-Toggle (`96 09`) und alle 10 Bänder +
+Vorverstärkung (`96 0a`–`96 14`) auf 0.0/0dB, Crossover (`96 17`) auf 80Hz
+(statt z.B. 120Hz bei "Baldur's Gate 3"), Bass/Smart Volume/Dialog+ aus,
+Surround an, Crystalizer bleibt an. Dreifach reproduziert unter Windows –
+alle drei Male **byte-identischer** Werte-Burst, Reset ist also
+zielunabhängig und deterministisch.
+
+**Live unter Linux getestet (2026-08-23) und vom Nutzer bestätigt: "war ein
+Reset wie unter Windows"** – der Report funktioniert unverändert über
+unseren eigenen HID-Kanal (`device.rs::send_report`), kein Windows-
+spezifisches Verhalten.
+
+**Bekannte Einschränkung (noch offen):** Nach dem Reset verliert unser
+`G8Device`-Handle die Verbindung (echte USB-Neuenumeration = neuer
+Gerätepfad), es gibt noch keine automatische Neuverbindung. Die App muss
+danach manuell neu gestartet werden, ein zweiter Reset-Klick in derselben
+Sitzung schlägt mit `hidapi error: No such device` fehl. Sauberer wäre ein
+Reconnect-Loop in main.rs (z.B. alle 2s `G8Device::open()` erneut
+versuchen, wenn `send_report`/`read_report` fehlschlagen) – nicht
+umgesetzt, siehe Abschnitt 8.
 
 ## 6. Preset-Bibliothek (direkt nutzbar, kein Reverse Engineering nötig)
 
@@ -604,6 +619,14 @@ mehr.
 
 ## 8. Offene Punkte
 
+- **Kein Auto-Reconnect nach Geräteverlust**: `G8Device::open()` wird nur
+  einmal beim Programmstart aufgerufen. Verliert das Gerät die Verbindung
+  (USB-Neuenumeration durch Reset, siehe Abschnitt 5a, oder ein
+  Aus-/Einstecken) bleibt das `HidDevice`-Handle dauerhaft ungültig
+  (`hidapi error: No such device`), auch nachdem das Gerät längst wieder
+  da ist – App muss manuell neu gestartet werden. Sauberer wäre ein
+  periodischer Reconnect-Versuch, wenn `send_report`/`read_report`
+  fehlschlägt.
 - ~~Sound-Modus-Preset auf dem Gerät auslesen~~ **erledigt, 2026-08-23**
   (`schrit 1 bis 5 nach claudes vorgabe.pcapng`) – siehe Abschnitt 2:
   keine geräteseitige Preset-Kennung, nur rohe Parameterwerte werden vom
