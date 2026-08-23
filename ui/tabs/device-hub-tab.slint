@@ -1,4 +1,5 @@
 import { TabWidget } from "std-widgets.slint";
+import { SoundModeTab } from "sound-mode-tab.slint";
 import { AcousticEngineTab } from "acoustic-engine-tab.slint";
 import { EqualizerTab } from "equalizer-tab.slint";
 import { CrystalVoiceTab } from "crystal-voice-tab.slint";
@@ -32,7 +33,14 @@ export component DeviceHubTab inherits TabWidget {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback sound-mode-preset-selected(int);
 
+    Tab {
+        title: "Sound-Modus";
+        SoundModeTab {
+            preset-selected(i) => { sound-mode-preset-selected(i); }
+        }
+    }
     Tab {
         title: "Acoustic Engine";
         AcousticEngineTab {

@@ -1,0 +1,32 @@
+import { ComboBox } from "std-widgets.slint";
+
+// Sound-Modus: kombiniertes Preset aus Acoustic Engine + Equalizer, echte
+// Original-Presets aus der Windows-Installation (SoundMode/*.json,
+// verknüpft mit dem passenden EQ-Preset über GraphicEQ.PresetId) – siehe
+// HANDOFF.md Abschnitt 6 und protocol.rs::sound_mode. Anwenden sendet
+// direkt alle zugehörigen Acoustic-Engine- und EQ-Parameter; Acoustic-
+// Engine- und Equalizer-Tab zeigen die neuen Werte erst nach erneutem
+// Öffnen (kein Live-Rücksync in dieser Version).
+export component SoundModeTab inherits VerticalLayout {
+    padding: 16px;
+    spacing: 12px;
+    alignment: start;
+
+    callback preset-selected(int);
+
+    Text { text: "Sound-Modus"; font-size: 20px; font-weight: 700; }
+    Text {
+        wrap: word-wrap;
+        font-size: 14px;
+        color: gray;
+        text: "Wendet ein komplettes Klangbild an: Surround/Crystalizer/Bass/Smart Volume/Dialog+ sowie die passende Equalizer-Kurve. Werte gelten für Kopfhörer.";
+    }
+
+    ComboBox {
+        width: 320px;
+        model: [
+            "64 Audio Aspire Series", "Adventure and Action", "Apex Legends", "Arena Of Valor", "Assetto Corsa", "Baldur's Gate 3", "Bass Boost", "Bass Cut", "Battle Royale", "Battlefield Series", "Black Myth: Wukong", "Call of Duty Series", "Counter-Strike 2", "Counter-Strike: Global Offensive", "Cyberpunk 2077", "Death Stranding", "Delta Force", "Diablo Series", "Doom Eternal", "DOTA 2", "Dynamic Music", "Effects Off", "Escape from Tarkov", "Esports", "Fortnite", "Forza Horizon Series", "FPS", "Gaming", "Genshin Impact", "Halo Infinite", "Helldivers 2", "Hogswart Legacy", "League of Legends", "Marvel Rivals", "Marvel's Spider-Man Series", "Minecraft Dungeons", "MMORPG", "MOBA", "Movies", "Music", "Overwatch 2", "Path of Exile 2", "PUBG: BATTLEGROUNDS", "Racing Simulation", "Red Dead Redemption 2", "Resident Evil Series", "Rocket League", "RPG", "RTS", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Stadium", "Star War Jedi Series", "The Witcher Series", "Tom Clancy's Rainbow Six Siege", "Treble Boost", "Treble Cut", "Valorant", "Warframe", "Warhammer 40000 Space Marine 2", "World War 3",
+        ];
+        selected(name) => { preset-selected(self.current-index); }
+    }
+}

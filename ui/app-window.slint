@@ -53,6 +53,7 @@ export component AppWindow inherits Window {
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
+    callback sound-mode-preset-selected(int);
     callback mute-changed(int, bool);
     callback capture-source-changed(int);
     callback reset-clicked();
@@ -78,6 +79,7 @@ export component AppWindow inherits Window {
                     direct-mode-toggled(on) => { direct-mode-toggled(on); }
                     decoder-mode-changed(m) => { decoder-mode-changed(m); }
                     mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
+                    sound-mode-preset-selected(i) => { sound-mode-preset-selected(i); }
                 }
             }
             Tab {

@@ -9,7 +9,8 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 ## Funktionen
 
 - **Acoustic Engine** – Surround, Crystalizer, Bass, Smart Volume (inkl. Nacht/Normal/Laut), Dialog+
-- **10-Band-Equalizer** mit Vorverstärkung und Sound-Modus-Presets
+- **Sound-Modus** – 60 komplette Klangbild-Presets (Surround/Crystalizer/Bass/Smart Volume/Dialog+ + passende Equalizer-Kurve in einem Klick)
+- **10-Band-Equalizer** mit Vorverstärkung und 71 echten Original-Presets
 - **CrystalVoice** – Noise Reduction, Echo Cancellation, Voice Morph, Mikrofon-Equalizer
 - **Modi & Decoder** – Direct Mode, Scout Mode (inkl. Zugriffstaste), Dolby-Decoder
 - **Mixer** – alle Ein-/Ausgangspegel inkl. Stummschaltung
@@ -22,7 +23,7 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 
 Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-Protokolls sind aus echten Captures rekonstruiert (siehe [HANDOFF.md](HANDOFF.md) für die vollständigen Hex-Funde und Analyse).
 
-**Funktioniert:** Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz) mit echten Original-Presets (Flat/Rock/Pop/Jazz/Classical/Bass Boost/Treble Boost/Vocal, 1:1 aus der Windows-Preset-Bibliothek), CrystalVoice inkl. korrekter Voice-Morph- (18 echte Charaktere) und Mikrofon-Equalizer-Presets (9 echte Presets) sowie Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
+**Funktioniert:** Sound-Modus (60 echte kombinierte Presets, 1:1 aus der Windows-Preset-Bibliothek), Acoustic Engine, 10-Band-Equalizer (31 Hz–16 kHz) mit allen 71 echten Original-Presets, CrystalVoice inkl. korrekter Voice-Morph- (18 echte Charaktere) und Mikrofon-Equalizer-Presets (9 echte Presets) sowie Smart-Volume-Parameter, Scout Mode, Direct Mode/SBX, Decoder, Mixer inkl. Stummschaltung, **Kopfhörer/Lautsprecher-Umschaltung inkl. Fernsteuerung** (Relais-Klick + LED, nicht nur Anzeige), SPDIF-Out Direct Mode, Energiesparen, Logo-LED, virtueller HRTF-Surround, Lautstärkeknopf-Livesync (Fußleiste und Mixer-Tab teilen sich denselben Wert für Lautsprecher/Mikrofon).
 
 **Baustelle – Lautstärke-Synchronisierung:** Es gibt mehrere Stellen, an denen Lautstärke geändert werden kann (ALSA-Hardwareregister, PipeWire-Sink-Lautstärke, unsere eigenen UI-Regler), die nicht vollständig miteinander verknüpft sind. Bekannte Probleme:
 - Volume Sync (Einstellungen) spiegelt aktuell nur in eine Richtung (ALSA → PipeWire); Änderungen an der PC-Lautstärke über andere Wege (System-Lautstärkeregler, Medientasten) fließen nicht zurück
@@ -32,7 +33,8 @@ Funktionsfähig und in aktiver Entwicklung. Große Teile des proprietären USB-P
 USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl; das ist eine PipeWire/ALSA-Architekturfrage (mehrere echte Lautstärke-Ebenen), siehe [HANDOFF.md](HANDOFF.md) Abschnitt 7.
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
-- Sound-Modus-Presets im Gerät speichern/laden
+- Sound-Modus-Presets im Gerät speichern/laden (Anwenden funktioniert, Auslesen/Persistieren eines aktiven Presets nicht)
+- Bass-Crossover-Frequenz aus den Sound-Modus-Presets (kein bekannter Geräteparameter)
 - Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
 

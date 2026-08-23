@@ -5,7 +5,7 @@ mod speaker_test;
 mod virtual_surround;
 
 use device::G8Device;
-use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, special, Namespace};
+use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, sound_mode, special, Namespace};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -70,6 +70,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
     }
+    // Sound-Modus: kombiniertes Preset aus Acoustic Engine + Equalizer,
+    // echte Werte aus SoundMode/*.json + Presets/EQ/*.json (verknüpft über
+    // GraphicEQ.PresetId), siehe protocol.rs::sound_mode. bass_xover wird
+    // nicht gesendet – kein bekannter Geräteparameter dafür (HANDOFF.md §8).
+    {
+        let device = device.clone();
+        ui.on_sound_mode_preset_selected(move |index| {
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
+            let Some((name, p)) = sound_mode::PRESETS.get(index as usize) else {
+                return eprintln!("Unbekannter Sound-Modus-Index {index}");
+            };
+            let send = |report: [u8; 64]| {
+                if let Err(e) = dev.send_report(&report) {
+                    eprintln!("Senden fehlgeschlagen ({name}): {e}");
+                }
+            };
+            send(build_toggle_report(acoustic_engine::SURROUND_TOGGLE, p.surround_on));
+            send(build_level_report(acoustic_engine::SURROUND_LEVEL, p.surround_level));
+            send(build_toggle_report(acoustic_engine::CRYSTALIZER_TOGGLE, p.crystalizer_on));
+            send(build_level_report(acoustic_engine::CRYSTALIZER_LEVEL, p.crystalizer_level));
+            send(build_toggle_report(acoustic_engine::BASS_TOGGLE, p.bass_on));
+            send(build_level_report(acoustic_engine::BASS_LEVEL, p.bass_level));
+            send(build_toggle_report(acoustic_engine::SMART_VOLUME_TOGGLE, p.svm_on));
+            send(build_level_report(acoustic_engine::SMART_VOLUME_LEVEL, p.svm_level));
+            send(build_level_report(acoustic_engine::SMART_VOLUME_MODE, p.svm_mode));
+            send(build_toggle_report(acoustic_engine::DIALOG_PLUS_TOGGLE, p.dialog_on));
+            send(build_level_report(acoustic_engine::DIALOG_PLUS_LEVEL, p.dialog_level));
+            send(build_toggle_report(equalizer::TOGGLE, true));
+            send(build_level_report(equalizer::PREAMP, p.eq_preamp));
+            for (i, &band) in p.eq_bands.iter().enumerate() {
+                send(build_level_report(equalizer::band(i), band));
+            }
+        });
+    }
+
     {
         let device = device.clone();
         ui.on_mic_eq_profile_changed(move |index| {

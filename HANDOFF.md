@@ -235,20 +235,21 @@ Neuaufbau nötig. Speicherorte (Windows):
 **EQ-Presets** (`Presets\EQ\*.json`, 71 Stück: Spiele, Genres). Format:
 `PreAmp` + `Bands[]` mit `Frequency`+`Value` (dB), **zwei getrennte
 `Settings`-Einträge pro Datei** (`Type: "Speaker"` und `Type:
-"Headphone"`, unterschiedliche Kurven!). **Implementiert:** 8 davon (Flat,
-Rock, Pop, Jazz, Classical, Bass Boost, Treble Boost, Vocal) ersetzen
-unsere vorher frei erfundenen Sound-Modus-Presets in equalizer-tab.slint
-– jeweils die Headphone-Kurve übernommen (unser Equalizer kennt bislang
-keine getrennte Lautsprecher-Kurve). Die übrigen 63 (Spiele-Presets)
-sind nicht übernommen – unsere feste 8-Slot-UI müsste für eine
-Dropdown-Suche über alle 71 erweitert werden.
+"Headphone"`, unterschiedliche Kurven!). **Implementiert:** alle 71,
+alphabetisch im Equalizer-Dropdown (`protocol.rs`, `builtin-presets` in
+equalizer-tab.slint) – jeweils die Headphone-Kurve übernommen (unser
+Equalizer kennt bislang keine getrennte Lautsprecher-Kurve). Drei freie
+Custom-Slots zum eigenen Speichern kommen dahinter.
 
 **SoundMode-Presets** (`SoundMode\*.json`, 60 Stück): Kombinierte
 Acoustic-Engine-Profile (Surround/Crystalizer/Bass/SVM/DialogPlus +
-Verweis auf ein EQ-Preset). Nicht implementiert – unser Sound-Modus-Tab
-wurde mangels Speicherformat-Kenntnis entfernt (siehe oben), diese Presets
-könnten aber eine App-seitige Sound-Modus-Auswahl füllen, analog zu den
-EQ-Presets.
+Verweis auf ein EQ-Preset, per GUID über `GraphicEQ.PresetId` mit dem
+passenden EQ-Preset verknüpft). **Implementiert:** alle 60 in
+`protocol.rs::sound_mode::PRESETS`, eigener "Sound-Modus"-Tab (wieder als
+erster Tab im Geräte-Hub, wie im Original) mit Dropdown, sendet beim
+Auswählen alle zugehörigen Acoustic-Engine-Toggles/Level sowie
+EQ-Vorverstärkung + 10 Bänder. `bass_xover` aus den JSONs wird nicht
+gesendet – kein bekannter Geräteparameter dafür (siehe Abschnitt 8).
 
 **Voice-Morph-Presets** (`VoiceFxProfile\*.json`, 18 Stück) –
 **implementiert**: `protocol.rs::crystal_voice::VOICE_MORPH_PRESETS`,
@@ -298,14 +299,14 @@ mehr.
 
 - Smart Volume Modus-Bestätigung nur für Wiedergabe-Seite, nicht Mic-Seite
 - Abtastrate/Sample-Rate-Wechsel (Clock Source) noch nicht direkt beobachtet
-- Sound-Modus-Presets speichern/laden im Gerät weiterhin unbekannt (Tab
-  deshalb entfernt)
+- Sound-Modus-Presets speichern/laden im Gerät weiterhin unbekannt (nur
+  Anwenden implementiert, kein Auslesen/Persistieren eines aktiven Presets)
+- Bass-Crossover-Frequenz (`bass_xover` in den SoundMode-JSONs) hat keinen
+  bekannten Geräteparameter, wird beim Anwenden eines Sound-Modus nicht
+  gesendet
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-vorbereitet, kein echter
   globaler Tastatur-Hook angebunden
 - GET-Anfrage-Familien 0x26 (teilweise), 0x39, 0x6c, 0x10 unentschlüsselt
-- 63 der 71 Windows-EQ-Presets (Spiele) und alle 60 SoundMode-Presets noch
-  nicht übernommen (siehe Abschnitt 6) – bräuchte eine Dropdown-Suche
-  statt der festen 8-Slot-UI
 - Equalizer kennt nur eine Kurve, keine getrennte Kopfhörer-/Lautsprecher-
   Variante wie das Original (siehe Abschnitt 6, EQ-Presets)
 - Balance-Regler (L/R) im Mixer nicht implementiert (nice-to-have, gleicher
