@@ -233,6 +233,39 @@ Geräte-Statusabfragen.
   implementiert (PipeWire-Filter-Chain statt Windows-Downmix).
 - **GameVoice Mix Knob** – rein analoger Hardware-Mixer in der G8 selbst,
   keine Software-Ansteuerung nötig/möglich.
+- **Autostart** (`src/autostart.rs`): Standard-XDG-Mechanismus, legt/löscht
+  `~/.config/autostart/g8-control.desktop` – kein systemd-Unit, keine
+  Root-Rechte.
+- **Tray-Icon + Schließen-Verhalten** (`ui/tray.slint`,
+  `Window::on_close_requested` in main.rs): Slint bringt `SystemTrayIcon`
+  nativ mit (Linux: StatusNotifierItem/ksni, bereits eine transitive
+  Abhängigkeit von `i-slint-core`) – kein eigenes Ksni-Setup nötig.
+  "Schließen" beendet das Programm richtig (`slint::quit_event_loop()`),
+  "In den Tray minimieren" versteckt nur das Fenster
+  (`CloseRequestResponse::HideWindow`), das Tray-Icon hält die
+  Ereignisschleife am Laufen.
+- **Einstellungen persistieren** (`src/persist.rs`): App-seitige Werte,
+  die das Gerät nicht zurücklesen lässt (Acoustic Engine/Equalizer,
+  Energiesparen, Logo-LED, Dark Mode, Schließen-Verhalten, Volume Sync),
+  werden bei jeder Änderung in `~/.config/g8-control/settings.txt`
+  gespeichert (einfaches Text-Format, bewusst kein serde/JSON für eine
+  Handvoll Werte) und beim Start wieder angezeigt UND ans Gerät gesendet
+  – sonst würde die App nach jedem Neustart wieder ihre eingebauten
+  Standardwerte zeigen, obwohl das Gerät längst andere Werte hat.
+  **Volume Sync** wird beim Start automatisch wiederhergestellt (anders
+  als die übrigen Werte ursprünglich bewusst ausgenommen, dann auf
+  Nutzerwunsch ergänzt) – ohne den Bestätigungsdialog, der nur für
+  bewusstes manuelles Umschalten gedacht ist. Sicherheitsmaßnahme gegen
+  einen Lautstärkeschock: main.rs setzt PipeWire beim Wiederherstellen
+  zuerst auf 0%, dann erst auf den tatsächlich ausgelesenen
+  Reglerstand, statt direkt auf einen möglicherweise lauten alten
+  PipeWire-Stand zu wechseln.
+  Zusammen mit Autostart + "In den Tray minimieren" macht das den
+  Lautstärkeknopf durchgehend wirksam, auch ohne offenes Fenster – ohne
+  laufende App gibt es unter Linux (anders als unter Windows mit dem
+  `CTUSBa64`-Kerneltreiber) keine Kopplung zwischen Knopf und tatsächlich
+  hörbarer Lautstärke, da PipeWire eine eigene, vom ALSA-Register
+  unabhängige Software-Lautstärkestufe führt (siehe Abschnitt 7).
 
 ## 5. Bewusst nicht implementiert
 

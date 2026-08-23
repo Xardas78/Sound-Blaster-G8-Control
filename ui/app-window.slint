@@ -1,4 +1,5 @@
 import { TabWidget, VerticalBox, Palette } from "std-widgets.slint";
+export { AppTray } from "tray.slint";
 import { DeviceHubTab } from "tabs/device-hub-tab.slint";
 import { PlaybackSettingsTab } from "tabs/playback-settings-tab.slint";
 import { RecordingSettingsTab } from "tabs/recording-settings-tab.slint";
@@ -83,6 +84,29 @@ export component AppWindow inherits Window {
     callback volume-sync-toggled(bool);
     callback power-saving-toggled(bool);
     callback logo-led-toggled(bool);
+    callback autostart-toggled(bool);
+    callback close-behavior-changed(int);
+    callback dark-mode-toggled(bool);
+
+    in-out property <bool> autostart-on: false;
+    in-out property <int> close-behavior: 0;
+    in-out property <bool> power-saving-on: false;
+    in-out property <bool> logo-led-on: false;
+    in-out property <bool> dark-mode-on: false;
+    // Von Rust beim Start gesetzt, wenn Volume Sync zuletzt aktiv war
+    // (siehe main.rs) – zeigt den Schalter korrekt an, ohne den
+    // Bestätigungsdialog auszulösen (der nur bei manuellem Umschalten
+    // in settings-tab.slint kommt).
+    in-out property <bool> volume-sync-on: false;
+
+    // Persistierter Dark-Mode-Wert von Rust beim Start gesetzt (siehe
+    // main.rs) – `changed` feuert nicht bei der initialen Konstruktion,
+    // nur bei echten späteren Änderungen (weder beim Start noch beim
+    // Umschalten in settings-tab.slint doppelt ausgelöst, da der Schalter
+    // dort selbst schon Palette.color-scheme setzt).
+    changed dark-mode-on => {
+        Palette.color-scheme = dark-mode-on ? ColorScheme.dark : ColorScheme.light;
+    }
 
     VerticalLayout {
         TabWidget {
@@ -141,10 +165,19 @@ export component AppWindow inherits Window {
                 SettingsTab {
                     device-connected: device-connected;
                     footer-speaker-level: footer-speaker-level;
+                    autostart-on: autostart-on;
+                    close-behavior: close-behavior;
+                    power-saving-on: power-saving-on;
+                    logo-led-on: logo-led-on;
+                    dark-mode-on: dark-mode-on;
                     reset-clicked => { reset-clicked(); }
+                    volume-sync-on: volume-sync-on;
                     volume-sync-toggled(on) => { volume-sync-toggled(on); }
                     power-saving-toggled(on) => { power-saving-toggled(on); }
                     logo-led-toggled(on) => { logo-led-toggled(on); }
+                    autostart-toggled(on) => { autostart-on = on; autostart-toggled(on); }
+                    close-behavior-changed(m) => { close-behavior = m; close-behavior-changed(m); }
+                    dark-mode-toggled(on) => { dark-mode-toggled(on); }
                 }
             }
         }

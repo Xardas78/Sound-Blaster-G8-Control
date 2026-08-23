@@ -1,0 +1,27 @@
+// Tray-Icon für "In den Tray minimieren" (siehe Einstellungen-Tab). Slint
+// bringt SystemTrayIcon nativ mit (Linux: StatusNotifierItem/ksni,
+// bereits eine transitive Abhängigkeit von i-slint-core) – kein eigenes
+// ksni-Setup nötig.
+export component AppTray inherits SystemTrayIcon {
+    icon: @image-url("assets/app-icon.svg");
+    tooltip: "Sound Blaster G8 Control";
+
+    callback open-clicked();
+    callback quit-clicked();
+
+    // Linksklick auf das Icon selbst öffnet das Fenster wieder, wie bei
+    // den meisten Tray-Icons üblich (Menü kommt zusätzlich per Rechtsklick).
+    clicked => { open-clicked(); }
+
+    Menu {
+        MenuItem {
+            title: "Öffnen";
+            activated => { open-clicked(); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: "Beenden";
+            activated => { quit-clicked(); }
+        }
+    }
+}

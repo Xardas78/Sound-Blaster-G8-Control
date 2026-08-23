@@ -1,5 +1,7 @@
+mod autostart;
 mod device;
 mod mixer;
+mod persist;
 mod proc_util;
 mod protocol;
 mod speaker_test;
@@ -7,6 +9,8 @@ mod virtual_surround;
 
 use device::G8Device;
 use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, sound_mode, special, Namespace};
+use slint::{ModelRc, VecModel};
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -30,9 +34,90 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Zuletzt gespeicherte App-seitige Einstellungen laden: Anzeige UND
+    // Gerät nachziehen, sonst würde die App nach jedem Neustart wieder
+    // ihre eingebauten Standardwerte zeigen, obwohl das Gerät (das wir
+    // für die meisten dieser Werte nicht zurücklesen können) längst
+    // andere Werte hat. Volume Sync bewusst ausgenommen, siehe persist.rs.
+    let settings = Rc::new(RefCell::new(persist::load()));
+    {
+        let s = settings.borrow();
+        ui.set_ae_surround_on(s.ae_surround_on);
+        ui.set_ae_surround_level(s.ae_surround_level * 100.0);
+        ui.set_ae_crystalizer_on(s.ae_crystalizer_on);
+        ui.set_ae_crystalizer_level(s.ae_crystalizer_level * 100.0);
+        ui.set_ae_bass_on(s.ae_bass_on);
+        ui.set_ae_bass_level(s.ae_bass_level * 100.0);
+        ui.set_ae_svm_on(s.ae_svm_on);
+        ui.set_ae_svm_level(s.ae_svm_level * 100.0);
+        ui.set_ae_svm_mode(s.ae_svm_mode);
+        ui.set_ae_dialog_on(s.ae_dialog_on);
+        ui.set_ae_dialog_level(s.ae_dialog_level * 100.0);
+        ui.set_ae_eq_on(s.ae_eq_on);
+        ui.set_ae_eq_preamp(s.ae_eq_preamp);
+        ui.set_ae_eq_bands(ModelRc::new(VecModel::from(s.ae_eq_bands.to_vec())));
+        ui.set_power_saving_on(s.power_saving_on);
+        ui.set_logo_led_on(s.logo_led_on);
+        ui.set_dark_mode_on(s.dark_mode_on);
+        ui.set_close_behavior(s.close_behavior);
+        ui.set_power_saving_on(s.power_saving_on);
+        ui.set_logo_led_on(s.logo_led_on);
+        ui.set_dark_mode_on(s.dark_mode_on);
+
+        if let Some(dev) = &device {
+            let send = |report: [u8; 64]| {
+                if let Err(e) = dev.send_report(&report) {
+                    eprintln!("Senden fehlgeschlagen (gespeicherte Einstellungen): {e}");
+                }
+            };
+            send(build_toggle_report(acoustic_engine::SURROUND_TOGGLE, s.ae_surround_on));
+            send(build_level_report(acoustic_engine::SURROUND_LEVEL, s.ae_surround_level));
+            send(build_toggle_report(acoustic_engine::CRYSTALIZER_TOGGLE, s.ae_crystalizer_on));
+            send(build_level_report(acoustic_engine::CRYSTALIZER_LEVEL, s.ae_crystalizer_level));
+            send(build_toggle_report(acoustic_engine::BASS_TOGGLE, s.ae_bass_on));
+            send(build_level_report(acoustic_engine::BASS_LEVEL, s.ae_bass_level));
+            send(build_toggle_report(acoustic_engine::SMART_VOLUME_TOGGLE, s.ae_svm_on));
+            send(build_level_report(acoustic_engine::SMART_VOLUME_LEVEL, s.ae_svm_level));
+            send(build_level_report(acoustic_engine::SMART_VOLUME_MODE, s.ae_svm_mode as f32));
+            send(build_toggle_report(acoustic_engine::DIALOG_PLUS_TOGGLE, s.ae_dialog_on));
+            send(build_level_report(acoustic_engine::DIALOG_PLUS_LEVEL, s.ae_dialog_level));
+            send(build_toggle_report(equalizer::TOGGLE, s.ae_eq_on));
+            send(build_level_report(equalizer::PREAMP, s.ae_eq_preamp));
+            for (i, &band) in s.ae_eq_bands.iter().enumerate() {
+                send(build_level_report(equalizer::band(i), band));
+            }
+            send(special::device_setting(special::setting_id::POWER_SAVING, s.power_saving_on));
+            send(special::device_setting(special::setting_id::LOGO_LED, s.logo_led_on));
+        }
+    }
+    ui.set_autostart_on(autostart::is_enabled());
+
     {
         let device = device.clone();
+        let settings = settings.clone();
         ui.on_playback_param_changed(move |id, value| {
+            // Acoustic-Engine-Parameter merken (siehe persist.rs) – deckt
+            // sowohl den Acoustic-Engine-Tab als auch den Sound-Modus-Tab
+            // ab, da beide über denselben Callback laufen.
+            {
+                let mut s = settings.borrow_mut();
+                match id {
+                    0 => s.ae_surround_on = value != 0.0,
+                    1 => s.ae_surround_level = value,
+                    2 => s.ae_dialog_on = value != 0.0,
+                    3 => s.ae_dialog_level = value,
+                    4 => s.ae_svm_on = value != 0.0,
+                    5 => s.ae_svm_level = value,
+                    6 => s.ae_svm_mode = value as i32,
+                    7 => s.ae_crystalizer_on = value != 0.0,
+                    8 => s.ae_crystalizer_level = value,
+                    24 => s.ae_bass_on = value != 0.0,
+                    25 => s.ae_bass_level = value,
+                    _ => {}
+                }
+                persist::save(&s);
+            }
+
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = build_report(Namespace::Playback, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
@@ -157,7 +242,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Equalizer liegt ebenfalls im Playback-Namespace (0x96), siehe
         // protocol.rs::equalizer.
         let device = device.clone();
+        let settings = settings.clone();
         ui.on_eq_param_changed(move |id, value| {
+            {
+                let mut s = settings.borrow_mut();
+                match id {
+                    9 => s.ae_eq_on = value != 0.0,
+                    10 => s.ae_eq_preamp = value,
+                    11..=20 => s.ae_eq_bands[(id - 11) as usize] = value,
+                    _ => {}
+                }
+                persist::save(&s);
+            }
+
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = build_report(Namespace::Playback, id as u8, value);
             if let Err(e) = dev.send_report(&report) {
@@ -322,8 +419,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let flag = volume_sync_enabled.clone();
         let device = device.clone();
+        let settings = settings.clone();
         ui.on_volume_sync_toggled(move |on| {
             flag.store(on, Ordering::SeqCst);
+            {
+                let mut s = settings.borrow_mut();
+                s.volume_sync_on = on;
+                persist::save(&s);
+            }
             if on {
                 if let Some(pct) = mixer::get_level(0) {
                     mixer::set_pipewire_sink_volume_percent(pct);
@@ -340,6 +443,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         });
+    }
+    // Volume Sync beim Start automatisch wiederherstellen, wenn es beim
+    // letzten Mal aktiv war – ohne den Bestätigungsdialog (der ist nur
+    // für bewusstes manuelles Umschalten mitten in der Nutzung gedacht,
+    // ein Sprung direkt nach dem Programmstart ist unkritischer). Als
+    // Sicherheitsmaßnahme gegen einen möglichen Lautstärkeschock: erst
+    // stumm schalten, dann erst auf den tatsächlich ausgelesenen
+    // Reglerstand setzen – falls PipeWire zuvor zufällig sehr laut stand.
+    if settings.borrow().volume_sync_on {
+        volume_sync_enabled.store(true, Ordering::SeqCst);
+        ui.set_volume_sync_on(true);
+        mixer::set_pipewire_sink_volume_percent(0.0);
+        if let Some(pct) = mixer::get_level(0) {
+            mixer::set_pipewire_sink_volume_percent(pct);
+        }
+        if let Some(dev) = &device {
+            let report = special::device_setting(special::setting_id::VOLUME_SYNC, true);
+            if let Err(e) = dev.send_report(&report) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+        }
     }
 
     // Der Lautstärkeknopf am Gerät schreibt direkt in dasselbe ALSA-
@@ -411,7 +535,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     {
         let device = device.clone();
+        let settings = settings.clone();
         ui.on_power_saving_toggled(move |on| {
+            {
+                let mut s = settings.borrow_mut();
+                s.power_saving_on = on;
+                persist::save(&s);
+            }
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = special::device_setting(special::setting_id::POWER_SAVING, on);
             if let Err(e) = dev.send_report(&report) {
@@ -421,7 +551,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     {
         let device = device.clone();
+        let settings = settings.clone();
         ui.on_logo_led_toggled(move |on| {
+            {
+                let mut s = settings.borrow_mut();
+                s.logo_led_on = on;
+                persist::save(&s);
+            }
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let report = special::device_setting(special::setting_id::LOGO_LED, on);
             if let Err(e) = dev.send_report(&report) {
@@ -429,7 +565,66 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
     }
+    {
+        let settings = settings.clone();
+        ui.on_dark_mode_toggled(move |on| {
+            let mut s = settings.borrow_mut();
+            s.dark_mode_on = on;
+            persist::save(&s);
+        });
+    }
+    ui.on_autostart_toggled(move |on| {
+        autostart::set_enabled(on);
+    });
+    let close_behavior = Rc::new(Cell::new(settings.borrow().close_behavior));
+    {
+        // Schließen-Verhalten: "Schließen" beendet das Programm richtig,
+        // "In den Tray minimieren" versteckt nur das Fenster – das
+        // Tray-Icon hält die Ereignisschleife am Laufen (siehe unten),
+        // die App bleibt im Hintergrund aktiv (z.B. für den
+        // Lautstärke-Poll-Thread). close_behavior wird zusätzlich in
+        // diesem gemeinsamen Cell gehalten, weil on_close_requested()
+        // unten den aktuellen Wert synchron braucht, nicht nur bei
+        // Änderungen.
+        let settings = settings.clone();
+        let close_behavior = close_behavior.clone();
+        ui.on_close_behavior_changed(move |m| {
+            close_behavior.set(m);
+            let mut s = settings.borrow_mut();
+            s.close_behavior = m;
+            persist::save(&s);
+        });
+    }
+    {
+        let weak = ui.as_weak();
+        let close_behavior = close_behavior.clone();
+        ui.window().on_close_requested(move || {
+            if close_behavior.get() == 1 {
+                if let Some(ui) = weak.upgrade() {
+                    let _ = ui.hide();
+                }
+            } else {
+                let _ = slint::quit_event_loop();
+            }
+            slint::CloseRequestResponse::HideWindow
+        });
+    }
 
-    ui.run()?;
+    let tray = AppTray::new()?;
+    {
+        let weak = ui.as_weak();
+        tray.on_open_clicked(move || {
+            if let Some(ui) = weak.upgrade() {
+                let _ = ui.show();
+            }
+        });
+    }
+    tray.on_quit_clicked(move || {
+        let _ = slint::quit_event_loop();
+    });
+
+    ui.show()?;
+    tray.show()?;
+    slint::run_event_loop()?;
     Ok(())
 }

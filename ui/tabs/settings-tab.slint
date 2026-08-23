@@ -22,17 +22,27 @@ export component SettingsTab inherits HorizontalLayout {
     // Nutzer blind auf 50% stellen zu lassen.
     in property <float> footer-speaker-level: 49;
 
-    // Standardmäßig aus: sonst würde beim ersten App-Start sofort die
-    // PC-Lautstärke auf den aktuellen (unbekannten) Reglerstand springen.
+    // Default false (erster Start ohne gespeicherte Einstellungen). Rust
+    // setzt das beim Programmstart auf den zuletzt gespeicherten Wert
+    // (siehe persist.rs/main.rs) – dabei OHNE den Bestätigungsdialog
+    // unten (der ist nur für bewusstes manuelles Umschalten mitten in
+    // der Nutzung gedacht, main.rs sichert den Start stattdessen per
+    // "erst stumm, dann Reglerstand" ab).
     in-out property <bool> volume-sync-on: false;
     in-out property <bool> power-saving-on: false;
     in-out property <bool> logo-led-on: false;
     in-out property <bool> dark-mode-on: false;
+    in-out property <bool> autostart-on: false;
+    // 0 = Schließen (Programm beenden), 1 = In den Tray minimieren
+    in-out property <int> close-behavior: 0;
 
     callback reset-clicked();
     callback volume-sync-toggled(bool);
     callback power-saving-toggled(bool);
     callback logo-led-toggled(bool);
+    callback autostart-toggled(bool);
+    callback close-behavior-changed(int);
+    callback dark-mode-toggled(bool);
 
     padding: 16px;
     spacing: 48px;
@@ -155,11 +165,60 @@ export component SettingsTab inherits HorizontalLayout {
             Switch {
                 checked: dark-mode-on;
                 toggled => {
+                    // Palette.color-scheme wird zentral in app-window.slint
+                    // gesetzt (changed dark-mode-on => {...}), damit dasselbe
+                    // sowohl bei Klick hier als auch beim Wiederherstellen
+                    // gespeicherter Einstellungen von Rust greift.
                     dark-mode-on = self.checked;
-                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
+                    dark-mode-toggled(self.checked);
                 }
             }
             Text { text: "Dark Mode"; font-weight: 600; vertical-alignment: center; }
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            Switch {
+                checked: autostart-on;
+                toggled => { autostart-on = self.checked; autostart-toggled(self.checked); }
+            }
+            Text { text: "Mit dem System starten"; font-weight: 600; vertical-alignment: center; }
+        }
+
+        Text { text: "Beim Schließen"; font-weight: 600; }
+        Rectangle {
+            width: 260px;
+            height: 32px;
+            border-radius: 6px;
+            background: #e0e0e0;
+            clip: true;
+
+            HorizontalLayout {
+                Rectangle {
+                    background: close-behavior == 0 ? #3d7fd9 : transparent;
+                    TouchArea {
+                        clicked => { close-behavior = 0; close-behavior-changed(0); }
+                    }
+                    Text {
+                        text: "Schließen";
+                        color: close-behavior == 0 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                Rectangle {
+                    background: close-behavior == 1 ? #3d7fd9 : transparent;
+                    TouchArea {
+                        clicked => { close-behavior = 1; close-behavior-changed(1); }
+                    }
+                    Text {
+                        text: "In den Tray minimieren";
+                        font-size: 13px;
+                        color: close-behavior == 1 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
         }
     }
 }
