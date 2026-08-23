@@ -2,10 +2,14 @@ import { Button, Switch, Palette } from "std-widgets.slint";
 
 // Entspricht der "Einstellungen"-Seite im Original, aber ohne die
 // Gerät/Anwendung-Unterreiter des Originals – auf Wunsch flach in einem
-// Reiter zusammengefasst. Reset, Firmware/Treiber-Check, Energieeinsparung
-// und Logo-LED sind über den proprietären Kanal noch nicht reverse-
-// engineert (kein Capture vorhanden) – die Controls sind vorbereitet,
-// lösen aber noch keinen echten Befehl aus, siehe HANDOFF.md.
+// Reiter zusammengefasst. Reset ist über den proprietären Kanal noch
+// nicht reverse-engineert (kein Capture vorhanden, Risiko eines
+// Bricking) – der Button ist vorbereitet, löst aber noch keinen echten
+// Befehl aus, siehe HANDOFF.md. Energieeinsparung und Logo-LED sind
+// implementiert (special::setting_id, siehe main.rs).
+// Firmware-Update bewusst NICHT implementiert: Update-Ablauf/Netzwerk-
+// Traffic der Original-Software nicht reverse-engineert, zu riskant, um
+// zu raten – siehe HANDOFF.md. Bei Bedarf unter Windows aktualisieren.
 // Volume Sync IST implementiert (siehe main.rs): spiegelt den
 // Lautstärkeknopf-Prozentwert live auf die PipeWire-Sink-Lautstärke.
 // Dark Mode ist reiner UI-Zustand (Slint-Standard-Widgets über die
@@ -40,10 +44,6 @@ export component SettingsTab inherits HorizontalLayout {
         Text { text: "Sound Blaster G8"; font-weight: 700; }
         Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
         Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
-
-        Text { text: "Firmware"; font-weight: 700; }
-        Text { text: "Version: unbekannt (kein Report bekannt)"; color: gray; }
-        Button { text: "Jetzt prüfen"; enabled: false; }
     }
 
     VerticalLayout {

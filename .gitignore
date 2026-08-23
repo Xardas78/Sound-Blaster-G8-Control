@@ -1,1 +1,6 @@
 /target
+# Rohe Windows-Preset-JSONs (persönliche Creative-Profile) – nicht vom
+# Programm geladen, alle Werte sind zur Compile-Zeit in protocol.rs /
+# equalizer-tab.slint übernommen. Nur zufällig hier abgelegt, gehört
+# nicht in den öffentlichen Repo-Verlauf.
+/SB1900

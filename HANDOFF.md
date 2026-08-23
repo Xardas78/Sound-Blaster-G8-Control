@@ -225,7 +225,15 @@ Geräte-Statusabfragen.
 
 Die Windows-App legt ihre komplette Preset-Bibliothek als lesbare
 JSON-Dateien ab – direkt für die eigene Software übernehmbar, kein
-Neuaufbau nötig. Speicherorte (Windows):
+Neuaufbau nötig. **Wichtig: diese JSON-Dateien werden zur Laufzeit NICHT
+gebraucht und nicht gelesen** – alle Werte wurden einmalig extrahiert und
+liegen fest im Programm (`protocol.rs::sound_mode::PRESETS`,
+`crystal_voice::VOICE_MORPH_PRESETS`/`MIC_EQ_PRESETS`,
+`equalizer-tab.slint::builtin-presets`). Ein Ordner mit den rohen JSONs
+im Projektverzeichnis (z.B. `SB1900/`) ist reine Ablage/Referenz für
+künftige Ergänzungen, gehört nicht zum Build und ist per `.gitignore`
+vom Repo ausgeschlossen (persönliche Geräte-Profile). Speicherorte
+(Windows):
 
 - `%LOCALAPPDATA%\Creative\{GUID}\Product\SB1900\` – Nutzer-eigene/aktuell
   aktive Profile
@@ -276,9 +284,34 @@ Mehrere Stellen können Lautstärke ändern (ALSA-Hardwareregister,
 PipeWire-Sink-Lautstärke, unsere UI-Regler), die nicht vollständig
 miteinander verknüpft sind:
 
-- Volume Sync spiegelt aktuell nur einseitig (ALSA → PipeWire); Änderungen
-  an der PC-Lautstärke über andere Wege (System-Regler, Medientasten)
-  fließen nicht zurück
+- **Gefunden und behoben:** ALSA-Prozent (`amixer`/`get_level()`) und
+  PipeWire-Sink-Prozent (`wpctl get-volume`) sind für die G8 **zwei
+  unterschiedliche Skalen**, keine austauschbaren Zahlen – am laufenden
+  Gerät empirisch bestätigt: ALSA 27 % entspricht PipeWire 17 %, ALSA
+  65 % entspricht PipeWire 42 %. PipeWire/PulseAudio verwenden die
+  "kubische" Lautstärke-Konvention (Prozent = dritte Wurzel des linearen
+  Gain-Faktors), ALSA zeigt einen dB-basierten Prozentwert. Volume Sync
+  kopierte bisher den rohen ALSA-Prozentwert 1:1 in die PipeWire-API
+  (`wpctl set-volume`) – das erzeugte bei *jeder* Synchronisierung
+  garantiert eine falsche PC-Lautstärke (genau das "System 100 % vs.
+  Lautsprecher 27 %"-Verhalten). Fix: `mixer.rs::get_level_db()` +
+  `set_pipewire_sink_volume_db()` rechnen jetzt über dB/linearen Gain um
+  (`cubic_percent = gain^(1/3) * 100`), Formel gegen echte Gerätewerte
+  verifiziert (exakte Übereinstimmung bei beiden Testpunkten oben).
+- **Noch nicht abschließend geklärt:** ein zusätzliches, nicht zuverlässig
+  reproduzierbares "Springen auf 100 %" beim Drehen des Knopfs bei
+  aktivem Sync wurde live getestet (wiederholtes gezieltes Setzen von
+  ALSA-Werten bei laufender App, `wpctl status`/`journalctl -u
+  wireplumber` beobachtet) – unter identischen Bedingungen mal
+  reproduzierbar, mal nicht. Keine erkennbare Ursache im eigenen Code
+  gefunden (kein Feedback zwischen Slint-`Slider.changed` und
+  Programmwerten – laut `slider-base.slint` feuert `changed` nur bei
+  Nutzerinteraktion, nicht bei extern gesetzten Werten). Verdacht:
+  WirePlumbers eigene Stream-Volume-Restore-Logik reagiert unter
+  bestimmten Bedingungen selbst auf externe ALSA-Änderungen. Mit dem
+  Skalen-Fix oben sollte das Hauptproblem verschwinden; falls das
+  Springen danach weiterhin auftritt, ist es ein separates
+  WirePlumber-seitiges Verhalten, kein g8-control-Bug.
 - Smart Volume (Acoustic Engine) hebt/senkt den Pegel nicht immer sauber
   nachvollziehbar
 - Gelegentlich große, unerklärte Sprünge im Lautstärke-Poll (z.B. 44%→6%),

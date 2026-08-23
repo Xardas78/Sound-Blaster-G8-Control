@@ -1,10 +1,18 @@
 import { ComboBox, Button } from "std-widgets.slint";
 
-// Entspricht der "Aufnahme"-Seite im Original: Audioqualität pro Quelle
-// (nur Anzeige, kein bekannter Wechsel-Mechanismus) und "Standard
-// festlegen" – Letzteres ist die ALSA-Enum-Control "PCM Capture Source"
-// (per `amixer -c USB1 sget 'PCM Capture Source'` verifiziert), kein
-// eigener USB-Report nötig.
+// Entspricht der "Aufnahme"-Seite im Original. "Standard festlegen" ist
+// die ALSA-Enum-Control "PCM Capture Source" (per `amixer -c USB1 sget
+// 'PCM Capture Source'` verifiziert), kein eigener USB-Report nötig.
+//
+// Die ursprüngliche Anzeige fester "24 bit, 48000 Hz"-Werte pro Quelle
+// wurde entfernt: anders als unter Windows (WASAPI-Standardformat je
+// Gerät über die Sound-Systemsteuerung einstellbar) gibt es unter Linux/
+// PipeWire keinen einfachen, persistenten "Standardformat je Quelle"-
+// Schalter – Bit-Tiefe/Abtastrate werden pro Stream dynamisch ausge-
+// handelt (begrenzt durch die USB-Audio-Class-Descriptor-Altsettings des
+// Geräts), nicht über eine feste Einstellung wie unter Windows. Ein
+// erzwungenes Format ließe sich nur über eine WirePlumber-Systemkonfig-
+// Datei setzen, nicht über einen Live-Schalter in dieser App.
 export component RecordingSettingsTab inherits VerticalLayout {
     in-out property <int> active-source: 1; // Index passend zu mixer.rs::CAPTURE_SOURCES, Default = "Line In"
 
@@ -16,17 +24,11 @@ export component RecordingSettingsTab inherits VerticalLayout {
     alignment: start;
 
     Text { text: "Aufnahme"; font-size: 20px; font-weight: 700; }
-    Text { text: "Audioqualität"; font-weight: 600; }
+    Text { text: "Standardquelle"; font-weight: 600; }
 
-    for entry[i] in [
-        { label: "S/PDIF In", quality: "24 bit, 48000 Hz" },
-        { label: "Line In", quality: "24 bit, 48000 Hz" },
-        { label: "External Mic", quality: "24 bit, 44100 Hz" },
-        { label: "What U Hear", quality: "24 bit, 48000 Hz" },
-    ]: HorizontalLayout {
+    for entry[i] in ["S/PDIF In", "Line In", "External Mic", "What U Hear"]: HorizontalLayout {
         spacing: 12px;
-        Text { text: entry.label; width: 100px; vertical-alignment: center; }
-        Text { text: entry.quality; width: 160px; vertical-alignment: center; color: gray; }
+        Text { text: entry; width: 100px; vertical-alignment: center; }
         Button {
             text: active-source == i ? "✓ Standard" : "Standard festlegen";
             enabled: active-source != i;

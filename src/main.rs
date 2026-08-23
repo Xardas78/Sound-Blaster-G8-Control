@@ -6,7 +6,6 @@ mod virtual_surround;
 
 use device::G8Device;
 use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, sound_mode, special, Namespace};
-use slint::{ModelRc, VecModel};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -103,8 +102,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui_handle.set_ae_dialog_on(p.dialog_on);
             ui_handle.set_ae_dialog_level(p.dialog_level * 100.0);
             ui_handle.set_ae_eq_on(true);
-            ui_handle.set_ae_eq_preamp(p.eq_preamp);
-            ui_handle.set_ae_eq_bands(ModelRc::new(VecModel::from(p.eq_bands.to_vec())));
+            // Setzt NUR den Index, nicht preamp/bands direkt: das löst in
+            // equalizer-tab.slint den `changed selected-preset-index`-
+            // Handler aus, der apply-preset() aufruft – dieselbe Kurve wie
+            // p.eq_preamp/p.eq_bands (aus genau diesem EQ-Preset abgeleitet,
+            // siehe protocol.rs::sound_mode), aber zusätzlich zeigen dann
+            // BEIDE Equalizer-Dropdowns (Equalizer-Tab und die
+            // Equalizer-Zeile im Sound-Modus-Tab) den richtigen Namen an,
+            // statt nur die Kurve ohne erkennbaren Preset-Namen zu ändern.
+            ui_handle.set_ae_eq_preset_index(p.eq_preset_index);
 
             let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let send = |report: [u8; 64]| {
@@ -124,10 +130,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             send(build_toggle_report(acoustic_engine::DIALOG_PLUS_TOGGLE, p.dialog_on));
             send(build_level_report(acoustic_engine::DIALOG_PLUS_LEVEL, p.dialog_level));
             send(build_toggle_report(equalizer::TOGGLE, true));
-            send(build_level_report(equalizer::PREAMP, p.eq_preamp));
-            for (i, &band) in p.eq_bands.iter().enumerate() {
-                send(build_level_report(equalizer::band(i), band));
-            }
+            // Kein direkter Preamp/Bänder-Report hier mehr nötig – kommt
+            // bereits über den eq-param-changed-Callback oben an, ausgelöst
+            // durch set_ae_eq_preset_index().
         });
     }
 
@@ -305,8 +310,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.on_volume_sync_toggled(move |on| {
             flag.store(on, Ordering::SeqCst);
             if on {
-                if let Some(v) = mixer::get_level(0) {
-                    mixer::set_pipewire_sink_volume(v);
+                if let Some(db) = mixer::get_level_db(0) {
+                    mixer::set_pipewire_sink_volume_db(db);
                 }
             }
             // Per Windows-Capture bestätigt: eigener Geräte-Befehl
@@ -340,7 +345,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if changed {
                         last_speaker = Some(v);
                         if volume_sync_enabled.load(Ordering::SeqCst) {
-                            mixer::set_pipewire_sink_volume(v);
+                            // Über dB synchronisieren, nicht über den
+                            // ALSA-Prozentwert v: ALSA-% und PipeWire-%
+                            // sind unterschiedliche Skalen (siehe
+                            // set_pipewire_sink_volume_db()), ein direktes
+                            // Übernehmen von v hätte bei jeder
+                            // Synchronisierung eine falsche PC-Lautstärke
+                            // gesetzt.
+                            if let Some(db) = mixer::get_level_db(0) {
+                                mixer::set_pipewire_sink_volume_db(db);
+                            }
                         }
                         let weak = weak.clone();
                         let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));

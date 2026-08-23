@@ -59,6 +59,7 @@ export component AppWindow inherits Window {
     in-out property <bool> ae-eq-on: true;
     in-out property <float> ae-eq-preamp: 0;
     in-out property <[float]> ae-eq-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    in-out property <int> ae-eq-preset-index: 0;
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
@@ -105,6 +106,7 @@ export component AppWindow inherits Window {
                     ae-eq-on: ae-eq-on;
                     ae-eq-preamp: ae-eq-preamp;
                     ae-eq-bands: ae-eq-bands;
+                    ae-eq-preset-index: ae-eq-preset-index;
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }
