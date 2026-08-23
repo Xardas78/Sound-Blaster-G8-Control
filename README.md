@@ -9,7 +9,7 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 ## Funktionen
 
 - **Acoustic Engine** – Surround, Crystalizer, Bass, Smart Volume (inkl. Nacht/Normal/Laut), Dialog+
-- **Sound-Modus** – 60 komplette Klangbild-Presets (Surround/Crystalizer/Bass/Smart Volume/Dialog+ + passende Equalizer-Kurve in einem Klick)
+- **Sound-Modus** – 60 komplette Klangbild-Presets (Surround/Crystalizer/Bass/Smart Volume/Dialog+ + passende Equalizer-Kurve in einem Klick), plus dieselben Live-Regler wie Acoustic Engine direkt eingebettet, im selben Zustand wie der Acoustic-Engine-Tab (Regler-Dreh an einer Stelle zeigt sich sofort an der anderen)
 - **10-Band-Equalizer** mit Vorverstärkung und 71 echten Original-Presets
 - **CrystalVoice** – Noise Reduction, Echo Cancellation, Voice Morph, Mikrofon-Equalizer
 - **Modi & Decoder** – Direct Mode, Scout Mode (inkl. Zugriffstaste), Dolby-Decoder

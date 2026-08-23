@@ -38,6 +38,28 @@ export component AppWindow inherits Window {
     in-out property <float> footer-speaker-level: 49;
     in-out property <float> footer-mic-level: 63;
 
+    // Geteilter Zustand zwischen Acoustic-Engine-Tab, Equalizer-Tab und
+    // dem neuen Sound-Modus-Tab (siehe device-hub-tab.slint): Regler an
+    // einer Stelle bewegen soll sich überall zeigen, genau wie beim
+    // Fußleisten-/Mixer-Sync oben. Rust schreibt hier zusätzlich rein,
+    // wenn ein komplettes Sound-Modus-Preset angewendet wird (main.rs),
+    // damit die Anzeige nicht stehen bleibt, obwohl das Gerät längst neue
+    // Werte hat.
+    in-out property <bool> ae-surround-on: true;
+    in-out property <float> ae-surround-level: 48;
+    in-out property <bool> ae-crystalizer-on: true;
+    in-out property <float> ae-crystalizer-level: 52;
+    in-out property <bool> ae-bass-on: true;
+    in-out property <float> ae-bass-level: 52;
+    in-out property <bool> ae-svm-on: true;
+    in-out property <float> ae-svm-level: 52;
+    in-out property <int> ae-svm-mode: 0;
+    in-out property <bool> ae-dialog-on: true;
+    in-out property <float> ae-dialog-level: 56;
+    in-out property <bool> ae-eq-on: true;
+    in-out property <float> ae-eq-preamp: 0;
+    in-out property <[float]> ae-eq-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
     callback playback-param-changed(int, float);
@@ -69,6 +91,20 @@ export component AppWindow inherits Window {
                     output-target: output-target;
                     footer-speaker-level: footer-speaker-level;
                     footer-mic-level: footer-mic-level;
+                    ae-surround-on: ae-surround-on;
+                    ae-surround-level: ae-surround-level;
+                    ae-crystalizer-on: ae-crystalizer-on;
+                    ae-crystalizer-level: ae-crystalizer-level;
+                    ae-bass-on: ae-bass-on;
+                    ae-bass-level: ae-bass-level;
+                    ae-svm-on: ae-svm-on;
+                    ae-svm-level: ae-svm-level;
+                    ae-svm-mode: ae-svm-mode;
+                    ae-dialog-on: ae-dialog-on;
+                    ae-dialog-level: ae-dialog-level;
+                    ae-eq-on: ae-eq-on;
+                    ae-eq-preamp: ae-eq-preamp;
+                    ae-eq-bands: ae-eq-bands;
                     playback-param-changed(id, v) => { playback-param-changed(id, v); }
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
                     recording-param-changed(id, v) => { recording-param-changed(id, v); }

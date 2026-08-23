@@ -246,10 +246,20 @@ Acoustic-Engine-Profile (Surround/Crystalizer/Bass/SVM/DialogPlus +
 Verweis auf ein EQ-Preset, per GUID über `GraphicEQ.PresetId` mit dem
 passenden EQ-Preset verknüpft). **Implementiert:** alle 60 in
 `protocol.rs::sound_mode::PRESETS`, eigener "Sound-Modus"-Tab (wieder als
-erster Tab im Geräte-Hub, wie im Original) mit Dropdown, sendet beim
-Auswählen alle zugehörigen Acoustic-Engine-Toggles/Level sowie
-EQ-Vorverstärkung + 10 Bänder. `bass_xover` aus den JSONs wird nicht
-gesendet – kein bekannter Geräteparameter dafür (siehe Abschnitt 8).
+erster Tab im Geräte-Hub, wie im Original) mit Dropdown ("Im Gerät" +
+alle 60 echten Presets), sendet beim Auswählen alle zugehörigen
+Acoustic-Engine-Toggles/Level sowie EQ-Vorverstärkung + 10 Bänder.
+`bass_xover` aus den JSONs wird nicht gesendet – kein bekannter
+Geräteparameter dafür (siehe Abschnitt 8). Der Sound-Modus-Tab zeigt
+zusätzlich dieselben Live-Regler wie der Acoustic-Engine-Tab
+(Surround/Crystalizer/Bass/Smart Volume/Dialog+) sowie eine
+Equalizer-Zeile (Toggle + dasselbe 71er-Preset-Dropdown wie im
+Equalizer-Tab) – beide Tabs teilen sich denselben Zustand
+(Zwei-Wege-Bindung über app-window.slint/device-hub-tab.slint, analog
+zum Fußleisten-/Mixer-Sync), ein Regler-Dreh an einer Stelle zeigt sich
+sofort an der anderen. Rust aktualisiert diese geteilten Werte auch
+selbst, wenn ein komplettes Sound-Modus-Preset angewendet wird (kein
+Rücklese-Mechanismus vom Gerät nötig).
 
 **Voice-Morph-Presets** (`VoiceFxProfile\*.json`, 18 Stück) –
 **implementiert**: `protocol.rs::crystal_voice::VOICE_MORPH_PRESETS`,

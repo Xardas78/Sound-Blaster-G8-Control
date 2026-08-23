@@ -6,6 +6,7 @@ mod virtual_surround;
 
 use device::G8Device;
 use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_report, crystal_voice, decoder, equalizer, sound_mode, special, Namespace};
+use slint::{ModelRc, VecModel};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -74,13 +75,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // echte Werte aus SoundMode/*.json + Presets/EQ/*.json (verknüpft über
     // GraphicEQ.PresetId), siehe protocol.rs::sound_mode. bass_xover wird
     // nicht gesendet – kein bekannter Geräteparameter dafür (HANDOFF.md §8).
+    // Aktualisiert zusätzlich die geteilten UI-Werte (app-window.slint),
+    // damit Acoustic-Engine-/Equalizer-Tab die neuen Werte sofort zeigen,
+    // statt erst beim nächsten manuellen Regler-Dreh sichtbar zu werden –
+    // das Gerät selbst hat keinen Rücklese-Mechanismus dafür (HANDOFF.md
+    // Abschnitt 7/8), also muss die App ihre eigene Anzeige nachziehen.
     {
         let device = device.clone();
+        let weak = ui.as_weak();
         ui.on_sound_mode_preset_selected(move |index| {
-            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let Some((name, p)) = sound_mode::PRESETS.get(index as usize) else {
                 return eprintln!("Unbekannter Sound-Modus-Index {index}");
             };
+            let ui_handle = weak.unwrap();
+            // acoustic_engine-Level-Parameter sind 0.0-1.0-Floats fürs
+            // Gerät, die UI-Slider laufen aber auf 0-100 (siehe
+            // acoustic-engine-tab.slint) – deshalb hier *100 für die Anzeige.
+            ui_handle.set_ae_surround_on(p.surround_on);
+            ui_handle.set_ae_surround_level(p.surround_level * 100.0);
+            ui_handle.set_ae_crystalizer_on(p.crystalizer_on);
+            ui_handle.set_ae_crystalizer_level(p.crystalizer_level * 100.0);
+            ui_handle.set_ae_bass_on(p.bass_on);
+            ui_handle.set_ae_bass_level(p.bass_level * 100.0);
+            ui_handle.set_ae_svm_on(p.svm_on);
+            ui_handle.set_ae_svm_level(p.svm_level * 100.0);
+            ui_handle.set_ae_svm_mode(p.svm_mode as i32);
+            ui_handle.set_ae_dialog_on(p.dialog_on);
+            ui_handle.set_ae_dialog_level(p.dialog_level * 100.0);
+            ui_handle.set_ae_eq_on(true);
+            ui_handle.set_ae_eq_preamp(p.eq_preamp);
+            ui_handle.set_ae_eq_bands(ModelRc::new(VecModel::from(p.eq_bands.to_vec())));
+
+            let Some(dev) = &device else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let send = |report: [u8; 64]| {
                 if let Err(e) = dev.send_report(&report) {
                     eprintln!("Senden fehlgeschlagen ({name}): {e}");

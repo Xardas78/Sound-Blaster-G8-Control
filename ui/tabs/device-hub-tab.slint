@@ -23,6 +23,31 @@ export component DeviceHubTab inherits TabWidget {
     in-out property <float> footer-speaker-level: 49;
     in-out property <float> footer-mic-level: 63;
 
+    // Geteilter Zustand zwischen Acoustic-Engine-, Equalizer- und
+    // Sound-Modus-Tab (siehe app-window.slint) – gleiches Muster wie
+    // footer-speaker-level oben, nur für die Acoustic-Engine-Werte.
+    // ae-eq-preset-index ist bewusst NUR hier lokal (nicht bis nach
+    // AppWindow durchgereicht): synct nur die beiden Dropdown-Anzeigen
+    // (Equalizer-Tab und Sound-Modus-Tab), Rust muss den Index selbst
+    // nicht kennen – beim Anwenden eines Sound-Modus-Presets werden
+    // preamp/bands direkt gesetzt, ohne einen benannten Preset-Namen zu
+    // beanspruchen (entspricht "Im Gerät" im Original-Screenshot).
+    in-out property <bool> ae-surround-on: true;
+    in-out property <float> ae-surround-level: 48;
+    in-out property <bool> ae-crystalizer-on: true;
+    in-out property <float> ae-crystalizer-level: 52;
+    in-out property <bool> ae-bass-on: true;
+    in-out property <float> ae-bass-level: 52;
+    in-out property <bool> ae-svm-on: true;
+    in-out property <float> ae-svm-level: 52;
+    in-out property <int> ae-svm-mode: 0;
+    in-out property <bool> ae-dialog-on: true;
+    in-out property <float> ae-dialog-level: 56;
+    in-out property <bool> ae-eq-on: true;
+    in-out property <float> ae-eq-preamp: 0;
+    in-out property <[float]> ae-eq-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    in-out property <int> ae-eq-preset-index: 0;
+
     callback playback-param-changed(int, float);
     callback output-target-changed(int);
     callback recording-param-changed(int, float);
@@ -38,6 +63,23 @@ export component DeviceHubTab inherits TabWidget {
     Tab {
         title: "Sound-Modus";
         SoundModeTab {
+            output-target: output-target;
+            surround-on: ae-surround-on;
+            surround-level: ae-surround-level;
+            crystalizer-on: ae-crystalizer-on;
+            crystalizer-level: ae-crystalizer-level;
+            bass-on: ae-bass-on;
+            bass-level: ae-bass-level;
+            svm-on: ae-svm-on;
+            svm-level: ae-svm-level;
+            svm-mode: ae-svm-mode;
+            dialog-on: ae-dialog-on;
+            dialog-level: ae-dialog-level;
+            eq-on: ae-eq-on;
+            eq-preset-names: eq-tab.preset-names;
+            eq-selected-preset-index: ae-eq-preset-index;
+            param-changed(id, v) => { playback-param-changed(id, v); }
+            output-target-changed(t) => { output-target-changed(t); }
             preset-selected(i) => { sound-mode-preset-selected(i); }
         }
     }
@@ -45,13 +87,28 @@ export component DeviceHubTab inherits TabWidget {
         title: "Acoustic Engine";
         AcousticEngineTab {
             output-target: output-target;
+            surround-on: ae-surround-on;
+            surround-level: ae-surround-level;
+            crystalizer-on: ae-crystalizer-on;
+            crystalizer-level: ae-crystalizer-level;
+            bass-on: ae-bass-on;
+            bass-level: ae-bass-level;
+            smart-volume-on: ae-svm-on;
+            smart-volume-level: ae-svm-level;
+            smart-volume-mode: ae-svm-mode;
+            dialog-plus-on: ae-dialog-on;
+            dialog-plus-level: ae-dialog-level;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
         }
     }
     Tab {
         title: "Equalizer";
-        EqualizerTab {
+        eq-tab := EqualizerTab {
+            eq-on: ae-eq-on;
+            preamp: ae-eq-preamp;
+            bands: ae-eq-bands;
+            selected-preset-index: ae-eq-preset-index;
             param-changed(id, v) => { eq-param-changed(id, v); }
         }
     }

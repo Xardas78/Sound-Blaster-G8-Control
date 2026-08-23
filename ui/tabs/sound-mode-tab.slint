@@ -1,32 +1,222 @@
-import { ComboBox } from "std-widgets.slint";
+import { CompactEffectRow, CompactComboBox } from "../effect-slider.slint";
+import { ComboBox, Switch, Slider } from "std-widgets.slint";
 
-// Sound-Modus: kombiniertes Preset aus Acoustic Engine + Equalizer, echte
-// Original-Presets aus der Windows-Installation (SoundMode/*.json,
-// verknüpft mit dem passenden EQ-Preset über GraphicEQ.PresetId) – siehe
-// HANDOFF.md Abschnitt 6 und protocol.rs::sound_mode. Anwenden sendet
-// direkt alle zugehörigen Acoustic-Engine- und EQ-Parameter; Acoustic-
-// Engine- und Equalizer-Tab zeigen die neuen Werte erst nach erneutem
-// Öffnen (kein Live-Rücksync in dieser Version).
+// Sound-Modus: der Original-Hub in einem Tab – kombiniertes Preset aus
+// Acoustic Engine + Equalizer oben (echte Original-Presets aus
+// SoundMode/*.json, verknüpft mit dem passenden EQ-Preset über
+// GraphicEQ.PresetId, siehe HANDOFF.md Abschnitt 6 und
+// protocol.rs::sound_mode), darunter dieselben Live-Regler wie im
+// Acoustic-Engine-Tab plus eine Equalizer-Zeile. Die Regler sind über
+// device-hub-tab.slint an dieselben Werte gebunden wie der
+// Acoustic-Engine-Tab (Zwei-Wege-Bindung) – Ändern an einer Stelle zeigt
+// sich sofort an der anderen, wie vom Nutzer gefordert.
 export component SoundModeTab inherits VerticalLayout {
-    padding: 16px;
-    spacing: 12px;
-    alignment: start;
+    in property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
 
+    in-out property <bool> surround-on: true;
+    in-out property <float> surround-level: 48;
+    in-out property <bool> crystalizer-on: true;
+    in-out property <float> crystalizer-level: 52;
+    in-out property <bool> bass-on: true;
+    in-out property <float> bass-level: 52;
+    in-out property <bool> svm-on: true;
+    in-out property <float> svm-level: 52;
+    in-out property <int> svm-mode: 0; // 0=Normal, 1=Laut, 2=Nacht
+    in-out property <bool> dialog-on: true;
+    in-out property <float> dialog-level: 56;
+    in-out property <bool> eq-on: true;
+    in property <[string]> eq-preset-names: [];
+    in-out property <int> eq-selected-preset-index: 0;
+
+    // param-id, value – wie im Acoustic-Engine-/Equalizer-Tab, Rust
+    // ordnet über acoustic_engine::*/equalizer::* Konstanten zu.
+    callback param-changed(int, float);
+    callback output-target-changed(int);
+    // Index in protocol.rs::sound_mode::PRESETS (0-basiert, OHNE den
+    // "Im Gerät"-Platzhalter unten in der Dropdown-Liste).
     callback preset-selected(int);
 
+    // 0 = "Im Gerät" (kein festes Preset gewählt, aktuelle Live-Werte,
+    // entspricht dem Original-Screenshot), 1..60 = sound_mode::PRESETS.
+    property <int> selected-sound-mode-index: 0;
+
+    padding: 16px;
+    spacing: 14px;
+    alignment: start;
+
     Text { text: "Sound-Modus"; font-size: 20px; font-weight: 700; }
-    Text {
-        wrap: word-wrap;
-        font-size: 14px;
-        color: gray;
-        text: "Wendet ein komplettes Klangbild an: Surround/Crystalizer/Bass/Smart Volume/Dialog+ sowie die passende Equalizer-Kurve. Werte gelten für Kopfhörer.";
-    }
 
     ComboBox {
         width: 320px;
         model: [
+            "Im Gerät",
             "64 Audio Aspire Series", "Adventure and Action", "Apex Legends", "Arena Of Valor", "Assetto Corsa", "Baldur's Gate 3", "Bass Boost", "Bass Cut", "Battle Royale", "Battlefield Series", "Black Myth: Wukong", "Call of Duty Series", "Counter-Strike 2", "Counter-Strike: Global Offensive", "Cyberpunk 2077", "Death Stranding", "Delta Force", "Diablo Series", "Doom Eternal", "DOTA 2", "Dynamic Music", "Effects Off", "Escape from Tarkov", "Esports", "Fortnite", "Forza Horizon Series", "FPS", "Gaming", "Genshin Impact", "Halo Infinite", "Helldivers 2", "Hogswart Legacy", "League of Legends", "Marvel Rivals", "Marvel's Spider-Man Series", "Minecraft Dungeons", "MMORPG", "MOBA", "Movies", "Music", "Overwatch 2", "Path of Exile 2", "PUBG: BATTLEGROUNDS", "Racing Simulation", "Red Dead Redemption 2", "Resident Evil Series", "Rocket League", "RPG", "RTS", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Stadium", "Star War Jedi Series", "The Witcher Series", "Tom Clancy's Rainbow Six Siege", "Treble Boost", "Treble Cut", "Valorant", "Warframe", "Warhammer 40000 Space Marine 2", "World War 3",
         ];
-        selected(name) => { preset-selected(self.current-index); }
+        current-index: selected-sound-mode-index;
+        selected(name) => {
+            selected-sound-mode-index = self.current-index;
+            if (self.current-index > 0) {
+                preset-selected(self.current-index - 1);
+            }
+        }
+    }
+
+    // Kopfhörer/Lautsprecher-Segmentumschalter, identisch zum
+    // Acoustic-Engine-Tab (geteilter Zustand über output-target).
+    HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            width: 280px;
+            height: 30px;
+            border-radius: 6px;
+            background: #e0e0e0;
+            clip: true;
+
+            HorizontalLayout {
+                Rectangle {
+                    background: output-target == 0 ? #3d7fd9 : transparent;
+                    TouchArea { clicked => { output-target-changed(0); } }
+                    Text {
+                        text: "Kopfhörer";
+                        color: output-target == 0 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                Rectangle {
+                    background: output-target == 1 ? #3d7fd9 : transparent;
+                    TouchArea { clicked => { output-target-changed(1); } }
+                    Text {
+                        text: "Lautsprecher";
+                        color: output-target == 1 ? white : #333333;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        background: #f2f2f2;
+        border-radius: 8px;
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 14px;
+
+            Text { text: "Acoustic Engine"; font-weight: 700; }
+
+            CompactEffectRow {
+                label: "Surround";
+                effect-enabled: surround-on;
+                value: surround-level;
+                toggled(on) => { surround-on = on; param-changed(0, on ? 1.0 : 0.0); }
+                value-changed(v) => { surround-level = v; param-changed(1, v / 100); }
+            }
+            CompactEffectRow {
+                label: "Crystalizer";
+                effect-enabled: crystalizer-on;
+                value: crystalizer-level;
+                toggled(on) => { crystalizer-on = on; param-changed(7, on ? 1.0 : 0.0); }
+                value-changed(v) => { crystalizer-level = v; param-changed(8, v / 100); }
+            }
+            CompactEffectRow {
+                label: "Bass";
+                effect-enabled: bass-on;
+                value: bass-level;
+                toggled(on) => { bass-on = on; param-changed(24, on ? 1.0 : 0.0); }
+                value-changed(v) => { bass-level = v; param-changed(25, v / 100); }
+            }
+
+            // Smart Volume: eigene Zeile statt CompactEffectRow, weil
+            // rechts noch die Nacht/Laut-Modus-Symbole dazukommen
+            // (SMART_VOLUME_MODE, Param 0x06 – 0.0=Normal, 1.0=Laut,
+            // 2.0=Nacht, wie im Acoustic-Engine-Tab).
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text { text: "Smart Volume"; width: 110px; vertical-alignment: center; }
+                Switch {
+                    checked: svm-on;
+                    toggled => { svm-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+                }
+                Slider {
+                    minimum: 0; maximum: 100;
+                    value: svm-level;
+                    enabled: svm-on;
+                    horizontal-stretch: 1;
+                    changed(v) => { svm-level = v; param-changed(5, v / 100); }
+                }
+                Text {
+                    text: svm-on ? "\{round(svm-level)}" : "Aus";
+                    width: 32px;
+                    color: svm-on ? #333333 : #999999;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    width: 26px;
+                    height: 26px;
+                    TouchArea {
+                        enabled: svm-on;
+                        clicked => {
+                            if (svm-mode == 2) { svm-mode = 0; param-changed(6, 0.0); }
+                            else { svm-mode = 2; param-changed(6, 2.0); }
+                        }
+                    }
+                    Text {
+                        text: "🌙";
+                        font-size: 16px;
+                        color: svm-mode == 2 ? #3d7fd9 : #999999;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                Rectangle {
+                    width: 26px;
+                    height: 26px;
+                    TouchArea {
+                        enabled: svm-on;
+                        clicked => {
+                            if (svm-mode == 1) { svm-mode = 0; param-changed(6, 0.0); }
+                            else { svm-mode = 1; param-changed(6, 1.0); }
+                        }
+                    }
+                    Text {
+                        text: "☀";
+                        font-size: 16px;
+                        color: svm-mode == 1 ? #3d7fd9 : #999999;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            CompactEffectRow {
+                label: "Dialog+";
+                effect-enabled: dialog-on;
+                value: dialog-level;
+                toggled(on) => { dialog-on = on; param-changed(2, on ? 1.0 : 0.0); }
+                value-changed(v) => { dialog-level = v; param-changed(3, v / 100); }
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text { text: "Equalizer"; width: 110px; vertical-alignment: center; }
+                Switch {
+                    checked: eq-on;
+                    toggled => { eq-on = self.checked; param-changed(9, self.checked ? 1.0 : 0.0); }
+                }
+                CompactComboBox {
+                    model: eq-preset-names;
+                    current-index: eq-selected-preset-index;
+                    horizontal-stretch: 1;
+                    selected(i) => { eq-selected-preset-index = i; }
+                }
+            }
+        }
     }
 }

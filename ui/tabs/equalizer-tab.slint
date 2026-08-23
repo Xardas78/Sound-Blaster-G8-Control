@@ -1,11 +1,11 @@
 import { EffectToggle, CompactSpinBox } from "../effect-slider.slint";
 import { Slider, ComboBox, LineEdit, Button } from "std-widgets.slint";
 
-// Sound-Modus-Presets. Das Original speichert Presets im Gerät selbst
+// EQ-Presets. Das Original speichert Presets im Gerät selbst
 // (Speicherformat nicht reverse-engineert, siehe HANDOFF.md) – diese
-// Presets sind deshalb rein App-seitig: 8 feste Klangbilder + 3 eigene
-// Speicherplätze, die aber nur für die Laufzeit der App gelten (kein
-// Neustart-übergreifendes Speichern implementiert).
+// Presets sind deshalb rein App-seitig: 71 echte Original-Kurven + 3
+// eigene Speicherplätze, die aber nur für die Laufzeit der App gelten
+// (kein Neustart-übergreifendes Speichern implementiert).
 struct EqPreset {
     preamp: float,
     bands: [float],
@@ -134,12 +134,17 @@ export component EqualizerTab inherits VerticalLayout {
     property <float> custom3-preamp: 0;
     property <[float]> custom3-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     // 71 feste Presets + 3 eigene Speicherplätze (Index 71-73). Reihenfolge
-    // exakt wie builtin-presets oben.
-    property <[string]> preset-names: [
+    // exakt wie builtin-presets oben. out: der Sound-Modus-Tab liest diese
+    // Liste per Sibling-Referenz (eq-tab.preset-names in device-hub-tab.slint)
+    // für seine eigene Equalizer-Zeile, statt sie ein drittes Mal zu pflegen.
+    out property <[string]> preset-names: [
         "64 Audio Aspire Series", "Acoustic", "Adventure and Action", "Apex Legends", "Arena Of Valor", "Assetto Corsa", "Baldur's Gate 3", "Bass Boost", "Bass Cut", "Battle Royale", "Battlefield Series", "Black Myth: Wukong", "Call of Duty Series", "Classical", "Counter-Strike 2", "Counter-Strike: Global Offensive", "Country", "Cyberpunk 2077", "Dance", "Death Stranding", "Delta Force", "Diablo Series", "Doom Eternal", "DOTA 2", "Dynamic Music", "Escape from Tarkov", "Esports", "Flat", "Footsteps Enhancer", "Fortnite", "Forza Horizon Series", "FPS", "Gaming", "Genshin Impact", "Halo Infinite", "Helldivers 2", "HipHop", "Hogswart Legacy", "Jazz", "League of Legends", "Marvel Rivals", "Marvel's Spider-Man Series", "Minecraft Dungeons", "MMORPG", "MOBA", "Movies", "Music", "Overwatch 2", "Path of Exile 2", "Pop", "PUBG: BATTLEGROUNDS", "R & B", "Racing Simulation", "Red Dead Redemption 2", "Resident Evil Series", "Rock", "Rocket League", "RPG", "RTS", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Stadium", "Star War Jedi Series", "The Witcher Series", "Tom Clancy's Rainbow Six Siege", "Treble Boost", "Treble Cut", "Valorant", "Vocal", "Warframe", "Warhammer 40000 Space Marine 2", "World War 3",
         custom1-name, custom2-name, custom3-name,
     ];
-    property <int> selected-preset-index: 0;
+    // in-out (nicht privat): der neue Sound-Modus-Tab spiegelt denselben
+    // Index in seiner eigenen Equalizer-Zeile (siehe device-hub-tab.slint),
+    // damit beide Dropdowns immer denselben Preset-Namen zeigen.
+    in-out property <int> selected-preset-index: 0;
 
     function apply-preset(idx: int) {
         if (idx == 71) {
@@ -212,6 +217,14 @@ export component EqualizerTab inherits VerticalLayout {
 
     // param-id (0x0a=Preamp, 0x0b..0x14=Bänder), value
     callback param-changed(int, float);
+
+    // Reagiert unabhängig davon, WOHER die Änderung kommt – eigenes
+    // Dropdown hier im Equalizer-Tab ODER die gespiegelte Auswahl im
+    // Sound-Modus-Tab (device-hub-tab.slint bindet beide an denselben
+    // ae-eq-preset-index). `changed` feuert laut Slint nicht bei der
+    // initialen Konstruktion, nur bei echten späteren Änderungen – beim
+    // Programmstart wird also nicht ungefragt Preset 0 ans Gerät gesendet.
+    changed selected-preset-index => { apply-preset(selected-preset-index); }
 
     spacing: 16px;
     padding: 16px;
@@ -482,21 +495,22 @@ export component EqualizerTab inherits VerticalLayout {
                     }
                 }
 
-                // Sound-Modus-Presets, unterhalb der Vorver/Bass/Höhen-Box.
-                // App-seitig statt im Gerät gespeichert, siehe Kommentar bei
-                // EqPreset oben.
+                // EQ-Presets, unterhalb der Vorver/Bass/Höhen-Box. App-seitig
+                // statt im Gerät gespeichert, siehe Kommentar bei EqPreset
+                // oben. (Nicht zu verwechseln mit dem Sound-Modus-Tab, der
+                // zusätzlich noch Surround/Crystalizer/Bass/SVM/Dialog+
+                // mit anwendet – hier geht es nur um die EQ-Kurve.)
                 VerticalLayout {
                     spacing: 8px;
                     padding-top: 12px;
 
-                    Text { text: "Sound-Modus"; font-weight: 700; }
+                    Text { text: "EQ-Preset"; font-weight: 700; }
 
                     ComboBox {
                         model: preset-names;
                         current-index: selected-preset-index;
                         selected(name) => {
                             selected-preset-index = self.current-index;
-                            apply-preset(self.current-index);
                         }
                     }
 

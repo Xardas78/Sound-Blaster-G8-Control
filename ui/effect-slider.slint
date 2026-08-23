@@ -55,6 +55,47 @@ export component EffectSlider inherits VerticalLayout {
     }
 }
 
+// Kompakte Zeile für den Sound-Modus-Tab: Titel, Schalter, horizontaler
+// Slider, Zahlenwert – ein Effekt pro Zeile statt eines eigenen Blocks
+// wie EffectSlider oben (siehe Original-Screenshot der "Sound-Modus"-Seite).
+export component CompactEffectRow inherits HorizontalLayout {
+    in property <string> label;
+    in-out property <bool> effect-enabled: true;
+    in-out property <float> value: 50;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+
+    callback toggled(bool);
+    callback value-changed(float);
+
+    spacing: 12px;
+
+    Text {
+        text: label;
+        width: 110px;
+        vertical-alignment: center;
+    }
+    Switch {
+        checked: effect-enabled;
+        toggled => { toggled(self.checked); }
+    }
+    Slider {
+        minimum: minimum;
+        maximum: maximum;
+        value: value;
+        enabled: effect-enabled;
+        horizontal-stretch: 1;
+        changed(v) => { value-changed(v); }
+    }
+    Text {
+        text: effect-enabled ? "\{round(value)}" : "Aus";
+        width: 32px;
+        color: effect-enabled ? #333333 : #999999;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+}
+
 // Einfacher Ein/Aus-Regler ohne Slider (z.B. Direct Mode, Scout Mode).
 export component EffectToggle inherits HorizontalLayout {
     in property <string> label;
