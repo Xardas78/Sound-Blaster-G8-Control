@@ -13,7 +13,7 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 - **10-Band-Equalizer** mit Vorverstärkung und 71 echten Original-Presets
 - **CrystalVoice** – Noise Reduction, Echo Cancellation, Voice Morph, Mikrofon-Equalizer
 - **Modi & Decoder** – Direct Mode, Scout Mode (inkl. Zugriffstaste), Dolby-Decoder
-- **Mixer** – alle Ein-/Ausgangspegel inkl. Stummschaltung
+- **Mixer** – alle Ein-/Ausgangspegel inkl. Stummschaltung und Balance (L/R)
 - **Wiedergabe** – 7.1-Positionsdiagramm mit Testtönen, Kopfhörer/Lautsprecher-Umschaltung
 - **Virtueller HRTF-Kopfhörer-Surround**: PipeWire-Filter-Chain mit HeSuVi-Faltung, da die G8-Hardware selbst nur Stereo ausgibt
 - **Lautstärkeknopf-Livesync**: der physische Regler am Gerät steuert live den Regler in der App (und optional die PipeWire-Systemlautstärke, "Volume Sync")
@@ -37,7 +37,7 @@ Weiterhin bekannt:
 USB-Captures des Originals zeigen: beim Drehen des Knopfs entsteht auch mit aktivem Volume Sync kein zusätzlicher USB-Traffic – Windows koppelt Knopf und Systemlautstärke über einen eigenen Kernel-Treiber, unsichtbar auf dem USB-Kabel. Es fehlt also kein Protokoll-Befehl.
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
-- Sound-Modus-Presets im Gerät speichern/laden (Anwenden funktioniert, Auslesen/Persistieren eines aktiven Presets nicht)
+- Sound-Modus-Preset **auf dem Gerät selbst** speichern/auslesen (bräuchte einen neuen USB-Capture, siehe HANDOFF.md Abschnitt 8) – **software-seitig** merkt sich die App das zuletzt gewählte Preset aber bereits und wendet es beim nächsten Start automatisch wieder an
 - Bass-Crossover-Frequenz aus den Sound-Modus-Presets (kein bekannter Geräteparameter)
 - Firmware-Versionsanzeige/-Update-Check, Gerät zurücksetzen – **bewusst dauerhaft nicht implementiert** (Bricking-Risiko bei falscher Byte-Sequenz, kein Capture vorhanden), nicht nur vorläufig offen; siehe [HANDOFF.md](HANDOFF.md) Abschnitt 5
 - Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook

@@ -504,6 +504,26 @@ mehr.
 
 ## 8. Offene Punkte
 
+- **Sound-Modus-Preset auf dem Gerät auslesen** (geplanter nächster
+  USB-Capture, noch nicht gemacht): Ziel ist herauszufinden, ob das Gerät
+  oder die Windows-Software beim (Wieder-)Verbinden ein zuletzt aktives
+  Sound-Modus-Preset zurückmeldet – bisher unbekannt, nur Anwenden ist
+  implementiert (software-seitiges Merken über den App-Neustart hinweg IST
+  seit 2026-08-23 umgesetzt, siehe persist.rs/main.rs
+  `sound_mode_preset_index` – das hier ist nur für ein *echtes*, geräte-
+  seitiges Auslesen, z.B. auch von einem anderen Rechner/unter Windows
+  aus sichtbar). Capture-Rezept (USBPcap + Wireshark, wie die bisherigen
+  Captures in diesem Projekt):
+  1. Capture starten, Creative-Software öffnen.
+  2. Im Sound-Modus ein bestimmtes Preset wählen (Namen notieren).
+  3. Software komplett schließen (oder Gerät ab-/anstecken), dann neu
+     öffnen bzw. neu verbinden lassen – genau in diesem Moment würde ein
+     "welches Preset ist aktiv"-Abruf passieren, falls es ihn gibt.
+  4. Prüfen, ob die Software das zuvor gewählte Preset beim Neustart
+     wieder anzeigt (Screenshot zum Abgleich mit dem Capture).
+  5. .pcapng speichern, wie gehabt mit scapy/rdpcap auswerten (siehe
+     Abschnitt 3 für das Paket-Parsing-Vorgehen).
+  Ohne diesen Capture wird hier nichts spekulativ implementiert.
 - Mixer-Zugriff (`mixer.rs`) startet für jedes Poll-Tick einen neuen
   `amixer`-Prozess statt eine dauerhafte ALSA-Verbindung offen zu halten
   (wie Windows/PipeWire es intern tun, siehe Abschnitt 3/7). Funktioniert,
@@ -522,9 +542,9 @@ mehr.
   globaler Tastatur-Hook angebunden
 - GET-Anfrage-Familien 0x26 (teilweise), 0x39, 0x6c, 0x10 unentschlüsselt
 - Equalizer kennt nur eine Kurve, keine getrennte Kopfhörer-/Lautsprecher-
-  Variante wie das Original (siehe Abschnitt 6, EQ-Presets)
-- Balance-Regler (L/R) im Mixer nicht implementiert (nice-to-have, gleicher
-  UAC-Mechanismus wie Hauptlautstärke, nur anderer Channel)
+  Variante wie das Original (siehe Abschnitt 6, EQ-Presets) – Original-
+  Preset-JSONs haben tatsächlich getrennte Kurven für 43 von 71 Presets
+  (per Skript verglichen, 2026-08-23), technisch also sinnvoll umsetzbar
 
 ## 9. Projektstruktur
 
