@@ -149,11 +149,18 @@ export component SettingsTab inherits HorizontalLayout {
             Switch {
                 checked: dark-mode-on;
                 toggled => {
-                    // Palette.color-scheme wird zentral in app-window.slint
-                    // gesetzt (changed dark-mode-on => {...}), damit dasselbe
-                    // sowohl bei Klick hier als auch beim Wiederherstellen
-                    // gespeicherter Einstellungen von Rust greift.
+                    // Direkt hier setzen (wie in der ursprünglichen
+                    // Implementierung), nicht nur über den changed-Handler
+                    // in app-window.slint: eine Palette.color-scheme-
+                    // Zuweisung als Reaktion auf eine echte Klick-Aktion in
+                    // derselben Datei löst zuverlässig ein Neuzeichnen aus,
+                    // über einen changed-Handler in einer anderen Datei war
+                    // das bei einem Live-Test nicht der Fall (Standard-
+                    // Widgets blieben hell, siehe HANDOFF.md 2026-08-24).
+                    // Der changed-Handler bleibt zusätzlich bestehen, für
+                    // den Start-Wiederherstellungsfall aus main.rs.
                     dark-mode-on = self.checked;
+                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
                     dark-mode-toggled(self.checked);
                 }
             }

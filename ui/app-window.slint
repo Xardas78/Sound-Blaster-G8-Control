@@ -15,11 +15,13 @@ export component AppWindow inherits Window {
     icon: @image-url("assets/app-icon.svg");
     width: 1372px;
     height: 820px;
-    // Dark-Mode-Hintergrund: dunkles Anthrazit zwischen RAL 9017
-    // "Verkehrsschwarz" (#2a292a) und RAL 9007 "Graualuminium" (#878581),
-    // Richtung dunkel gewichtet. Umgeschaltet über den Dark-Mode-Schalter
-    // im Einstellungen-Reiter (setzt Palette.color-scheme).
-    background: Palette.color-scheme == ColorScheme.dark ? #3a3c3f : Palette.background;
+    // Dieselbe Palette.color-scheme-Bedingung wie die Standard-Widgets
+    // (Buttons, Switches, TabWidget) intern verwenden – EIN gemeinsamer
+    // Auslöser (siehe init => und settings-tab.slint) statt zweier
+    // konkurrierender Mechanismen, die zu inkonsistentem Neuzeichnen
+    // führten (siehe HANDOFF.md 2026-08-24). Werte sind die echten
+    // Fluent-Palette-Farben (FluentPalette.background in std-widgets).
+    background: Palette.color-scheme == ColorScheme.dark ? #1C1C1C : #FAFAFA;
 
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
@@ -110,11 +112,15 @@ export component AppWindow inherits Window {
     in-out property <bool> show-firmware-result: false;
 
     // Persistierter Dark-Mode-Wert von Rust beim Start gesetzt (siehe
-    // main.rs) – `changed` feuert nicht bei der initialen Konstruktion,
-    // nur bei echten späteren Änderungen (weder beim Start noch beim
-    // Umschalten in settings-tab.slint doppelt ausgelöst, da der Schalter
-    // dort selbst schon Palette.color-scheme setzt).
-    changed dark-mode-on => {
+    // main.rs). Absichtlich `init =>` statt `changed dark-mode-on =>`:
+    // Live getestet (2026-08-24), dass eine Palette.color-scheme-
+    // Zuweisung aus BEIDEM gleichzeitig (hier per changed-Handler UND im
+    // Schalter selbst in settings-tab.slint) zu inkonsistentem Neuzeichnen
+    // führte – manche Standard-Widgets/Karten reagierten, andere nicht,
+    // je nachdem welcher der beiden Handler "gewann". Jetzt genau EIN
+    // Auslöser für den Klick (direkt im Schalter, settings-tab.slint) und
+    // EIN separater, nicht-reaktiver Auslöser nur für den Start (hier).
+    init => {
         Palette.color-scheme = dark-mode-on ? ColorScheme.dark : ColorScheme.light;
     }
 

@@ -104,17 +104,59 @@ export component MixerTab inherits VerticalLayout {
     // entity-id indiziert Rust-seitig direkt in die ALSA-Control-Namenstabelle
     // (mixer.rs) – die G8 exponiert diese Standard-UAC-Feature-Units bereits
     // als Kernel-Mixer-Controls (Karte "USB1"), kein eigener USB-Report nötig.
-    Text { text: "Wiedergabe"; font-weight: 700; }
-    MixerRow { label: "Lautsprecher"; entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    //
+    // Jede Sektion (Wiedergabe/Überwachung/Aufnahme) als eigene Karte statt
+    // loser Überschrift + Zeilen – gleiche Karten-Optik wie "Acoustic
+    // Engine" im Sound-Modus-Tab (siehe sound-mode-tab.slint), für
+    // durchgängigen Look zwischen den Tabs.
+    Rectangle {
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+        border-radius: 8px;
+        VerticalLayout {
+            padding: 16px;
+            // Größerer Abstand Überschrift→erste Zeile als zwischen den
+            // Zeilen selbst (verschachteltes Layout mit eigenem, kleinerem
+            // spacing) – auf Nutzerwunsch, damit die Überschrift optisch
+            // klarer von den Reglern abgesetzt ist.
+            spacing: 16px;
+            Text { text: "Wiedergabe"; font-weight: 700; }
+            VerticalLayout {
+                spacing: 8px;
+                MixerRow { label: "Lautsprecher"; entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+            }
+        }
+    }
 
-    Text { text: "Überwachung"; font-weight: 700; }
-    MixerRow { label: "Line In"; entity-id: 1; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-    MixerRow { label: "External Mic"; entity-id: 2; level: monitor-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-    MixerRow { label: "SPDIF In"; entity-id: 3; level: monitor-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    Rectangle {
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+        border-radius: 8px;
+        VerticalLayout {
+            padding: 16px;
+            spacing: 16px;
+            Text { text: "Überwachung"; font-weight: 700; }
+            VerticalLayout {
+                spacing: 8px;
+                MixerRow { label: "Line In"; entity-id: 1; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "External Mic"; entity-id: 2; level: monitor-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "SPDIF In"; entity-id: 3; level: monitor-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+            }
+        }
+    }
 
-    Text { text: "Aufnahme"; font-weight: 700; }
-    MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-    MixerRow { label: "Line In"; entity-id: 5; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-    MixerRow { label: "External Mic"; entity-id: 6; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-    MixerRow { label: "What U Hear"; entity-id: 7; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+    Rectangle {
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+        border-radius: 8px;
+        VerticalLayout {
+            padding: 16px;
+            spacing: 16px;
+            Text { text: "Aufnahme"; font-weight: 700; }
+            VerticalLayout {
+                spacing: 8px;
+                MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "Line In"; entity-id: 5; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "External Mic"; entity-id: 6; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "What U Hear"; entity-id: 7; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+            }
+        }
+    }
 }

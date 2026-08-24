@@ -101,7 +101,7 @@ export component SoundModeTab inherits VerticalLayout {
     }
 
     Rectangle {
-        background: Palette.color-scheme == ColorScheme.dark ? #454749 : #f2f2f2;
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
         border-radius: 8px;
 
         VerticalLayout {
@@ -187,10 +187,14 @@ export component SoundModeTab inherits VerticalLayout {
                             else { svm-mode = 1; param-changed(6, 1.0); }
                         }
                     }
+                    // "Laut"-Symbol: 💥 statt Sonne – auf Nutzerwunsch,
+                    // passt semantisch auch besser (Nacht=Mond, Laut=Knall).
+                    // Eigenständiges Emoji wie 🌙 (kein Dingbat + Selektor-
+                    // Kombination wie "☀"/"☀️", die auf diesem System nicht
+                    // korrekt rendert, siehe HANDOFF.md).
                     Text {
-                        text: "☀️";
+                        text: "💥";
                         font-size: 16px;
-                        color: svm-mode == 1 ? #3d7fd9 : #999999;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }

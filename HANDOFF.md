@@ -708,34 +708,58 @@ mehr.
     mehr nötig. An der Stelle des früheren Hintergrunddienst-Schalters
     steht jetzt ein Hinweistext dazu.
 
-    **Bekannte Einschränkung (kosmetisch, Fix für 2026-08-24 geplant):**
+    **Bekannter Unterschied (bewusst so belassen, Entscheidung 2026-08-24):**
     Die App zeigt weiterhin die lineare (taper-korrigierte) Reglerposition
     (z.B. 44%), während PipeWire/KDE die kubische Lautstärke-Skala zeigt
     (z.B. 60%) – zwei unterschiedliche, beide korrekte Zahlen für
     denselben Rohwert, da wir nicht mehr aktiv in PipeWire hineinschreiben.
-    Geplanter Fix: nur die App-Anzeige auf die kubische Skala umrechnen
-    (rein kosmetisch, kein Zurückschreiben zu PipeWire – das würde den
-    gerade behobenen Bug wieder einführen).
+    Bewusst NICHT auf die kubische Skala umgestellt: die physische
+    Reglermitte würde dann wieder ~67% statt 50% zeigen – genau das
+    Problem, das die Taper-Korrektur ursprünglich gelöst hat. Abgewogen
+    und vom Nutzer bestätigt: unsere Anzeige bleibt bei der gefühlten
+    Reglerposition.
+
+## 7a. Dark Mode: Palette.color-scheme-Zuweisung reagiert nicht immer (2026-08-24)
+
+Der Dark-Mode-Schalter selbst funktionierte (sichtbares Umschalten,
+korrekte Persistierung), aber die Farben reagierten teils gar nicht,
+teils inkonsistent (manche Elemente hell, andere dunkel gleichzeitig).
+Ursache: **zwei gleichzeitig aktive Mechanismen**, die beide
+`Palette.color-scheme` setzten – einmal ein `changed dark-mode-on =>`-
+Handler in app-window.slint, einmal eine direkte Zuweisung im Schalter
+selbst (settings-tab.slint). Beide feuerten bei jedem Klick, was zu
+inkonsistentem Neuzeichnen führte (welcher Handler "gewann", schien
+nicht deterministisch). Fix: genau EIN Auslöser für den interaktiven
+Fall (direkt im Schalter-Klick-Handler, settings-tab.slint – so wie in
+der ursprünglichen Implementierung, commit `ed4a0c5`), und ein
+separater `init =>`-Handler in app-window.slint (NICHT `changed`) nur
+für die Start-Wiederherstellung aus main.rs. Zusätzlich: unsere eigenen
+Hintergründe (Fenster, Karten) binden konsequent an dieselbe
+`Palette.color-scheme == ColorScheme.dark ? ... : ...`-Bedingung wie die
+Standard-Widgets, mit den echten Fluent-Palette-Farben (`#1C1C1C`/
+`#FAFAFA` Hintergrund, `#2C2C2C`/`#f0f0f0` für Karten – aus
+`FluentPalette` in std-widgets, nicht mehr selbst geraten). Live
+verifiziert: beide Richtungen schalten jetzt zuverlässig und konsistent
+um.
+
+**Lehre für künftige Palette-Änderungen:** Eine `changed <property> =>`-
+Reaktion auf eine ANDERE Property, die ihrerseits `Palette.color-scheme`
+setzt, ist offenbar unzuverlässig, wenn gleichzeitig noch ein zweiter
+Schreibpfad auf dieselbe Palette-Property existiert. Direkte Zuweisung
+in einem echten Interaktions-Handler (Klick) funktioniert zuverlässig;
+für rein programmatisches Setzen (Start, kein Klick) `init =>` statt
+`changed` verwenden.
 
 ## 8. Offene Punkte
 
-- **Sonnen-Icon (☀️) im Sound-Modus-Tab wird nicht dargestellt** (leeres
-  Kästchen/Tofu-Glyph, 2026-08-23 getestet) – Font auf dem Testsystem hat
-  offenbar keine Glyphe für U+2600+FE0F, anders als der Mond (🌙), der
-  korrekt farbig rendert. Fix für 2026-08-24 geplant: anderes Icon oder
-  eigene Path-Zeichnung statt Font-Glyphe (wie schon bei den Pfeilen in
-  `CompactSpinBox`, siehe effect-slider.slint).
-- **App-Anzeige auf kubische PipeWire-Skala umstellen** (siehe Abschnitt 7
-  oben) – rein kosmetisch, für 2026-08-24 geplant.
-
-- **Kein Auto-Reconnect nach Geräteverlust**: `G8Device::open()` wird nur
-  einmal beim Programmstart aufgerufen. Verliert das Gerät die Verbindung
-  (USB-Neuenumeration durch Reset, siehe Abschnitt 5a, oder ein
-  Aus-/Einstecken) bleibt das `HidDevice`-Handle dauerhaft ungültig
-  (`hidapi error: No such device`), auch nachdem das Gerät längst wieder
-  da ist – App muss manuell neu gestartet werden. Sauberer wäre ein
-  periodischer Reconnect-Versuch, wenn `send_report`/`read_report`
-  fehlschlägt.
+- ~~Sonnen-Icon (☀️) im Sound-Modus-Tab wird nicht dargestellt~~ **erledigt,
+  2026-08-24** – zwei Emoji-Versuche scheiterten auf dem Testsystem
+  (leeres Kästchen bzw. ein falsches Ersatzzeichen 💥). Auf Nutzerwunsch
+  am Ende bewusst durch 💥 ersetzt (passt semantisch: Nacht=Mond,
+  Laut=Knall), kein Emoji-Rendering-Problem mehr relevant.
+- ~~Kein Auto-Reconnect nach Geräteverlust~~ **erledigt, 2026-08-23** –
+  siehe Abschnitt 5a und Commit "Automatischen Reconnect nach
+  Geräteverlust hinzufügen".
 - ~~Sound-Modus-Preset auf dem Gerät auslesen~~ **erledigt, 2026-08-23**
   (`schrit 1 bis 5 nach claudes vorgabe.pcapng`) – siehe Abschnitt 2:
   keine geräteseitige Preset-Kennung, nur rohe Parameterwerte werden vom
