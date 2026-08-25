@@ -23,14 +23,14 @@ export component RecordingSettingsTab inherits VerticalLayout {
     spacing: 16px;
     alignment: start;
 
-    Text { text: "Aufnahme"; font-size: 20px; font-weight: 700; }
-    Text { text: "Standardquelle"; font-weight: 600; }
+    Text { text: @tr("Aufnahme"); font-size: 20px; font-weight: 700; }
+    Text { text: @tr("Standardquelle"); font-weight: 600; }
 
     for entry[i] in ["S/PDIF In", "Line In", "External Mic", "What U Hear"]: HorizontalLayout {
         spacing: 12px;
         Text { text: entry; width: 100px; vertical-alignment: center; }
         Button {
-            text: active-source == i ? "✓ Standard" : "Standard festlegen";
+            text: active-source == i ? @tr("✓ Standard") : @tr("Standard festlegen");
             enabled: active-source != i;
             clicked => { active-source = i; source-selected(i); }
         }

@@ -60,7 +60,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         }
     }
     Text {
-        text: "Reduzieren Sie statische Hintergrundgeräusche bei ausgehendem Audio während Telefonkonferenzen.";
+        text: @tr("Reduzieren Sie statische Hintergrundgeräusche bei ausgehendem Audio während Telefonkonferenzen.");
         wrap: word-wrap;
         font-size: 16px;
         color: gray;
@@ -72,7 +72,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         toggled(on) => { aec-on = on; param-changed(0, on ? 1.0 : 0.0); }
     }
     Text {
-        text: "Beseitigen Sie Echos, die Ihre Konversation stören.";
+        text: @tr("Beseitigen Sie Echos, die Ihre Konversation stören.");
         wrap: word-wrap;
         font-size: 16px;
         color: gray;
@@ -86,7 +86,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         toggled(on) => { smart-volume-on = on; param-changed(44, on ? 1.0 : 0.0); }
     }
     Text {
-        text: "Gut verstanden werden, ohne rufen oder flüstern zu müssen.";
+        text: @tr("Gut verstanden werden, ohne rufen oder flüstern zu müssen.");
         wrap: word-wrap;
         font-size: 16px;
         color: gray;
@@ -114,7 +114,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         }
     }
     Text {
-        text: "Morphen Sie Ihre Stimme in verschiedene Charaktere und Akzente.";
+        text: @tr("Morphen Sie Ihre Stimme in verschiedene Charaktere und Akzente.");
         wrap: word-wrap;
         font-size: 16px;
         color: gray;
@@ -123,7 +123,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
     HorizontalLayout {
         EffectToggle {
             width: profile-label-width;
-            label: "Mikrofon-Equalizer";
+            label: @tr("Mikrofon-Equalizer");
             checked: mic-eq-on;
             toggled(on) => { mic-eq-on = on; param-changed(19, on ? 1.0 : 0.0); }
         }
@@ -140,7 +140,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
         }
     }
     Text {
-        text: "Verbessern Sie die Mikrofonleistung und die Qualität Ihrer Stimme.";
+        text: @tr("Verbessern Sie die Mikrofonleistung und die Qualität Ihrer Stimme.");
         wrap: word-wrap;
         font-size: 16px;
         color: gray;

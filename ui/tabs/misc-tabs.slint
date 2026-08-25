@@ -7,8 +7,13 @@ import { CheckBox, LineEdit } from "std-widgets.slint";
 // zusammengelegt.
 export component ModiDecoderTab inherits VerticalLayout {
     in-out property <bool> direct-mode-on: false;
-    // Direct Mode ist vermutlich reines UAC-Routing (Bypass), kein 5a-Report –
-    // noch nicht durch Capture bestätigt.
+    // Direct Mode ist ein echtes Hardware-Register (`5a 39 03 00 05`,
+    // per Capture `Directmode ein-aus.pcapng` bestätigt 2026-08-24) –
+    // derselbe Zustand, den auch der physische MODE-Knopf schaltet.
+    // Achtung: der Knopf ändert das Register, ohne dass die App es
+    // bisher mitbekommt (Status-Bitfeld noch nicht sicher entschlüsselt,
+    // siehe HANDOFF.md Abschnitt 7) – dieser Schalter kann daher vom
+    // echten Gerätezustand abweichen.
     in-out property <bool> scout-on: false;
     in-out property <int> decoder-mode: 1; // 0=Normal 1=Voll 2=Nacht
 
@@ -46,7 +51,7 @@ export component ModiDecoderTab inherits VerticalLayout {
             wrap: word-wrap;
             font-size: 16px;
             color: gray;
-            text: "Im Direct Mode erhalten Sie Audio in seiner reinsten Form direkt von der Quelle. Alle Audioeffekte werden nicht auf die Ausgabe angewendet.";
+            text: @tr("Im Direct Mode erhalten Sie Audio in seiner reinsten Form direkt von der Quelle. Alle Audioeffekte werden nicht auf die Ausgabe angewendet.");
         }
     }
 
@@ -72,19 +77,19 @@ export component ModiDecoderTab inherits VerticalLayout {
             wrap: word-wrap;
             font-size: 16px;
             color: gray;
-            text: "Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel.";
+            text: @tr("Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel.");
         }
         Text {
             wrap: word-wrap;
             font-size: 16px;
             color: gray;
-            text: "Einige Audioeffekte werden nicht für die Ausgabe übernommen.";
+            text: @tr("Einige Audioeffekte werden nicht für die Ausgabe übernommen.");
         }
 
         HorizontalLayout {
             spacing: 8px;
             CheckBox {
-                text: "Zugriffstaste";
+                text: @tr("Zugriffstaste");
                 checked: scout-hotkey-enabled;
                 toggled => { scout-hotkey-enabled = self.checked; }
             }
@@ -93,12 +98,12 @@ export component ModiDecoderTab inherits VerticalLayout {
             wrap: word-wrap;
             font-size: 14px;
             color: gray;
-            text: "Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift.";
+            text: @tr("Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift.");
         }
         LineEdit {
             width: 260px;
             enabled: scout-hotkey-enabled;
-            placeholder-text: "Klicken Sie, um den Tastaturanschlag zuzuweisen";
+            placeholder-text: @tr("Klicken Sie, um den Tastaturanschlag zuzuweisen");
             text: scout-hotkey-text;
             edited(t) => { scout-hotkey-text = t; }
         }
@@ -109,7 +114,7 @@ export component ModiDecoderTab inherits VerticalLayout {
     VerticalLayout {
         spacing: 8px;
         HorizontalLayout {
-            Text { text: "Decoder"; font-weight: 700; font-size: 18px; }
+            Text { text: @tr("Decoder"); font-weight: 700; font-size: 18px; }
             Rectangle { horizontal-stretch: 1; }
             Image {
                 source: @image-url("../assets/decoder-logo.svg");
@@ -122,9 +127,9 @@ export component ModiDecoderTab inherits VerticalLayout {
             wrap: word-wrap;
             font-size: 16px;
             color: gray;
-            text: "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder.";
+            text: @tr("Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder.");
         }
-        for label[i] in ["Normal", "Voll", "Nacht"]: HorizontalLayout {
+        for label[i] in [@tr("Normal"), @tr("Voll"), @tr("Nacht")]: HorizontalLayout {
             spacing: 8px;
             Rectangle {
                 width: 16px; height: 16px;

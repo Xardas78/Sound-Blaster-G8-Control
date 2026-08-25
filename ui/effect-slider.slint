@@ -1,11 +1,53 @@
-import { Slider, Switch, Palette } from "std-widgets.slint";
+import { Slider, Palette } from "std-widgets.slint";
+
+// Eigener Ein/Aus-Schalter statt std-widgets Switch: der Switch-Baustein
+// aktualisiert sein Aussehen nachweislich nicht zuverlässig, wenn sich
+// `checked` ändert während er in einem gerade NICHT aktiven Tab liegt
+// (reproduzierbar bei Sound-Modus <=> Acoustic-Engine-Sync, sehr
+// unregelmäßig – "mal geht's, mal vergisst er's", siehe HANDOFF.md
+// 2026-08-24). Der zugrunde liegende Wert ist dabei nachweislich korrekt
+// (per Debug-Log bestätigt und per <=>-Alias architektonisch garantiert),
+// nur das Neuzeichnen hängt. Der bereits vorhandene, handgezeichnete
+// Kopfhörer/Lautsprecher-Umschalter (Rectangle+TouchArea, kein
+// std-widget) litt nie an diesem Problem – gleiche Bauweise hier.
+export component CompactSwitch inherits Rectangle {
+    in-out property <bool> checked: false;
+    in property <bool> enabled: true;
+
+    callback toggled(bool);
+
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    border-width: checked ? 0px : 1px;
+    border-color: #999999;
+    background: checked ? #3d7fd9 : transparent;
+    opacity: enabled ? 1.0 : 0.5;
+
+    thumb := Rectangle {
+        x: checked ? parent.width - self.width - 4px : 4px;
+        y: (parent.height - self.height) / 2;
+        width: 12px;
+        height: 12px;
+        border-radius: 6px;
+        background: checked ? white : #999999;
+    }
+
+    TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
 
 // Ein Regler-Block wie in der Acoustic-Engine-/CrystalVoice-Seite des
 // Originals: Titel, Zahlenwert, vertikaler Slider, darunter ein Toggle.
 export component EffectSlider inherits VerticalLayout {
     in property <string> label;
     in property <string> description;
-    in property <bool> effect-enabled: true;
+    in-out property <bool> effect-enabled: true;
     in property <float> value: 50;
     in property <float> minimum: 0;
     in property <float> maximum: 100;
@@ -15,7 +57,7 @@ export component EffectSlider inherits VerticalLayout {
 
     spacing: 8px;
     alignment: start;
-    width: 230px;
+    padding: 16px;
 
     Text {
         text: label;
@@ -40,9 +82,9 @@ export component EffectSlider inherits VerticalLayout {
 
     HorizontalLayout {
         alignment: center;
-        Switch {
-            checked: effect-enabled;
-            toggled => { toggled(self.checked); }
+        CompactSwitch {
+            checked <=> effect-enabled;
+            toggled(on) => { toggled(on); }
         }
     }
 
@@ -60,6 +102,12 @@ export component EffectSlider inherits VerticalLayout {
 // wie EffectSlider oben (siehe Original-Screenshot der "Sound-Modus"-Seite).
 export component CompactEffectRow inherits HorizontalLayout {
     in property <string> label;
+    // in-out + `checked <=> effect-enabled` unten (echter Alias): siehe
+    // Kommentar bei EffectSlider oben – ohne echten Alias kappt der
+    // Switch-eigene Klick-Handler jede `:`-Ausdrucksbindung dauerhaft,
+    // der Schalter reagierte dann nie wieder auf externe Änderungen
+    // (z.B. Sync mit Acoustic-Engine-Tab), obwohl der Slider (enabled:
+    // effect-enabled) korrekt reagierte.
     in-out property <bool> effect-enabled: true;
     in-out property <float> value: 50;
     in property <float> minimum: 0;
@@ -75,9 +123,9 @@ export component CompactEffectRow inherits HorizontalLayout {
         width: 110px;
         vertical-alignment: center;
     }
-    Switch {
-        checked: effect-enabled;
-        toggled => { toggled(self.checked); }
+    CompactSwitch {
+        checked <=> effect-enabled;
+        toggled(on) => { toggled(on); }
     }
     Slider {
         minimum: minimum;
@@ -88,7 +136,7 @@ export component CompactEffectRow inherits HorizontalLayout {
         changed(v) => { value-changed(v); }
     }
     Text {
-        text: effect-enabled ? "\{round(value)}" : "Aus";
+        text: effect-enabled ? "\{round(value)}" : @tr("Aus");
         width: 32px;
         color: effect-enabled ? Palette.foreground : #999999;
         horizontal-alignment: right;
@@ -105,9 +153,9 @@ export component EffectToggle inherits HorizontalLayout {
 
     spacing: 8px;
 
-    Switch {
-        checked: checked;
-        toggled => { toggled(self.checked); }
+    CompactSwitch {
+        checked <=> root.checked;
+        toggled(on) => { toggled(on); }
     }
     Text {
         text: label;

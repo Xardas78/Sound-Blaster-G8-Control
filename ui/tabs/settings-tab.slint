@@ -80,17 +80,17 @@ export component SettingsTab inherits HorizontalLayout {
                     alignment: start;
 
                     Text {
-                        text: firmware-check-failed ? "Prüfung fehlgeschlagen" : firmware-update-available ? "Update verfügbar" : "Keine neue Firmware";
+                        text: firmware-check-failed ? @tr("Prüfung fehlgeschlagen") : firmware-update-available ? @tr("Update verfügbar") : @tr("Keine neue Firmware");
                         font-weight: 700;
                         font-size: 17px;
                     }
                     Text {
                         wrap: word-wrap;
                         text: firmware-check-failed
-                            ? "Der Update-Server war nicht erreichbar (keine Internetverbindung?). Bitte später erneut versuchen."
+                            ? @tr("Der Update-Server war nicht erreichbar (keine Internetverbindung?). Bitte später erneut versuchen.")
                             : firmware-update-available
-                            ? "Eine neuere Firmware (" + firmware-latest-version + ") ist verfügbar. Firmware-Updates werden von dieser App nicht unterstützt – bitte dafür die offizielle Creative-Software unter Windows verwenden."
-                            : "Es ist keine neuere Firmware verfügbar.";
+                            ? @tr("Eine neuere Firmware ({}) ist verfügbar. Firmware-Updates werden von dieser App nicht unterstützt – bitte dafür die offizielle Creative-Software unter Windows verwenden.", firmware-latest-version)
+                            : @tr("Es ist keine neuere Firmware verfügbar.");
                         font-size: 14px;
                         color: gray;
                     }
@@ -99,7 +99,7 @@ export component SettingsTab inherits HorizontalLayout {
 
                     HorizontalLayout {
                         alignment: end;
-                        Button { text: "OK"; clicked => { firmware-result-popup.close(); } }
+                        Button { text: @tr("OK"); clicked => { firmware-result-popup.close(); } }
                     }
                 }
             }
@@ -110,18 +110,18 @@ export component SettingsTab inherits HorizontalLayout {
         spacing: 12px;
         alignment: start;
         Text { text: "Sound Blaster G8"; font-weight: 700; }
-        Text { text: device-connected ? "Verbunden (USB 041e:329b)" : "Nicht verbunden"; color: gray; }
-        if device-connected && serial-number != "": Text { text: "S/N: " + serial-number; font-size: 12px; color: gray; }
+        Text { text: device-connected ? @tr("Verbunden (USB 041e:329b)") : @tr("Nicht verbunden"); color: gray; }
+        if device-connected && serial-number != "": Text { text: @tr("S/N: {}", serial-number); font-size: 12px; color: gray; }
 
         Rectangle { height: 16px; }
 
-        Button { text: "Gerät zurücksetzen"; clicked => { reset-clicked(); } }
-        Button { text: "Nach Firmware-Update suchen"; clicked => { firmware-check-clicked(); } }
-        if firmware-version != "": Text { text: "Firmware: " + firmware-version; font-size: 12px; color: gray; }
+        Button { text: @tr("Gerät zurücksetzen"); clicked => { reset-clicked(); } }
+        Button { text: @tr("Nach Firmware-Update suchen"); clicked => { firmware-check-clicked(); } }
+        if firmware-version != "": Text { text: @tr("Firmware: {}", firmware-version); font-size: 12px; color: gray; }
 
         Rectangle { height: 8px; }
 
-        Text { text: "Version " + app-version; font-size: 12px; color: gray; }
+        Text { text: @tr("Version {}", app-version); font-size: 12px; color: gray; }
     }
 
     VerticalLayout {
@@ -130,12 +130,12 @@ export component SettingsTab inherits HorizontalLayout {
         HorizontalLayout {
             spacing: 8px;
             Switch { checked: power-saving-on; toggled => { power-saving-on = self.checked; power-saving-toggled(self.checked); } }
-            Text { text: "Energieeinsparung"; font-weight: 600; vertical-alignment: center; }
+            Text { text: @tr("Energieeinsparung"); font-weight: 600; vertical-alignment: center; }
         }
         HorizontalLayout {
             spacing: 8px;
             Switch { checked: logo-led-on; toggled => { logo-led-on = self.checked; logo-led-toggled(self.checked); } }
-            Text { text: "Sound Blaster Logo LED"; font-weight: 600; vertical-alignment: center; }
+            Text { text: @tr("Sound Blaster Logo LED"); font-weight: 600; vertical-alignment: center; }
         }
     }
 
@@ -143,7 +143,7 @@ export component SettingsTab inherits HorizontalLayout {
     VerticalLayout {
         spacing: 12px;
         alignment: start;
-        Text { text: "Anwendung"; font-weight: 700; }
+        Text { text: @tr("Anwendung"); font-weight: 700; }
         HorizontalLayout {
             spacing: 8px;
             Switch {
@@ -164,7 +164,7 @@ export component SettingsTab inherits HorizontalLayout {
                     dark-mode-toggled(self.checked);
                 }
             }
-            Text { text: "Dark Mode"; font-weight: 600; vertical-alignment: center; }
+            Text { text: @tr("Dark Mode"); font-weight: 600; vertical-alignment: center; }
         }
         HorizontalLayout {
             spacing: 8px;
@@ -172,12 +172,15 @@ export component SettingsTab inherits HorizontalLayout {
                 checked: autostart-on;
                 toggled => { autostart-on = self.checked; autostart-toggled(self.checked); }
             }
-            Text { text: "Mit dem System starten"; font-weight: 600; vertical-alignment: center; }
+            Text { text: @tr("Mit dem System starten"); font-weight: 600; vertical-alignment: center; }
         }
 
-        Text { text: "Beim Schließen"; font-weight: 600; }
+        Text { text: @tr("Beim Schließen"); font-weight: 600; }
+        // Bewusst OHNE feste width: die Breite ergibt sich aus dem Inhalt
+        // der beiden Segmente (Text + Innenabstand), damit längere
+        // Übersetzungen (z.B. Französisch) nicht abgeschnitten werden statt
+        // die Box einfach breiter zu machen.
         Rectangle {
-            width: 260px;
             height: 32px;
             border-radius: 6px;
             background: #e0e0e0;
@@ -189,11 +192,15 @@ export component SettingsTab inherits HorizontalLayout {
                     TouchArea {
                         clicked => { close-behavior = 0; close-behavior-changed(0); }
                     }
-                    Text {
-                        text: "Schließen";
-                        color: close-behavior == 0 ? white : #333333;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        Text {
+                            text: @tr("Schließen");
+                            color: close-behavior == 0 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
                 Rectangle {
@@ -201,12 +208,16 @@ export component SettingsTab inherits HorizontalLayout {
                     TouchArea {
                         clicked => { close-behavior = 1; close-behavior-changed(1); }
                     }
-                    Text {
-                        text: "In den Tray minimieren";
-                        font-size: 13px;
-                        color: close-behavior == 1 ? white : #333333;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        Text {
+                            text: @tr("In den Tray minimieren");
+                            font-size: 13px;
+                            color: close-behavior == 1 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }
@@ -217,11 +228,11 @@ export component SettingsTab inherits HorizontalLayout {
         // Lautstärke bereits von selbst synchron, auch komplett ohne
         // laufende App (siehe HANDOFF.md Abschnitt 7, Nachtrag 2).
         VerticalLayout {
-            Text { text: "Lautstärke-Synchronisierung"; font-weight: 600; }
+            Text { text: @tr("Lautstärke-Synchronisierung"); font-weight: 600; }
             Text {
                 wrap: word-wrap;
                 width: 260px;
-                text: "Wird nicht benötigt: dein System hält Gerät- und PC-Lautstärke bereits automatisch synchron, auch wenn diese App nicht läuft.";
+                text: @tr("Wird nicht benötigt: dein System hält Gerät- und PC-Lautstärke bereits automatisch synchron, auch wenn diese App nicht läuft.");
                 color: gray;
             }
         }

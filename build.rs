@@ -1,3 +1,9 @@
 fn main() {
-    slint_build::compile("ui/app-window.slint").expect("Slint-Build fehlgeschlagen");
+    // Übersetzungsdomäne ist automatisch CARGO_PKG_NAME ("g8-control"),
+    // siehe slint-build-Quelltext. Erwartet rohe .po-Dateien (kein
+    // separates msgfmt/.mo nötig) unter lang/<sprache>/LC_MESSAGES/
+    // g8-control.po, relativ zu CARGO_MANIFEST_DIR.
+    let config = slint_build::CompilerConfiguration::new().with_bundled_translations("lang");
+    slint_build::compile_with_config("ui/app-window.slint", config)
+        .expect("Slint-Build fehlgeschlagen");
 }

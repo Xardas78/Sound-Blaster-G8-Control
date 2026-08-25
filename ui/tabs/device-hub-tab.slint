@@ -67,23 +67,23 @@ export component DeviceHubTab inherits TabWidget {
     callback sound-mode-preset-selected(int);
 
     Tab {
-        title: "Sound-Modus";
+        title: @tr("Sound-Modus");
         SoundModeTab {
             output-target: output-target;
-            surround-on: ae-surround-on;
-            surround-level: ae-surround-level;
-            crystalizer-on: ae-crystalizer-on;
-            crystalizer-level: ae-crystalizer-level;
-            bass-on: ae-bass-on;
-            bass-level: ae-bass-level;
-            svm-on: ae-svm-on;
-            svm-level: ae-svm-level;
-            svm-mode: ae-svm-mode;
-            dialog-on: ae-dialog-on;
-            dialog-level: ae-dialog-level;
-            eq-on: ae-eq-on;
+            surround-on <=> ae-surround-on;
+            surround-level <=> ae-surround-level;
+            crystalizer-on <=> ae-crystalizer-on;
+            crystalizer-level <=> ae-crystalizer-level;
+            bass-on <=> ae-bass-on;
+            bass-level <=> ae-bass-level;
+            svm-on <=> ae-svm-on;
+            svm-level <=> ae-svm-level;
+            svm-mode <=> ae-svm-mode;
+            dialog-on <=> ae-dialog-on;
+            dialog-level <=> ae-dialog-level;
+            eq-on <=> ae-eq-on;
             eq-preset-names: eq-tab.preset-names;
-            eq-selected-preset-index: ae-eq-preset-index;
+            eq-selected-preset-index <=> ae-eq-preset-index;
             selected-sound-mode-index: sound-mode-selected-index;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
@@ -94,28 +94,28 @@ export component DeviceHubTab inherits TabWidget {
         title: "Acoustic Engine";
         AcousticEngineTab {
             output-target: output-target;
-            surround-on: ae-surround-on;
-            surround-level: ae-surround-level;
-            crystalizer-on: ae-crystalizer-on;
-            crystalizer-level: ae-crystalizer-level;
-            bass-on: ae-bass-on;
-            bass-level: ae-bass-level;
-            smart-volume-on: ae-svm-on;
-            smart-volume-level: ae-svm-level;
-            smart-volume-mode: ae-svm-mode;
-            dialog-plus-on: ae-dialog-on;
-            dialog-plus-level: ae-dialog-level;
+            surround-on <=> ae-surround-on;
+            surround-level <=> ae-surround-level;
+            crystalizer-on <=> ae-crystalizer-on;
+            crystalizer-level <=> ae-crystalizer-level;
+            bass-on <=> ae-bass-on;
+            bass-level <=> ae-bass-level;
+            smart-volume-on <=> ae-svm-on;
+            smart-volume-level <=> ae-svm-level;
+            smart-volume-mode <=> ae-svm-mode;
+            dialog-plus-on <=> ae-dialog-on;
+            dialog-plus-level <=> ae-dialog-level;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
         }
     }
     Tab {
-        title: "Equalizer";
+        title: @tr("Equalizer");
         eq-tab := EqualizerTab {
-            eq-on: ae-eq-on;
-            preamp: ae-eq-preamp;
-            bands: ae-eq-bands;
-            selected-preset-index: ae-eq-preset-index;
+            eq-on <=> ae-eq-on;
+            preamp <=> ae-eq-preamp;
+            bands <=> ae-eq-bands;
+            selected-preset-index <=> ae-eq-preset-index;
             param-changed(id, v) => { eq-param-changed(id, v); }
         }
     }
@@ -128,7 +128,7 @@ export component DeviceHubTab inherits TabWidget {
         }
     }
     Tab {
-        title: "Modi & Decoder";
+        title: @tr("Modi & Decoder");
         ModiDecoderTab {
             direct-mode-toggled(on) => { direct-mode-toggled(on); }
             scout-toggled(on) => { scout-toggled(on); }
@@ -136,7 +136,7 @@ export component DeviceHubTab inherits TabWidget {
         }
     }
     Tab {
-        title: "Mixer";
+        title: @tr("Mixer");
         MixerTab {
             playback-speaker: footer-speaker-level;
             rec-ext-mic: footer-mic-level;

@@ -1,0 +1,547 @@
+# French translation for g8-control.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: g8-control 0.1.1\n"
+"PO-Revision-Date: 2026-08-25\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+
+#: ui/app-window.slint:29
+msgctxt "AppWindow"
+msgid "Suche Gerät …"
+msgstr "Recherche de l'appareil …"
+
+#: ui/app-window.slint:161
+msgctxt "AppWindow"
+msgid "Gerät"
+msgstr "Appareil"
+
+#: ui/app-window.slint:208
+msgctxt "AppWindow"
+msgid "Wiedergabe"
+msgstr "Lecture"
+
+#: ui/app-window.slint:218
+msgctxt "AppWindow"
+msgid "Aufnahme"
+msgstr "Enregistrement"
+
+#: ui/app-window.slint:224
+msgctxt "AppWindow"
+msgid "Einstellungen"
+msgstr "Paramètres"
+
+#: ui/effect-slider.slint:139
+msgctxt "CompactEffectRow"
+msgid "Aus"
+msgstr "Désactivé"
+
+#: ui/tray.slint:18
+msgctxt "AppTray"
+msgid "Öffnen"
+msgstr "Ouvrir"
+
+#: ui/tray.slint:23
+msgctxt "AppTray"
+msgid "Beenden"
+msgstr "Quitter"
+
+#: ui/tabs/crystal-voice-tab.slint:63
+msgctxt "CrystalVoiceTab"
+msgid "Reduzieren Sie statische Hintergrundgeräusche bei ausgehendem Audio während Telefonkonferenzen."
+msgstr "Réduisez les bruits de fond statiques sur l'audio sortant lors des téléconférences."
+
+#: ui/tabs/crystal-voice-tab.slint:75
+msgctxt "CrystalVoiceTab"
+msgid "Beseitigen Sie Echos, die Ihre Konversation stören."
+msgstr "Éliminez les échos qui perturbent votre conversation."
+
+#: ui/tabs/crystal-voice-tab.slint:89
+msgctxt "CrystalVoiceTab"
+msgid "Gut verstanden werden, ohne rufen oder flüstern zu müssen."
+msgstr "Soyez bien compris sans avoir à crier ou chuchoter."
+
+#: ui/tabs/crystal-voice-tab.slint:117
+msgctxt "CrystalVoiceTab"
+msgid "Morphen Sie Ihre Stimme in verschiedene Charaktere und Akzente."
+msgstr "Transformez votre voix en différents personnages et accents."
+
+#: ui/tabs/crystal-voice-tab.slint:126
+msgctxt "CrystalVoiceTab"
+msgid "Mikrofon-Equalizer"
+msgstr "Égaliseur du microphone"
+
+#: ui/tabs/crystal-voice-tab.slint:143
+msgctxt "CrystalVoiceTab"
+msgid "Verbessern Sie die Mikrofonleistung und die Qualität Ihrer Stimme."
+msgstr "Améliorez les performances du microphone et la qualité de votre voix."
+
+#: ui/tabs/recording-settings-tab.slint:26
+msgctxt "RecordingSettingsTab"
+msgid "Aufnahme"
+msgstr "Enregistrement"
+
+#: ui/tabs/recording-settings-tab.slint:27
+msgctxt "RecordingSettingsTab"
+msgid "Standardquelle"
+msgstr "Source par défaut"
+
+#: ui/tabs/recording-settings-tab.slint:33
+msgctxt "RecordingSettingsTab"
+msgid "✓ Standard"
+msgstr "✓ Par défaut"
+
+#: ui/tabs/recording-settings-tab.slint:33
+msgctxt "RecordingSettingsTab"
+msgid "Standard festlegen"
+msgstr "Définir par défaut"
+
+#: ui/tabs/mixer-tab.slint:66
+msgctxt "MixerRow"
+msgid "Balance"
+msgstr "Balance"
+
+#: ui/tabs/mixer-tab.slint:81
+msgctxt "MixerRow"
+msgid "Mitte"
+msgstr "Centre"
+
+#: ui/tabs/mixer-tab.slint:81
+msgctxt "MixerRow"
+msgid "{}% links"
+msgstr "{}% à gauche"
+
+#: ui/tabs/mixer-tab.slint:81
+msgctxt "MixerRow"
+msgid "{}% rechts"
+msgstr "{}% à droite"
+
+#: ui/tabs/mixer-tab.slint:128
+msgctxt "MixerTab"
+msgid "Wiedergabe"
+msgstr "Lecture"
+
+#: ui/tabs/mixer-tab.slint:131
+msgctxt "MixerTab"
+msgid "Lautsprecher"
+msgstr "Haut-parleurs"
+
+#: ui/tabs/mixer-tab.slint:143
+msgctxt "MixerTab"
+msgid "Überwachung"
+msgstr "Surveillance"
+
+#: ui/tabs/mixer-tab.slint:160
+msgctxt "MixerTab"
+msgid "Aufnahme"
+msgstr "Enregistrement"
+
+#: ui/tabs/device-hub-tab.slint:70
+msgctxt "DeviceHubTab"
+msgid "Sound-Modus"
+msgstr "Mode sonore"
+
+#: ui/tabs/device-hub-tab.slint:113
+msgctxt "DeviceHubTab"
+msgid "Equalizer"
+msgstr "Égaliseur"
+
+#: ui/tabs/device-hub-tab.slint:131
+msgctxt "DeviceHubTab"
+msgid "Modi & Decoder"
+msgstr "Modes et décodeur"
+
+#: ui/tabs/device-hub-tab.slint:139
+msgctxt "DeviceHubTab"
+msgid "Mixer"
+msgstr "Mixeur"
+
+#: ui/tabs/playback-settings-tab.slint:30
+msgctxt "PlaybackSettingsTab"
+msgid "Front Links"
+msgstr "Avant gauche"
+
+#: ui/tabs/playback-settings-tab.slint:31
+msgctxt "PlaybackSettingsTab"
+msgid "Front Rechts"
+msgstr "Avant droit"
+
+#: ui/tabs/playback-settings-tab.slint:32
+msgctxt "PlaybackSettingsTab"
+msgid "Center"
+msgstr "Centre"
+
+#: ui/tabs/playback-settings-tab.slint:33
+msgctxt "PlaybackSettingsTab"
+msgid "Subwoofer"
+msgstr "Caisson de basses"
+
+#: ui/tabs/playback-settings-tab.slint:34
+msgctxt "PlaybackSettingsTab"
+msgid "Hinten Links"
+msgstr "Arrière gauche"
+
+#: ui/tabs/playback-settings-tab.slint:35
+msgctxt "PlaybackSettingsTab"
+msgid "Hinten Rechts"
+msgstr "Arrière droit"
+
+#: ui/tabs/playback-settings-tab.slint:36
+msgctxt "PlaybackSettingsTab"
+msgid "Seite Links"
+msgstr "Latéral gauche"
+
+#: ui/tabs/playback-settings-tab.slint:37
+msgctxt "PlaybackSettingsTab"
+msgid "Seite Rechts"
+msgstr "Latéral droit"
+
+#: ui/tabs/playback-settings-tab.slint:44
+msgctxt "PlaybackSettingsTab"
+msgid "Wiedergabe"
+msgstr "Lecture"
+
+#: ui/tabs/playback-settings-tab.slint:56
+msgctxt "PlaybackSettingsTab"
+msgid "Kopfhörer"
+msgstr "Casque"
+
+#: ui/tabs/playback-settings-tab.slint:56
+msgctxt "PlaybackSettingsTab"
+msgid "Virtueller HRTF-Surround (7.1)"
+msgstr "Surround virtuel HRTF (7.1)"
+
+#: ui/tabs/playback-settings-tab.slint:57
+msgctxt "PlaybackSettingsTab"
+msgid "Lautsprecher"
+msgstr "Haut-parleurs"
+
+#: ui/tabs/playback-settings-tab.slint:57
+msgctxt "PlaybackSettingsTab"
+msgid "Stereo, direkt über die G8-Hardware"
+msgstr "Stéréo, directement via le matériel G8"
+
+#: ui/tabs/playback-settings-tab.slint:77
+msgctxt "PlaybackSettingsTab"
+msgid "Klicke auf eine Position im Kreis, um einen Testton von dort zu hören. Im Kopfhörer-Modus klingt jede Position dank HRTF-Faltung räumlich unterschiedlich."
+msgstr "Cliquez sur une position dans le cercle pour entendre une tonalité de test depuis cet endroit. En mode casque, chaque position sonne différemment dans l'espace grâce à la convolution HRTF."
+
+#: ui/tabs/playback-settings-tab.slint:137
+msgctxt "PlaybackSettingsTab"
+msgid "Testen"
+msgstr "Tester"
+
+#: ui/tabs/settings-tab.slint:83
+msgctxt "SettingsTab"
+msgid "Prüfung fehlgeschlagen"
+msgstr "Échec de la vérification"
+
+#: ui/tabs/settings-tab.slint:83
+msgctxt "SettingsTab"
+msgid "Update verfügbar"
+msgstr "Mise à jour disponible"
+
+#: ui/tabs/settings-tab.slint:83
+msgctxt "SettingsTab"
+msgid "Keine neue Firmware"
+msgstr "Aucun nouveau micrologiciel"
+
+#: ui/tabs/settings-tab.slint:90
+msgctxt "SettingsTab"
+msgid "Der Update-Server war nicht erreichbar (keine Internetverbindung?). Bitte später erneut versuchen."
+msgstr "Le serveur de mise à jour était injoignable (pas de connexion Internet ?). Veuillez réessayer plus tard."
+
+#: ui/tabs/settings-tab.slint:92
+msgctxt "SettingsTab"
+msgid "Eine neuere Firmware ({}) ist verfügbar. Firmware-Updates werden von dieser App nicht unterstützt – bitte dafür die offizielle Creative-Software unter Windows verwenden."
+msgstr "Un micrologiciel plus récent ({}) est disponible. Les mises à jour du micrologiciel ne sont pas prises en charge par cette application -- veuillez utiliser le logiciel officiel Creative sous Windows à cet effet."
+
+#: ui/tabs/settings-tab.slint:93
+msgctxt "SettingsTab"
+msgid "Es ist keine neuere Firmware verfügbar."
+msgstr "Aucun micrologiciel plus récent n'est disponible."
+
+#: ui/tabs/settings-tab.slint:102
+msgctxt "SettingsTab"
+msgid "OK"
+msgstr "OK"
+
+#: ui/tabs/settings-tab.slint:113
+msgctxt "SettingsTab"
+msgid "Verbunden (USB 041e:329b)"
+msgstr "Connecté (USB 041e:329b)"
+
+#: ui/tabs/settings-tab.slint:113
+msgctxt "SettingsTab"
+msgid "Nicht verbunden"
+msgstr "Non connecté"
+
+#: ui/tabs/settings-tab.slint:114
+msgctxt "SettingsTab"
+msgid "S/N: {}"
+msgstr "N° de série : {}"
+
+#: ui/tabs/settings-tab.slint:118
+msgctxt "SettingsTab"
+msgid "Gerät zurücksetzen"
+msgstr "Réinitialiser l'appareil"
+
+#: ui/tabs/settings-tab.slint:119
+msgctxt "SettingsTab"
+msgid "Nach Firmware-Update suchen"
+msgstr "Rechercher une mise à jour du micrologiciel"
+
+#: ui/tabs/settings-tab.slint:120
+msgctxt "SettingsTab"
+msgid "Firmware: {}"
+msgstr "Micrologiciel : {}"
+
+#: ui/tabs/settings-tab.slint:124
+msgctxt "SettingsTab"
+msgid "Version {}"
+msgstr "Version {}"
+
+#: ui/tabs/settings-tab.slint:133
+msgctxt "SettingsTab"
+msgid "Energieeinsparung"
+msgstr "Économie d'énergie"
+
+#: ui/tabs/settings-tab.slint:138
+msgctxt "SettingsTab"
+msgid "Sound Blaster Logo LED"
+msgstr "LED du logo Sound Blaster"
+
+#: ui/tabs/settings-tab.slint:146
+msgctxt "SettingsTab"
+msgid "Anwendung"
+msgstr "Application"
+
+#: ui/tabs/settings-tab.slint:167
+msgctxt "SettingsTab"
+msgid "Dark Mode"
+msgstr "Mode sombre"
+
+#: ui/tabs/settings-tab.slint:175
+msgctxt "SettingsTab"
+msgid "Mit dem System starten"
+msgstr "Démarrer avec le système"
+
+#: ui/tabs/settings-tab.slint:178
+msgctxt "SettingsTab"
+msgid "Beim Schließen"
+msgstr "À la fermeture"
+
+#: ui/tabs/settings-tab.slint:199
+msgctxt "SettingsTab"
+msgid "Schließen"
+msgstr "Fermer"
+
+#: ui/tabs/settings-tab.slint:215
+msgctxt "SettingsTab"
+msgid "In den Tray minimieren"
+msgstr "Réduire dans la barre d'état système"
+
+#: ui/tabs/settings-tab.slint:231
+msgctxt "SettingsTab"
+msgid "Lautstärke-Synchronisierung"
+msgstr "Synchronisation du volume"
+
+#: ui/tabs/settings-tab.slint:235
+msgctxt "SettingsTab"
+msgid "Wird nicht benötigt: dein System hält Gerät- und PC-Lautstärke bereits automatisch synchron, auch wenn diese App nicht läuft."
+msgstr "Non nécessaire : votre système synchronise déjà automatiquement le volume de l'appareil et du PC, même lorsque cette application n'est pas en cours d'exécution."
+
+#: ui/tabs/misc-tabs.slint:54
+msgctxt "ModiDecoderTab"
+msgid "Im Direct Mode erhalten Sie Audio in seiner reinsten Form direkt von der Quelle. Alle Audioeffekte werden nicht auf die Ausgabe angewendet."
+msgstr "En mode direct, vous obtenez l'audio sous sa forme la plus pure directement depuis la source. Aucun effet audio n'est appliqué à la sortie."
+
+#: ui/tabs/misc-tabs.slint:80
+msgctxt "ModiDecoderTab"
+msgid "Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel."
+msgstr "Conçu pour vous aider à entendre ce que vous ne pouvez pas voir, comme les pas, la parole et les changements d'armes."
+
+#: ui/tabs/misc-tabs.slint:86
+msgctxt "ModiDecoderTab"
+msgid "Einige Audioeffekte werden nicht für die Ausgabe übernommen."
+msgstr "Certains effets audio ne sont pas appliqués à la sortie."
+
+#: ui/tabs/misc-tabs.slint:92
+msgctxt "ModiDecoderTab"
+msgid "Zugriffstaste"
+msgstr "Touche d'accès"
+
+#: ui/tabs/misc-tabs.slint:101
+msgctxt "ModiDecoderTab"
+msgid "Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift."
+msgstr "Pour attribuer un raccourci, appuyez sur la touche du clavier en combinaison avec Ctrl, Alt ou Maj."
+
+#: ui/tabs/misc-tabs.slint:106
+msgctxt "ModiDecoderTab"
+msgid "Klicken Sie, um den Tastaturanschlag zuzuweisen"
+msgstr "Cliquez pour attribuer la combinaison de touches"
+
+#: ui/tabs/misc-tabs.slint:117
+msgctxt "ModiDecoderTab"
+msgid "Decoder"
+msgstr "Décodeur"
+
+#: ui/tabs/misc-tabs.slint:130
+msgctxt "ModiDecoderTab"
+msgid "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder."
+msgstr "Lisez facilement vos médias Dolby Digital avec le décodeur intégré."
+
+#: ui/tabs/misc-tabs.slint:132
+msgctxt "ModiDecoderTab"
+msgid "Normal"
+msgstr "Normal"
+
+#: ui/tabs/misc-tabs.slint:132
+msgctxt "ModiDecoderTab"
+msgid "Voll"
+msgstr "Complet"
+
+#: ui/tabs/misc-tabs.slint:132
+msgctxt "ModiDecoderTab"
+msgid "Nacht"
+msgstr "Nuit"
+
+#: ui/tabs/acoustic-engine-tab.slint:69
+msgctxt "AcousticEngineTab"
+msgid "Kopfhörer"
+msgstr "Casque"
+
+#: ui/tabs/acoustic-engine-tab.slint:83
+msgctxt "AcousticEngineTab"
+msgid "Lautsprecher"
+msgstr "Haut-parleurs"
+
+#: ui/tabs/acoustic-engine-tab.slint:95
+msgctxt "AcousticEngineTab"
+msgid "Kopfhörer aktiviert virtuellen HRTF-Surround (SBX) – PipeWire startet dafür kurz neu."
+msgstr "Le casque active le surround virtuel HRTF (SBX) -- PipeWire redémarre brièvement pour cela."
+
+#: ui/tabs/acoustic-engine-tab.slint:96
+msgctxt "AcousticEngineTab"
+msgid "Lautsprecher gibt direkt über die G8-Hardware aus, ohne virtuellen Surround."
+msgstr "Les haut-parleurs sortent directement via le matériel G8, sans surround virtuel."
+
+#: ui/tabs/acoustic-engine-tab.slint:120
+msgctxt "AcousticEngineTab"
+msgid "Erzeugt ein beispielloses Maß an Audio-Realismus, indem virtuelle Lautsprecher um Sie herum erzeugt werden."
+msgstr "Crée un niveau de réalisme audio sans précédent en générant des haut-parleurs virtuels autour de vous."
+
+#: ui/tabs/acoustic-engine-tab.slint:133
+msgctxt "AcousticEngineTab"
+msgid "Stellt sicher, dass Musik so klingt, wie der Künstler ursprünglich beabsichtigt hat, indem man jedes Audio-Detail hören kann."
+msgstr "Garantit que la musique sonne comme l'artiste l'a voulu à l'origine, en vous permettant d'entendre chaque détail audio."
+
+#: ui/tabs/acoustic-engine-tab.slint:146
+msgctxt "AcousticEngineTab"
+msgid "Deutlich verbessert das Klangerlebnis durch die bessere Wiedergabe der tiefen Töne."
+msgstr "Améliore nettement l'expérience sonore grâce à une meilleure reproduction des sons graves."
+
+#: ui/tabs/acoustic-engine-tab.slint:201
+msgctxt "AcousticEngineTab"
+msgid "Nacht"
+msgstr "Nuit"
+
+#: ui/tabs/acoustic-engine-tab.slint:212
+msgctxt "AcousticEngineTab"
+msgid "Normal"
+msgstr "Normal"
+
+#: ui/tabs/acoustic-engine-tab.slint:223
+msgctxt "AcousticEngineTab"
+msgid "Laut"
+msgstr "Fort"
+
+#: ui/tabs/acoustic-engine-tab.slint:234
+msgctxt "AcousticEngineTab"
+msgid "Intelligenterweise verringert abrupte Lautstärkeänderungen durch automatische Lautstärkeanpassung der Audiowiedergabe."
+msgstr "Réduit intelligemment les changements de volume abrupts grâce à un ajustement automatique du volume de lecture audio."
+
+#: ui/tabs/acoustic-engine-tab.slint:249
+msgctxt "AcousticEngineTab"
+msgid "Intelligenterweise verstärkt Stimmen in Musik und Filmen für eine deutlich klarere Stimmenwiedergabe."
+msgstr "Amplifie intelligemment les voix dans la musique et les films pour une restitution vocale nettement plus claire."
+
+#: ui/tabs/equalizer-tab.slint:127
+msgctxt "EqualizerTab"
+msgid "Eigenes 1"
+msgstr "Personnalisé 1"
+
+#: ui/tabs/equalizer-tab.slint:130
+msgctxt "EqualizerTab"
+msgid "Eigenes 2"
+msgstr "Personnalisé 2"
+
+#: ui/tabs/equalizer-tab.slint:133
+msgctxt "EqualizerTab"
+msgid "Eigenes 3"
+msgstr "Personnalisé 3"
+
+#: ui/tabs/equalizer-tab.slint:235
+msgctxt "EqualizerTab"
+msgid "Equalizer"
+msgstr "Égaliseur"
+
+#: ui/tabs/equalizer-tab.slint:472
+msgctxt "EqualizerTab"
+msgid "Vorverstärker"
+msgstr "Préamplificateur"
+
+#: ui/tabs/equalizer-tab.slint:483
+msgctxt "EqualizerTab"
+msgid "Bass"
+msgstr "Graves"
+
+#: ui/tabs/equalizer-tab.slint:494
+msgctxt "EqualizerTab"
+msgid "Höhen"
+msgstr "Aigus"
+
+#: ui/tabs/equalizer-tab.slint:507
+msgctxt "EqualizerTab"
+msgid "EQ-Preset"
+msgstr "Préréglage EQ"
+
+#: ui/tabs/equalizer-tab.slint:532
+msgctxt "EqualizerTab"
+msgid "Speichern"
+msgstr "Enregistrer"
+
+#: ui/tabs/sound-mode-tab.slint:50
+msgctxt "SoundModeTab"
+msgid "Sound-Modus"
+msgstr "Mode sonore"
+
+#: ui/tabs/sound-mode-tab.slint:55
+msgctxt "SoundModeTab"
+msgid "Im Gerät"
+msgstr "Sur l'appareil"
+
+#: ui/tabs/sound-mode-tab.slint:87
+msgctxt "SoundModeTab"
+msgid "Kopfhörer"
+msgstr "Casque"
+
+#: ui/tabs/sound-mode-tab.slint:101
+msgctxt "SoundModeTab"
+msgid "Lautsprecher"
+msgstr "Haut-parleurs"
+
+#: ui/tabs/sound-mode-tab.slint:164
+msgctxt "SoundModeTab"
+msgid "Aus"
+msgstr "Désactivé"
+
+#: ui/tabs/sound-mode-tab.slint:224
+msgctxt "SoundModeTab"
+msgid "Equalizer"
+msgstr "Égaliseur"

@@ -63,7 +63,7 @@ export component MixerRow inherits HorizontalLayout {
             VerticalLayout {
                 padding: 10px;
                 spacing: 6px;
-                Text { text: "Balance"; font-weight: 600; font-size: 13px; }
+                Text { text: @tr("Balance"); font-weight: 600; font-size: 13px; }
                 HorizontalLayout {
                     spacing: 6px;
                     Text { text: "L"; vertical-alignment: center; }
@@ -78,7 +78,7 @@ export component MixerRow inherits HorizontalLayout {
                     horizontal-alignment: center;
                     font-size: 11px;
                     color: gray;
-                    text: abs(balance) < 1 ? "Mitte" : balance < 0 ? round(-balance) + "% links" : round(balance) + "% rechts";
+                    text: abs(balance) < 1 ? @tr("Mitte") : balance < 0 ? @tr("{}% links", round(-balance)) : @tr("{}% rechts", round(balance));
                 }
             }
         }
@@ -100,6 +100,11 @@ export component MixerTab inherits VerticalLayout {
 
     spacing: 16px;
     padding: 16px;
+    // Ohne alignment: start strecken sich VerticalLayouts standardmäßig
+    // auf die volle verfügbare Höhe – die Karten wurden dadurch viel
+    // höher als ihr Inhalt, mit übergroßem Leerraum zwischen Überschrift
+    // und erster Reglerzeile (siehe HANDOFF.md 2026-08-24).
+    alignment: start;
 
     // entity-id indiziert Rust-seitig direkt in die ALSA-Control-Namenstabelle
     // (mixer.rs) – die G8 exponiert diese Standard-UAC-Feature-Units bereits
@@ -119,10 +124,11 @@ export component MixerTab inherits VerticalLayout {
             // spacing) – auf Nutzerwunsch, damit die Überschrift optisch
             // klarer von den Reglern abgesetzt ist.
             spacing: 16px;
-            Text { text: "Wiedergabe"; font-weight: 700; }
+            alignment: start;
+            Text { text: @tr("Wiedergabe"); font-weight: 700; }
             VerticalLayout {
                 spacing: 8px;
-                MixerRow { label: "Lautsprecher"; entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: @tr("Lautsprecher"); entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
             }
         }
     }
@@ -133,7 +139,8 @@ export component MixerTab inherits VerticalLayout {
         VerticalLayout {
             padding: 16px;
             spacing: 16px;
-            Text { text: "Überwachung"; font-weight: 700; }
+            alignment: start;
+            Text { text: @tr("Überwachung"); font-weight: 700; }
             VerticalLayout {
                 spacing: 8px;
                 MixerRow { label: "Line In"; entity-id: 1; level: monitor-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
@@ -149,7 +156,8 @@ export component MixerTab inherits VerticalLayout {
         VerticalLayout {
             padding: 16px;
             spacing: 16px;
-            Text { text: "Aufnahme"; font-weight: 700; }
+            alignment: start;
+            Text { text: @tr("Aufnahme"); font-weight: 700; }
             VerticalLayout {
                 spacing: 8px;
                 MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }

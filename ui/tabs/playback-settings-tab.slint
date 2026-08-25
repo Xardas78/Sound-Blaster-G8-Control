@@ -27,21 +27,21 @@ export component PlaybackSettingsTab inherits VerticalLayout {
     // der 344x327-ViewBox). Kanalindex entspricht audio.position in der
     // Filter-Chain-Config: FL FR FC LFE RL RR SL SR.
     property <[{ x: float, y: float, ch: int, label: string }]> speaker-positions: [
-        { x: 0.205, y: 0.294, ch: 0, label: "Front Links" },
-        { x: 0.774, y: 0.295, ch: 1, label: "Front Rechts" },
-        { x: 0.488, y: 0.159, ch: 2, label: "Center" },
-        { x: 0.889, y: 0.155, ch: 3, label: "Subwoofer" },
-        { x: 0.202, y: 0.895, ch: 4, label: "Hinten Links" },
-        { x: 0.773, y: 0.894, ch: 5, label: "Hinten Rechts" },
-        { x: 0.083, y: 0.593, ch: 6, label: "Seite Links" },
-        { x: 0.894, y: 0.593, ch: 7, label: "Seite Rechts" },
+        { x: 0.205, y: 0.294, ch: 0, label: @tr("Front Links") },
+        { x: 0.774, y: 0.295, ch: 1, label: @tr("Front Rechts") },
+        { x: 0.488, y: 0.159, ch: 2, label: @tr("Center") },
+        { x: 0.889, y: 0.155, ch: 3, label: @tr("Subwoofer") },
+        { x: 0.202, y: 0.895, ch: 4, label: @tr("Hinten Links") },
+        { x: 0.773, y: 0.894, ch: 5, label: @tr("Hinten Rechts") },
+        { x: 0.083, y: 0.593, ch: 6, label: @tr("Seite Links") },
+        { x: 0.894, y: 0.593, ch: 7, label: @tr("Seite Rechts") },
     ];
 
     padding: 16px;
     spacing: 16px;
     alignment: start;
 
-    Text { text: "Wiedergabe"; font-size: 20px; font-weight: 700; }
+    Text { text: @tr("Wiedergabe"); font-size: 20px; font-weight: 700; }
 
     HorizontalLayout {
         spacing: 32px;
@@ -53,8 +53,8 @@ export component PlaybackSettingsTab inherits VerticalLayout {
             alignment: start;
 
             for entry[i] in [
-                { label: "Kopfhörer", detail: "Virtueller HRTF-Surround (7.1)" },
-                { label: "Lautsprecher (Line Out)", detail: "Stereo, direkt über die G8-Hardware" },
+                { label: @tr("Kopfhörer"), detail: @tr("Virtueller HRTF-Surround (7.1)") },
+                { label: @tr("Lautsprecher"), detail: @tr("Stereo, direkt über die G8-Hardware") },
             ]: HorizontalLayout {
                 spacing: 8px;
                 Rectangle {
@@ -74,7 +74,7 @@ export component PlaybackSettingsTab inherits VerticalLayout {
             Rectangle { height: 1px; background: #e0e0e0; }
 
             Text {
-                text: "Klicke auf eine Position im Kreis, um einen Testton von dort zu hören. Im Kopfhörer-Modus klingt jede Position dank HRTF-Faltung räumlich unterschiedlich.";
+                text: @tr("Klicke auf eine Position im Kreis, um einen Testton von dort zu hören. Im Kopfhörer-Modus klingt jede Position dank HRTF-Faltung räumlich unterschiedlich.");
                 wrap: word-wrap;
                 font-size: 14px;
                 color: gray;
@@ -134,7 +134,7 @@ export component PlaybackSettingsTab inherits VerticalLayout {
                         clicked => { speaker-test-cycle-clicked(); }
                     }
                     Text {
-                        text: "Testen";
+                        text: @tr("Testen");
                         color: white;
                         font-weight: 600;
                         horizontal-alignment: center;

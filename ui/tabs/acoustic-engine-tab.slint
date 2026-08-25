@@ -1,5 +1,5 @@
-import { EffectSlider } from "../effect-slider.slint";
-import { Slider, Switch } from "std-widgets.slint";
+import { EffectSlider, CompactSwitch } from "../effect-slider.slint";
+import { Slider, Palette } from "std-widgets.slint";
 
 // Entspricht der "Acoustic Engine"-Seite im Original (siehe Screenshot im
 // Projektordner). Kopfhörer/Lautsprecher-Umschalter oben ist rein
@@ -50,8 +50,9 @@ export component AcousticEngineTab inherits VerticalLayout {
     // nicht linksbündig).
     HorizontalLayout {
         alignment: center;
+        // Bewusst OHNE feste width, siehe settings-tab.slint ("Beim
+        // Schließen") -- Breite ergibt sich aus dem Inhalt.
         Rectangle {
-            width: 340px;
             height: 32px;
             border-radius: 6px;
             background: #e0e0e0;
@@ -61,21 +62,29 @@ export component AcousticEngineTab inherits VerticalLayout {
                 Rectangle {
                     background: output-target == 0 ? #3d7fd9 : transparent;
                     TouchArea { clicked => { output-target-changed(0); } }
-                    Text {
-                        text: "Kopfhörer";
-                        color: output-target == 0 ? white : #333333;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        Text {
+                            text: @tr("Kopfhörer");
+                            color: output-target == 0 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
                 Rectangle {
                     background: output-target == 1 ? #3d7fd9 : transparent;
                     TouchArea { clicked => { output-target-changed(1); } }
-                    Text {
-                        text: "Lautsprecher";
-                        color: output-target == 1 ? white : #333333;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        Text {
+                            text: @tr("Lautsprecher");
+                            color: output-target == 1 ? white : #333333;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }
@@ -83,39 +92,63 @@ export component AcousticEngineTab inherits VerticalLayout {
     }
     Text {
         text: output-target == 0
-            ? "Kopfhörer aktiviert virtuellen HRTF-Surround (SBX) – PipeWire startet dafür kurz neu."
-            : "Lautsprecher gibt direkt über die G8-Hardware aus, ohne virtuellen Surround.";
+            ? @tr("Kopfhörer aktiviert virtuellen HRTF-Surround (SBX) – PipeWire startet dafür kurz neu.")
+            : @tr("Lautsprecher gibt direkt über die G8-Hardware aus, ohne virtuellen Surround.");
         horizontal-alignment: center;
         font-size: 13px;
         color: gray;
     }
 
+    // Fünf gleich breite/hohe Karten (wie die Mixer-Tab-Karten, siehe
+    // mixer-tab.slint) statt loser Spalten – auf Nutzerwunsch: Breite an
+    // der kurzen Bass-Beschreibung orientiert statt an der längsten
+    // (Crystalizer wickelt dadurch auf mehr Zeilen um, das ist gewollt).
+    // `alignment: space-between` statt fester `spacing`, damit die erste
+    // Karte links und die letzte rechts bündig sitzen und der Zwischenraum
+    // automatisch gleichmäßig verteilt wird – kein manuelles Verschieben
+    // des rechten Rands nötig. Feste `height` auf allen Karten, da die
+    // Beschreibungstexte unterschiedlich viele Zeilen brauchen.
     HorizontalLayout {
-        spacing: 32px;
+        alignment: space-between;
 
-        EffectSlider {
-            label: "Surround";
-            description: "Erzeugt ein beispielloses Maß an Audio-Realismus, indem virtuelle Lautsprecher um Sie herum erzeugt werden.";
-            effect-enabled: surround-on;
-            value: surround-level;
-            toggled(on) => { surround-on = on; param-changed(0, on ? 1.0 : 0.0); }
-            value-changed(v) => { surround-level = v; param-changed(1, v / 100); }
+        Rectangle {
+            width: 240px;
+            border-radius: 8px;
+            background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+            EffectSlider {
+                label: "Surround";
+                description: @tr("Erzeugt ein beispielloses Maß an Audio-Realismus, indem virtuelle Lautsprecher um Sie herum erzeugt werden.");
+                effect-enabled <=> surround-on;
+                value: surround-level;
+                toggled(on) => { param-changed(0, on ? 1.0 : 0.0); }
+                value-changed(v) => { surround-level = v; param-changed(1, v / 100); }
+            }
         }
-        EffectSlider {
-            label: "Crystalizer";
-            description: "Stellt sicher, dass Musik so klingt, wie der Künstler ursprünglich beabsichtigt hat, indem man jedes Audio-Detail hören kann.";
-            effect-enabled: crystalizer-on;
-            value: crystalizer-level;
-            toggled(on) => { crystalizer-on = on; param-changed(7, on ? 1.0 : 0.0); }
-            value-changed(v) => { crystalizer-level = v; param-changed(8, v / 100); }
+        Rectangle {
+            width: 240px;
+            border-radius: 8px;
+            background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+            EffectSlider {
+                label: "Crystalizer";
+                description: @tr("Stellt sicher, dass Musik so klingt, wie der Künstler ursprünglich beabsichtigt hat, indem man jedes Audio-Detail hören kann.");
+                effect-enabled <=> crystalizer-on;
+                value: crystalizer-level;
+                toggled(on) => { param-changed(7, on ? 1.0 : 0.0); }
+                value-changed(v) => { crystalizer-level = v; param-changed(8, v / 100); }
+            }
         }
-        EffectSlider {
-            label: "Bass";
-            description: "Deutlich verbessert das Klangerlebnis durch die bessere Wiedergabe der tiefen Töne.";
-            effect-enabled: bass-on;
-            value: bass-level;
-            toggled(on) => { bass-on = on; param-changed(24, on ? 1.0 : 0.0); }
-            value-changed(v) => { bass-level = v; param-changed(25, v / 100); }
+        Rectangle {
+            width: 240px;
+            border-radius: 8px;
+            background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+            EffectSlider {
+                label: "Bass";
+                description: @tr("Deutlich verbessert das Klangerlebnis durch die bessere Wiedergabe der tiefen Töne.");
+                effect-enabled <=> bass-on;
+                value: bass-level;
+                toggled(on) => { param-changed(24, on ? 1.0 : 0.0); }
+                value-changed(v) => { bass-level = v; param-changed(25, v / 100); }
+            }
         }
 
         // Smart Volume: eigener Block statt EffectSlider, weil zusätzlich
@@ -124,91 +157,101 @@ export component AcousticEngineTab inherits VerticalLayout {
         // 0.0=Normal, 1.0=Laut, 2.0=Nacht). Reihenfolge/Position exakt
         // nach Wireframe-Koordinaten: Leiste kommt NACH dem Schalter,
         // nicht daneben.
-        VerticalLayout {
-            spacing: 8px;
-            alignment: start;
-            width: 230px;
+        Rectangle {
+            width: 240px;
+            border-radius: 8px;
+            background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
+                alignment: start;
 
-            Text { text: "Smart Volume"; horizontal-alignment: center; font-weight: 600; }
-            Text { text: round(smart-volume-level); horizontal-alignment: center; }
+                Text { text: "Smart Volume"; horizontal-alignment: center; font-weight: 600; }
+                Text { text: round(smart-volume-level); horizontal-alignment: center; }
 
-            Slider {
-                orientation: vertical;
-                minimum: 0; maximum: 100;
-                value: smart-volume-level;
-                enabled: smart-volume-on;
-                height: 300px;
-                changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
-            }
-
-            HorizontalLayout {
-                alignment: center;
-                Switch {
-                    checked: smart-volume-on;
-                    toggled => { smart-volume-on = self.checked; param-changed(4, self.checked ? 1.0 : 0.0); }
+                Slider {
+                    orientation: vertical;
+                    minimum: 0; maximum: 100;
+                    value: smart-volume-level;
+                    enabled: smart-volume-on;
+                    height: 300px;
+                    changed(v) => { smart-volume-level = v; param-changed(5, v / 100); }
                 }
-            }
-
-            Rectangle {
-                height: 28px;
-                border-radius: 6px;
-                background: #e0e0e0;
-                clip: true;
-                opacity: smart-volume-on ? 1.0 : 0.5;
 
                 HorizontalLayout {
-                    Rectangle {
-                        background: smart-volume-mode == 2 ? #3d7fd9 : transparent;
-                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 2; param-changed(6, 2.0); } }
-                        Text {
-                            text: "Nacht";
-                            font-size: 11px;
-                            color: smart-volume-mode == 2 ? white : #333333;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
+                    alignment: center;
+                    CompactSwitch {
+                        checked <=> smart-volume-on;
+                        toggled(on) => { param-changed(4, on ? 1.0 : 0.0); }
                     }
-                    Rectangle {
-                        background: smart-volume-mode == 0 ? #3d7fd9 : transparent;
-                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 0; param-changed(6, 0.0); } }
-                        Text {
-                            text: "Normal";
-                            font-size: 11px;
-                            color: smart-volume-mode == 0 ? white : #333333;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                }
+
+                Rectangle {
+                    height: 28px;
+                    border-radius: 6px;
+                    background: #e0e0e0;
+                    clip: true;
+                    opacity: smart-volume-on ? 1.0 : 0.5;
+
+                    HorizontalLayout {
+                        Rectangle {
+                            background: smart-volume-mode == 2 ? #3d7fd9 : transparent;
+                            TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 2; param-changed(6, 2.0); } }
+                            Text {
+                                text: @tr("Nacht");
+                                font-size: 13px;
+                                color: smart-volume-mode == 2 ? white : #333333;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
                         }
-                    }
-                    Rectangle {
-                        background: smart-volume-mode == 1 ? #3d7fd9 : transparent;
-                        TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 1; param-changed(6, 1.0); } }
-                        Text {
-                            text: "Laut";
-                            font-size: 11px;
-                            color: smart-volume-mode == 1 ? white : #333333;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                        Rectangle {
+                            background: smart-volume-mode == 0 ? #3d7fd9 : transparent;
+                            TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 0; param-changed(6, 0.0); } }
+                            Text {
+                                text: @tr("Normal");
+                                font-size: 13px;
+                                color: smart-volume-mode == 0 ? white : #333333;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        Rectangle {
+                            background: smart-volume-mode == 1 ? #3d7fd9 : transparent;
+                            TouchArea { enabled: smart-volume-on; clicked => { smart-volume-mode = 1; param-changed(6, 1.0); } }
+                            Text {
+                                text: @tr("Laut");
+                                font-size: 13px;
+                                color: smart-volume-mode == 1 ? white : #333333;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
                         }
                     }
                 }
-            }
 
-            Text {
-                text: "Intelligenterweise verringert abrupte Lautstärkeänderungen durch automatische Lautstärkeanpassung der Audiowiedergabe.";
-                wrap: word-wrap;
-                horizontal-alignment: center;
-                font-size: 16px;
-                color: gray;
+                Text {
+                    text: @tr("Intelligenterweise verringert abrupte Lautstärkeänderungen durch automatische Lautstärkeanpassung der Audiowiedergabe.");
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                    font-size: 16px;
+                    color: gray;
+                }
             }
         }
 
-        EffectSlider {
-            label: "Dialog+";
-            description: "Intelligenterweise verstärkt Stimmen in Musik und Filmen für eine deutlich klarere Stimmenwiedergabe.";
-            effect-enabled: dialog-plus-on;
-            value: dialog-plus-level;
-            toggled(on) => { dialog-plus-on = on; param-changed(2, on ? 1.0 : 0.0); }
-            value-changed(v) => { dialog-plus-level = v; param-changed(3, v / 100); }
+        Rectangle {
+            width: 240px;
+            border-radius: 8px;
+            background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+            EffectSlider {
+                label: "Dialog+";
+                description: @tr("Intelligenterweise verstärkt Stimmen in Musik und Filmen für eine deutlich klarere Stimmenwiedergabe.");
+                effect-enabled <=> dialog-plus-on;
+                value: dialog-plus-level;
+                toggled(on) => { param-changed(2, on ? 1.0 : 0.0); }
+                value-changed(v) => { dialog-plus-level = v; param-changed(3, v / 100); }
+            }
         }
     }
 

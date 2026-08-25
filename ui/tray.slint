@@ -15,12 +15,12 @@ export component AppTray inherits SystemTrayIcon {
 
     Menu {
         MenuItem {
-            title: "Öffnen";
+            title: @tr("Öffnen");
             activated => { open-clicked(); }
         }
         MenuSeparator { }
         MenuItem {
-            title: "Beenden";
+            title: @tr("Beenden");
             activated => { quit-clicked(); }
         }
     }

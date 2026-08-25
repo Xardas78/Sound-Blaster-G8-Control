@@ -124,13 +124,13 @@ export component EqualizerTab inherits VerticalLayout {
         { preamp: 0, bands: [0, 3, 3, 0, 0, 0, 0, 0, 2, 0] },
         { preamp: 0, bands: [0, 0, 3, 2, 0, 0, 0, 2, 2, 0] },
     ];
-    property <string> custom1-name: "Eigenes 1";
+    property <string> custom1-name: @tr("Eigenes 1");
     property <float> custom1-preamp: 0;
     property <[float]> custom1-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    property <string> custom2-name: "Eigenes 2";
+    property <string> custom2-name: @tr("Eigenes 2");
     property <float> custom2-preamp: 0;
     property <[float]> custom2-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    property <string> custom3-name: "Eigenes 3";
+    property <string> custom3-name: @tr("Eigenes 3");
     property <float> custom3-preamp: 0;
     property <[float]> custom3-bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     // 71 feste Presets + 3 eigene Speicherplätze (Index 71-73). Reihenfolge
@@ -232,9 +232,9 @@ export component EqualizerTab inherits VerticalLayout {
     alignment: start;
 
     EffectToggle {
-        label: "Equalizer";
-        checked: eq-on;
-        toggled(on) => { eq-on = on; param-changed(9, on ? 1.0 : 0.0); }
+        label: @tr("Equalizer");
+        checked <=> eq-on;
+        toggled(on) => { param-changed(9, on ? 1.0 : 0.0); }
     }
 
     HorizontalLayout {
@@ -469,7 +469,7 @@ export component EqualizerTab inherits VerticalLayout {
                             enabled: eq-on;
                             edited(v) => { preamp = v; param-changed(10, v); }
                         }
-                        Text { text: "Vorverstärker"; horizontal-alignment: center; wrap: word-wrap; font-size: 11px; }
+                        Text { text: @tr("Vorverstärker"); horizontal-alignment: center; wrap: word-wrap; font-size: 11px; }
                     }
                     VerticalLayout {
                         width: slider-column-width;
@@ -480,7 +480,7 @@ export component EqualizerTab inherits VerticalLayout {
                             enabled: eq-on;
                             edited(v) => { bands[0] = v; param-changed(11, v); }
                         }
-                        Text { text: "Bass"; horizontal-alignment: center; }
+                        Text { text: @tr("Bass"); horizontal-alignment: center; }
                     }
                     VerticalLayout {
                         width: slider-column-width;
@@ -491,7 +491,7 @@ export component EqualizerTab inherits VerticalLayout {
                             enabled: eq-on;
                             edited(v) => { bands[9] = v; param-changed(20, v); }
                         }
-                        Text { text: "Höhen"; horizontal-alignment: center; }
+                        Text { text: @tr("Höhen"); horizontal-alignment: center; }
                     }
                 }
 
@@ -504,7 +504,7 @@ export component EqualizerTab inherits VerticalLayout {
                     spacing: 8px;
                     padding-top: 12px;
 
-                    Text { text: "EQ-Preset"; font-weight: 700; }
+                    Text { text: @tr("EQ-Preset"); font-weight: 700; }
 
                     ComboBox {
                         model: preset-names;
@@ -529,7 +529,7 @@ export component EqualizerTab inherits VerticalLayout {
                             }
                         }
                         Button {
-                            text: "Speichern";
+                            text: @tr("Speichern");
                             clicked => {
                                 if (selected-preset-index == 71) {
                                     custom1-preamp = preamp;
