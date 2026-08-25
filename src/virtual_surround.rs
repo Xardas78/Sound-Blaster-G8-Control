@@ -184,5 +184,11 @@ pub fn disable() {
         let _ = fs::remove_file(conf_path());
         restart_pipewire_preserving_volume();
         set_default_sink(HARDWARE_SINK_SECTION, HARDWARE_SINK_MATCH);
+        // Die Filter-Chain-Rohkanäle sind jetzt weg, aber WirePlumber
+        // wechselt das ALSA-Profil nicht von selbst zurück (siehe
+        // audio_profile.rs) – aktiv versuchen. main.rs prüft danach über
+        // audio_profile::is_pro_audio_profile_active(), ob es geklappt
+        // hat, und aktiviert sonst den Push-Fallback.
+        crate::audio_profile::reset_to_stereo_profile();
     });
 }

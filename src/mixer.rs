@@ -258,6 +258,29 @@ fn extract_percent(text: &str, direction: &str) -> Option<f32> {
     max
 }
 
+/// Fallback für den Pro-Audio-Profil-Fall (siehe audio_profile.rs): dort
+/// spiegelt PipeWire die ALSA-Hardware-Lautstärke nicht mehr automatisch,
+/// hier wird sie stattdessen aktiv nachgezogen. Nur sicher, wenn der
+/// Aufrufer vorher audio_profile::is_pro_audio_profile_active() geprüft
+/// hat – sonst droht wieder der Zwei-Schreiber-Bug von früher (siehe
+/// HANDOFF.md Abschnitt 7 Nachtrag 2).
+///
+/// `felt_percent` ist der taper-korrigierte "gefühlte" Wert wie er auch
+/// im Fußleisten-/Sidebar-Regler angezeigt wird (siehe get_level()) –
+/// PipeWires eigene Lautstärke-Skala ist aber linear zum rohen ALSA-Pegel,
+/// nicht zu unserer Poti-Korrekturkurve. Erst zurückrechnen (taper_uncorrect),
+/// sonst zeigt `wpctl get-volume` einen ganz anderen Wert als `amixer`
+/// tatsächlich hat (z.B. 44% statt echter 80%).
+pub fn set_pipewire_sink_volume_percent(felt_percent: f32) {
+    let alsa_percent = taper_uncorrect(felt_percent);
+    let vol = (alsa_percent / 100.0).clamp(0.0, 1.0);
+    run_with_timeout(
+        "wpctl",
+        &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{vol:.2}")],
+        CMD_TIMEOUT,
+    );
+}
+
 fn run_amixer(args: &[&str]) {
     let mut full_args = vec!["-c", CARD];
     full_args.extend_from_slice(args);
