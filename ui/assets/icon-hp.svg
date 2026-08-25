@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Aus HP&SPK.svg (Gruppe "HP") extrahiert, nur Konturen (kein Fill),
+     damit Slints Image.colorize das Icon einfarbig einfärben kann. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="71 64 23 24">
+  <path style="fill:none;stroke:#000000;stroke-width:0.9;stroke-linejoin:round" d="m 5.2734613,-111.9695 a 10,10 0 0 1 -6.17316568,9.2388 10,10 0 0 1 -10.89790262,-2.16773 10,10 0 0 1 -2.167727,-10.8979 10,10 0 0 1 9.2387953,-6.17317" transform="rotate(135)" />
+  <path style="fill:none;stroke:#000000;stroke-width:0.9;stroke-linejoin:round" d="m 74.061926,77.16574 4.249846,9.31146" />
+  <path style="fill:none;stroke:#000000;stroke-width:0.9;stroke-linejoin:round" d="m 91.030201,77.25946 -4.249846,9.31146" />
+</svg>

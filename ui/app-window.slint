@@ -4,7 +4,7 @@ import { DeviceHubTab } from "tabs/device-hub-tab.slint";
 import { PlaybackSettingsTab } from "tabs/playback-settings-tab.slint";
 import { RecordingSettingsTab } from "tabs/recording-settings-tab.slint";
 import { SettingsTab } from "tabs/settings-tab.slint";
-import { QuickControlsBar } from "quick-controls-bar.slint";
+import { Sidebar } from "sidebar.slint";
 
 // Top-Level-Struktur folgt jetzt 1:1 dem Original (siehe Screenshots im
 // Projektordner): Gerät ist der Haupt-Hub für alle Effekte/Mixer, Wiedergabe
@@ -13,7 +13,8 @@ import { QuickControlsBar } from "quick-controls-bar.slint";
 export component AppWindow inherits Window {
     title: "Sound Blaster G8 Control";
     icon: @image-url("assets/app-icon.svg");
-    width: 1372px;
+    // +170px gegenüber vorher für die feste Sidebar links (siehe unten).
+    width: 1542px;
     height: 820px;
     // Dieselbe Palette.color-scheme-Bedingung wie die Standard-Widgets
     // (Buttons, Switches, TabWidget) intern verwenden – EIN gemeinsamer
@@ -25,7 +26,7 @@ export component AppWindow inherits Window {
 
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
-    in-out property <string> device-status: "Suche Gerät …";
+    in-out property <string> device-status: @tr("Suche Gerät …");
     // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
     in property <string> app-version: "";
 
@@ -34,7 +35,7 @@ export component AppWindow inherits Window {
     // virtuellen HRTF-Surround-Sink, siehe virtual_surround.rs.
     in-out property <int> output-target: 0;
 
-    // Bloße Eigenschaftsreferenz beim Binden unten (QuickControlsBar {
+    // Bloße Eigenschaftsreferenz beim Binden unten (Sidebar {
     // speaker-level: footer-speaker-level; }) erzeugt in Slint automatisch
     // eine Zwei-Wege-Bindung: Rust kann hier per set_footer_speaker_level()
     // reinschreiben (z.B. wenn der Regler am Gerät gedreht wurde, siehe
@@ -124,46 +125,87 @@ export component AppWindow inherits Window {
         Palette.color-scheme = dark-mode-on ? ColorScheme.dark : ColorScheme.light;
     }
 
-    VerticalLayout {
-        TabWidget {
+    HorizontalLayout {
+        Sidebar {
+            output-target: output-target;
+            speaker-level: footer-speaker-level;
+            mic-level: footer-mic-level;
+            output-target-changed(t) => { output-target = t; output-target-changed(t); }
+            level-changed(id, v) => { mixer-level-changed(id, v); }
+            mute-changed(id, m) => { mute-changed(id, m); }
+        }
+
+        // Eigene Rectangle als Träger für den Grau-Streifen-Trick unten:
+        // ein Rectangle (kein Layout) lässt freie, überlappende Kind-
+        // Positionierung zu (siehe Kommentar dort), eine VerticalLayout
+        // würde die Kinder stattdessen stapeln statt überlappen lassen.
+        Rectangle {
+            // Helleres Grau hinter der Reiterleiste (wie im Creative-
+            // Referenzbild), statt der normalen Fensterfarbe – gleicher
+            // Ton wie die Karten (Palette.alternate-background). Vor dem
+            // VerticalLayout deklariert, damit es dahinter liegt und nur
+            // in dessen transparenten Bereichen (rechts neben den
+            // Reitern) durchscheint; die eigentlichen Reiter malen ihren
+            // eigenen Hintergrund selbst darüber.
+            Rectangle {
+                x: 0px;
+                y: 0px;
+                width: 100%;
+                height: 40px;
+                background: Palette.alternate-background;
+            }
+
+            VerticalLayout {
+                TabWidget {
             Tab {
-                title: "Gerät";
-                DeviceHubTab {
-                    output-target: output-target;
-                    footer-speaker-level: footer-speaker-level;
-                    footer-mic-level: footer-mic-level;
-                    ae-surround-on: ae-surround-on;
-                    ae-surround-level: ae-surround-level;
-                    ae-crystalizer-on: ae-crystalizer-on;
-                    ae-crystalizer-level: ae-crystalizer-level;
-                    ae-bass-on: ae-bass-on;
-                    ae-bass-level: ae-bass-level;
-                    ae-svm-on: ae-svm-on;
-                    ae-svm-level: ae-svm-level;
-                    ae-svm-mode: ae-svm-mode;
-                    ae-dialog-on: ae-dialog-on;
-                    ae-dialog-level: ae-dialog-level;
-                    ae-eq-on: ae-eq-on;
-                    ae-eq-preamp: ae-eq-preamp;
-                    ae-eq-bands: ae-eq-bands;
-                    ae-eq-preset-index: ae-eq-preset-index;
-                    sound-mode-selected-index: sound-mode-selected-index;
-                    playback-param-changed(id, v) => { playback-param-changed(id, v); }
-                    output-target-changed(t) => { output-target = t; output-target-changed(t); }
-                    recording-param-changed(id, v) => { recording-param-changed(id, v); }
-                    voice-morph-profile-changed(i) => { voice-morph-profile-changed(i); }
-                    mic-eq-profile-changed(i) => { mic-eq-profile-changed(i); }
-                    eq-param-changed(id, v) => { eq-param-changed(id, v); }
-                    scout-toggled(on) => { scout-toggled(on); }
-                    direct-mode-toggled(on) => { direct-mode-toggled(on); }
-                    decoder-mode-changed(m) => { decoder-mode-changed(m); }
-                    mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
-                    mixer-balance-changed(id, v) => { mixer-balance-changed(id, v); }
-                    sound-mode-preset-selected(i) => { sound-mode-preset-selected(i); }
+                title: @tr("Gerät");
+                Rectangle {
+                    // Gleicher Trick für die zweite Reiterreihe (Sound-Modus/
+                    // Acoustic Engine/…/Mixer) innerhalb von DeviceHubTab.
+                    Rectangle {
+                        x: 0px;
+                        y: 0px;
+                        width: 100%;
+                        height: 40px;
+                        background: Palette.alternate-background;
+                    }
+                    DeviceHubTab {
+                        output-target: output-target;
+                        footer-speaker-level: footer-speaker-level;
+                        footer-mic-level: footer-mic-level;
+                        ae-surround-on: ae-surround-on;
+                        ae-surround-level: ae-surround-level;
+                        ae-crystalizer-on: ae-crystalizer-on;
+                        ae-crystalizer-level: ae-crystalizer-level;
+                        ae-bass-on: ae-bass-on;
+                        ae-bass-level: ae-bass-level;
+                        ae-svm-on: ae-svm-on;
+                        ae-svm-level: ae-svm-level;
+                        ae-svm-mode: ae-svm-mode;
+                        ae-dialog-on: ae-dialog-on;
+                        ae-dialog-level: ae-dialog-level;
+                        ae-eq-on: ae-eq-on;
+                        ae-eq-preamp: ae-eq-preamp;
+                        ae-eq-bands: ae-eq-bands;
+                        ae-eq-preset-index: ae-eq-preset-index;
+                        sound-mode-selected-index: sound-mode-selected-index;
+                        playback-param-changed(id, v) => { playback-param-changed(id, v); }
+                        output-target-changed(t) => { output-target = t; output-target-changed(t); }
+                        recording-param-changed(id, v) => { recording-param-changed(id, v); }
+                        voice-morph-profile-changed(i) => { voice-morph-profile-changed(i); }
+                        mic-eq-profile-changed(i) => { mic-eq-profile-changed(i); }
+                        eq-param-changed(id, v) => { eq-param-changed(id, v); }
+                        scout-toggled(on) => { scout-toggled(on); }
+                        direct-mode-toggled(on) => { direct-mode-toggled(on); }
+                        decoder-mode-changed(m) => { decoder-mode-changed(m); }
+                        mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
+                        mixer-balance-changed(id, v) => { mixer-balance-changed(id, v); }
+                        sound-mode-preset-selected(i) => { sound-mode-preset-selected(i); }
+                    }
                 }
             }
             Tab {
-                title: "Wiedergabe";
+                title: @tr("Wiedergabe");
                 PlaybackSettingsTab {
                     output-target: output-target;
                     output-target-changed(t) => { output-target = t; output-target-changed(t); }
@@ -173,13 +215,13 @@ export component AppWindow inherits Window {
                 }
             }
             Tab {
-                title: "Aufnahme";
+                title: @tr("Aufnahme");
                 RecordingSettingsTab {
                     source-selected(i) => { capture-source-changed(i); }
                 }
             }
             Tab {
-                title: "Einstellungen";
+                title: @tr("Einstellungen");
                 SettingsTab {
                     device-connected: device-connected;
                     app-version: app-version;
@@ -205,19 +247,14 @@ export component AppWindow inherits Window {
             }
         }
 
-        QuickControlsBar {
-            speaker-level: footer-speaker-level;
-            mic-level: footer-mic-level;
-            level-changed(id, v) => { mixer-level-changed(id, v); }
-            mute-changed(id, m) => { mute-changed(id, m); }
-        }
-
-        if !device-connected: VerticalLayout {
-            padding: 8px;
-            Text {
-                horizontal-alignment: center;
-                color: #e74c3c;
-                text: device-status;
+                if !device-connected: VerticalLayout {
+                    padding: 8px;
+                    Text {
+                        horizontal-alignment: center;
+                        color: #e74c3c;
+                        text: device-status;
+                    }
+                }
             }
         }
     }
