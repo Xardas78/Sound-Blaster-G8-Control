@@ -1,3 +1,4 @@
+mod audio_profile;
 mod autostart;
 mod device;
 mod firmware;
@@ -134,6 +135,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             send(special::device_setting(special::setting_id::POWER_SAVING, s.power_saving_on));
             send(special::device_setting(special::setting_id::LOGO_LED, s.logo_led_on));
+            // Ohne dieses Kommando sendet die G8 beim Drehen des Lautstärke-
+            // reglers überhaupt keine HID-Reports (weder auf dem Consumer-
+            // Control-Interface noch sonstwo) – live per usbmon bestätigt
+            // (2026-08-24): kein einziges Paket auf dem Regler-Endpoint, bis
+            // dieses Kommando gesendet wurde. Byte-identisch aus einem
+            // Windows-Capture extrahiert, siehe HANDOFF.md Abschnitt 7.
+            send(special::device_setting(special::setting_id::VOLUME_SYNC, true));
         }
     }
     ui.set_autostart_on(autostart::is_enabled());
@@ -354,23 +362,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let device = device.clone();
         ui.on_direct_mode_toggled(move |on| {
             let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
-            // Direct Mode und SBX sind derselbe zugrundeliegende Zustand,
-            // invers zueinander (Direct Mode an = SBX-Effekte aus). Per
-            // USB-Capture "g8 neu.pcapng" UND Live-Test bestätigt: die
-            // Original-Software schaltet dabei 6 Acoustic-Engine-Toggles
-            // gemeinsam um (Surround, Dialog+, Smart Volume, Crystalizer,
-            // Equalizer, Bass) statt eines einzelnen Masterschalter-Bytes.
-            let sbx_on = !on;
-            let toggles = [
-                acoustic_engine::SURROUND_TOGGLE,
-                acoustic_engine::DIALOG_PLUS_TOGGLE,
-                acoustic_engine::SMART_VOLUME_TOGGLE,
-                acoustic_engine::CRYSTALIZER_TOGGLE,
-                acoustic_engine::BASS_TOGGLE,
-                equalizer::TOGGLE,
-            ];
-            for toggle in toggles {
-                if let Err(e) = dev.send_report(&build_toggle_report(toggle, sbx_on)) {
+            // Direct Mode ist ein echtes einzelnes Hardware-Register:
+            // `5a 39 03 00 05 <01|00>` (Geräte-Einstellungs-Familie,
+            // setting_id::DIRECT_MODE). Per frischem Windows-Capture
+            // `Directmode ein-aus.pcapng` bestätigt (2026-08-24) – derselbe
+            // Befehl, den auch der physische MODE-Knopf am Gerät auslöst.
+            //
+            // Die frühere Nachbildung über 6 einzelne Acoustic-Engine-
+            // Toggles (Surround/Dialog+/Smart Volume/Crystalizer/Bass/EQ)
+            // war nicht der echte Mechanismus UND ihr Aus-Pfad schaltete
+            // pauschal alle 6 Effekte EIN, auch die, die der Nutzer vorher
+            // bewusst aus hatte – siehe HANDOFF-REVERTED.md für die
+            // Begründung, warum sie ursprünglich eingebaut wurde (Verwechs-
+            // lung mit einem separaten "SBX-Masterschalter" in der
+            // Windows-Software, anderes Byte-Muster `5a 11 2c 07 00...`).
+            if let Err(e) = dev.send_report(&special::device_setting(special::setting_id::DIRECT_MODE, on)) {
+                eprintln!("Senden fehlgeschlagen: {e}");
+            }
+            // Windows sendet beim Einschalten zusätzlich den generischen
+            // SBX-Sync-Burst (Direct Mode umgeht alle Effekte, deaktiviert
+            // daher SBX) – siehe HANDOFF.md Abschnitt 2, analog Scout Mode.
+            if on {
+                if let Err(e) = dev.send_report(&special::sbx_sync()) {
                     eprintln!("Senden fehlgeschlagen: {e}");
                 }
             }
@@ -486,6 +499,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::spawn(move || {
             let mut dev: Option<G8Device> = G8Device::open().ok();
             let mut last_target: Option<i32> = None;
+            // DIAGNOSE (temporär, siehe HANDOFF.md Abschnitt 7 "Nachtrag
+            // 2026-08-24: Direct-Mode-Status-Bitfeld"): Im Directmode-
+            // Capture sendet das Gerät nach dem Umschalten dreimal
+            // `5a 39 05 01 ...`, wovon eine Nachricht ein Byte zwischen
+            // Direct-Mode an/aus ändert (0x20/0x00) – aber nur in diesem
+            // einen Capture beobachtet, kein Quervergleich mit anderen
+            // Einstellungen möglich. Ziel hier: alles, was mit `5a 39`
+            // anfängt, mitloggen (statt wie bisher blind zu verwerfen),
+            // um live zu sehen, ob/wie sich das Muster bei Logo/Energie-
+            // sparen/SPDIF/Volume-Sync/physischem MODE-Knopf verhält.
+            // Danach entfernen.
+            let mut last_5a39: Option<[u8; 16]> = None;
             loop {
                 let Some(d) = &dev else {
                     thread::sleep(Duration::from_secs(2));
@@ -496,7 +521,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // periodischen Status-Heartbeat, der zufällig dieselbe
                 // "5a 2c 05 01 xx"-Form hat) – sonst wird eine alte,
                 // ungültige Antwort mit der frischen Anfrage verwechselt.
-                while d.read_report(20).ok().flatten().is_some() {}
+                // [diag] TEMPORÄR breiter gefasst: alle 5a-Reports loggen
+                // (nicht nur 0x39), um zu sehen, was der physische MODE-
+                // Knopf tatsächlich sendet – laut HANDOFF.md vermutlich
+                // eher die bekannten "unaufgeforderten Pushes" 5a6e/5a1a
+                // + Heartbeat-Dump, nicht das 5a39-Muster.
+                while let Ok(Some(buf)) = d.read_report(20) {
+                    if buf[0] == 0x5a {
+                        let mut snap = [0u8; 16];
+                        snap.copy_from_slice(&buf[0..16]);
+                        if last_5a39 != Some(snap) {
+                            // Param 0x70 in Namespace 0x96 ist in keiner
+                            // bekannten Tabelle -- moeglicher Direct-Mode-
+                            // Status-Kandidat, deshalb den Float-Wert
+                            // explizit mitloggen.
+                            if buf[5] == 0x96 && buf[6] == 0x70 {
+                                let f = f32::from_le_bytes([buf[7], buf[8], buf[9], buf[10]]);
+                                eprintln!("[diag] 96/70 (Kandidat) = {f} roh={:02x?}", &buf[7..11]);
+                            }
+                            eprintln!("[diag] 5a-Report: {:02x?}", &buf[0..16]);
+                            last_5a39 = Some(snap);
+                        }
+                    }
+                }
 
                 if d.send_report(&special::query_output_target()).is_err() {
                     dev = None; // Handle tot (z.B. nach Reset) – nächste Runde neu öffnen.
@@ -525,23 +572,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::spawn(move || {
             let mut last_speaker: Option<f32> = None;
             let mut last_mic: Option<f32> = None;
+            // Normalerweise spiegelt PipeWire das ALSA-Hardware-Register von
+            // selbst (live verifiziert, siehe HANDOFF.md) – AUSSER die
+            // G8-Karte hängt im "Pro Audio"-Profil fest (Nebenwirkung des
+            // virtuellen Kopfhörer-Surrounds, siehe audio_profile.rs). Nur
+            // alle ~2s neu geprüft (audio_profile-Abfrage über `pactl list
+            // cards` ist spürbar teurer als amixer sget), nicht bei jedem Tick.
+            let mut pro_audio_active = audio_profile::is_pro_audio_profile_active();
+            let mut pro_audio_check_tick: u32 = 0;
             loop {
                 thread::sleep(Duration::from_millis(120));
+
+                pro_audio_check_tick += 1;
+                if pro_audio_check_tick >= 17 {
+                    pro_audio_check_tick = 0;
+                    pro_audio_active = audio_profile::is_pro_audio_profile_active();
+                }
 
                 if let Some(v) = mixer::get_level(0) {
                     let changed = last_speaker.map(|prev| (prev - v).abs() > 0.5).unwrap_or(true);
                     if changed {
                         last_speaker = Some(v);
-                        // Bewusst kein eigener PipeWire-Push mehr: live
-                        // verifiziert (2026-08-23, siehe HANDOFF.md), dass
-                        // PipeWire das ALSA-Hardware-Register für die G8
-                        // bereits von selbst spiegelt (wpctl get-volume
-                        // folgt dem Regler exakt, auch komplett ohne
-                        // g8-control). Ein eigener Push (früher hier plus im
-                        // inzwischen entfernten Hintergrunddienst) schrieb
-                        // denselben Wert nur unnötig ein zweites Mal, mit
-                        // leicht verzögerter Ablesung – das zeigte sich als
-                        // kurzes "auf 0% zurückspringen" statt zu helfen.
+                        // Bewusst kein UNBEDINGTER eigener PipeWire-Push:
+                        // live verifiziert (2026-08-23, siehe HANDOFF.md),
+                        // dass PipeWire das ALSA-Hardware-Register für die G8
+                        // im Normalfall bereits von selbst spiegelt (wpctl
+                        // get-volume folgt dem Regler exakt, auch komplett
+                        // ohne g8-control). Ein unbedingter Push (früher hier
+                        // plus im inzwischen entfernten Hintergrunddienst)
+                        // schrieb denselben Wert dann unnötig ein zweites
+                        // Mal, mit leicht verzögerter Ablesung – das zeigte
+                        // sich als kurzes "auf 0% zurückspringen". Nur im
+                        // erkannten Pro-Audio-Sonderfall (s.o.) ist ein
+                        // eigener Push nötig UND sicher (dort spiegelt
+                        // PipeWire ohnehin nicht selbst, kein Zwei-Schreiber-
+                        // Konflikt).
+                        if pro_audio_active {
+                            mixer::set_pipewire_sink_volume_percent(v);
+                        }
                         let weak = weak.clone();
                         let _ = weak.upgrade_in_event_loop(move |ui| ui.set_footer_speaker_level(v));
                     }

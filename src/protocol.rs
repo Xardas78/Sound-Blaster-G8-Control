@@ -514,6 +514,17 @@ mod tests {
     }
 
     #[test]
+    fn direct_mode_report() {
+        // Byte-genau gegen das Windows-Capture
+        // captures/windows/einstellungen/Directmode ein-aus.pcapng
+        // (2026-08-24, Frames 31/731).
+        let on = special::device_setting(special::setting_id::DIRECT_MODE, true);
+        assert_eq!(&on[0..6], &[0x5a, 0x39, 0x03, 0x00, 0x05, 0x01]);
+        let off = special::device_setting(special::setting_id::DIRECT_MODE, false);
+        assert_eq!(&off[0..6], &[0x5a, 0x39, 0x03, 0x00, 0x05, 0x00]);
+    }
+
+    #[test]
     fn decoder_mode_report() {
         let r = build_level_report(decoder::MODE, decoder::DecoderMode::Nacht.as_value());
         assert_eq!(&r[0..6], &[0x5a, 0x12, 0x07, 0x01, 0x97, 0x02]);
