@@ -35,6 +35,7 @@ export component SoundModeTab inherits VerticalLayout {
     // Index in protocol.rs::sound_mode::PRESETS (0-basiert, OHNE den
     // "Im Gerät"-Platzhalter unten in der Dropdown-Liste).
     callback preset-selected(int);
+    callback eq-preset-user-selected(int);
 
     // 0 = "Im Gerät" (kein festes Preset gewählt, aktuelle Live-Werte,
     // entspricht dem Original-Screenshot), 1..60 = sound_mode::PRESETS.
@@ -55,7 +56,7 @@ export component SoundModeTab inherits VerticalLayout {
             @tr("Im Gerät"),
             "64 Audio Aspire Series", "Adventure and Action", "Apex Legends", "Arena Of Valor", "Assetto Corsa", "Baldur's Gate 3", "Bass Boost", "Bass Cut", "Battle Royale", "Battlefield Series", "Black Myth: Wukong", "Call of Duty Series", "Counter-Strike 2", "Counter-Strike: Global Offensive", "Cyberpunk 2077", "Death Stranding", "Delta Force", "Diablo Series", "Doom Eternal", "DOTA 2", "Dynamic Music", "Effects Off", "Escape from Tarkov", "Esports", "Fortnite", "Forza Horizon Series", "FPS", "Gaming", "Genshin Impact", "Halo Infinite", "Helldivers 2", "Hogswart Legacy", "League of Legends", "Marvel Rivals", "Marvel's Spider-Man Series", "Minecraft Dungeons", "MMORPG", "MOBA", "Movies", "Music", "Overwatch 2", "Path of Exile 2", "PUBG: BATTLEGROUNDS", "Racing Simulation", "Red Dead Redemption 2", "Resident Evil Series", "Rocket League", "RPG", "RTS", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Stadium", "Star War Jedi Series", "The Witcher Series", "Tom Clancy's Rainbow Six Siege", "Treble Boost", "Treble Cut", "Valorant", "Warframe", "Warhammer 40000 Space Marine 2", "World War 3",
         ];
-        current-index: selected-sound-mode-index;
+        current-index <=> selected-sound-mode-index;
         selected(name) => {
             selected-sound-mode-index = self.current-index;
             if (self.current-index > 0) {
@@ -228,9 +229,9 @@ export component SoundModeTab inherits VerticalLayout {
                 }
                 CompactComboBox {
                     model: eq-preset-names;
-                    current-index: eq-selected-preset-index;
+                    current-index <=> eq-selected-preset-index;
                     horizontal-stretch: 1;
-                    selected(i) => { eq-selected-preset-index = i; }
+                    selected(i) => { eq-selected-preset-index = i; eq-preset-user-selected(i); }
                 }
             }
         }

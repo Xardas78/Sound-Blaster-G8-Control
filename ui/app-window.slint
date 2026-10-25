@@ -69,6 +69,9 @@ export component AppWindow inherits Window {
     // Von Rust beim Start gesetzt (persist.rs) – zeigt das zuletzt
     // gewählte Sound-Modus-Preset wieder im Dropdown an.
     in-out property <int> sound-mode-selected-index: 0;
+    // Von Rust gesetzt (Statusabfrage nach Start/Reconnect, Issue #1).
+    in-out property <bool> direct-mode-on: false;
+    in-out property <bool> direct-mode-busy: false;
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
     // Report-Builder-Funktionen pro Namespace.
@@ -87,6 +90,8 @@ export component AppWindow inherits Window {
     callback mixer-level-changed(int, float);
     callback mixer-balance-changed(int, float);
     callback sound-mode-preset-selected(int);
+    callback eq-preset-user-selected(int);
+    in-out property <bool> eq-skip-next-apply: false;
     callback mute-changed(int, bool);
     callback capture-source-changed(int);
     callback reset-clicked();
@@ -112,24 +117,22 @@ export component AppWindow inherits Window {
     in-out property <string> firmware-latest-version: "";
     in-out property <bool> show-firmware-result: false;
 
-    // Persistierter Dark-Mode-Wert von Rust beim Start gesetzt (siehe
-    // main.rs). Absichtlich `init =>` statt `changed dark-mode-on =>`:
-    // Live getestet (2026-08-24), dass eine Palette.color-scheme-
-    // Zuweisung aus BEIDEM gleichzeitig (hier per changed-Handler UND im
-    // Schalter selbst in settings-tab.slint) zu inkonsistentem Neuzeichnen
-    // führte – manche Standard-Widgets/Karten reagierten, andere nicht,
-    // je nachdem welcher der beiden Handler "gewann". Jetzt genau EIN
-    // Auslöser für den Klick (direkt im Schalter, settings-tab.slint) und
-    // EIN separater, nicht-reaktiver Auslöser nur für den Start (hier).
-    init => {
+    // Wird von main.rs EINMAL nach set_dark_mode_on() beim Start aufgerufen.
+    // Bewusst keine `init =>`: das feuert schon in AppWindow::new(), also
+    // bevor Rust den gespeicherten Wert setzt (Issue #13), und bewusst kein
+    // `changed dark-mode-on =>`: zwei gleichzeitige Auslöser für
+    // Palette.color-scheme führten zu inkonsistentem Neuzeichnen (siehe
+    // HANDOFF-ARCHIVE.md). Der Klick im Schalter (settings-tab.slint) bleibt
+    // der einzige interaktive Auslöser.
+    public function apply-dark-mode() {
         Palette.color-scheme = dark-mode-on ? ColorScheme.dark : ColorScheme.light;
     }
 
     HorizontalLayout {
         Sidebar {
             output-target: output-target;
-            speaker-level: footer-speaker-level;
-            mic-level: footer-mic-level;
+            speaker-level <=> footer-speaker-level;
+            mic-level <=> footer-mic-level;
             output-target-changed(t) => { output-target = t; output-target-changed(t); }
             level-changed(id, v) => { mixer-level-changed(id, v); }
             mute-changed(id, m) => { mute-changed(id, m); }
@@ -171,24 +174,28 @@ export component AppWindow inherits Window {
                     }
                     DeviceHubTab {
                         output-target: output-target;
-                        footer-speaker-level: footer-speaker-level;
-                        footer-mic-level: footer-mic-level;
-                        ae-surround-on: ae-surround-on;
-                        ae-surround-level: ae-surround-level;
-                        ae-crystalizer-on: ae-crystalizer-on;
-                        ae-crystalizer-level: ae-crystalizer-level;
-                        ae-bass-on: ae-bass-on;
-                        ae-bass-level: ae-bass-level;
-                        ae-svm-on: ae-svm-on;
-                        ae-svm-level: ae-svm-level;
-                        ae-svm-mode: ae-svm-mode;
-                        ae-dialog-on: ae-dialog-on;
-                        ae-dialog-level: ae-dialog-level;
-                        ae-eq-on: ae-eq-on;
-                        ae-eq-preamp: ae-eq-preamp;
-                        ae-eq-bands: ae-eq-bands;
-                        ae-eq-preset-index: ae-eq-preset-index;
-                        sound-mode-selected-index: sound-mode-selected-index;
+                        footer-speaker-level <=> footer-speaker-level;
+                        footer-mic-level <=> footer-mic-level;
+                        ae-surround-on <=> ae-surround-on;
+                        ae-surround-level <=> ae-surround-level;
+                        ae-crystalizer-on <=> ae-crystalizer-on;
+                        ae-crystalizer-level <=> ae-crystalizer-level;
+                        ae-bass-on <=> ae-bass-on;
+                        ae-bass-level <=> ae-bass-level;
+                        ae-svm-on <=> ae-svm-on;
+                        ae-svm-level <=> ae-svm-level;
+                        ae-svm-mode <=> ae-svm-mode;
+                        ae-dialog-on <=> ae-dialog-on;
+                        ae-dialog-level <=> ae-dialog-level;
+                        ae-eq-on <=> ae-eq-on;
+                        ae-eq-preamp <=> ae-eq-preamp;
+                        ae-eq-bands <=> ae-eq-bands;
+                        ae-eq-preset-index <=> ae-eq-preset-index;
+                        sound-mode-selected-index <=> sound-mode-selected-index;
+                        eq-skip-next-apply <=> eq-skip-next-apply;
+                        direct-mode-on <=> direct-mode-on;
+                        direct-mode-busy: direct-mode-busy;
+                        eq-preset-user-selected(i) => { eq-preset-user-selected(i); }
                         playback-param-changed(id, v) => { playback-param-changed(id, v); }
                         output-target-changed(t) => { output-target = t; output-target-changed(t); }
                         recording-param-changed(id, v) => { recording-param-changed(id, v); }

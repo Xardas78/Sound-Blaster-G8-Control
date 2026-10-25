@@ -15,7 +15,7 @@ use slint::{ModelRc, VecModel};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 slint::include_modules!();
 
@@ -98,6 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.set_power_saving_on(s.power_saving_on);
         ui.set_logo_led_on(s.logo_led_on);
         ui.set_dark_mode_on(s.dark_mode_on);
+        ui.invoke_apply_dark_mode();
         ui.set_close_behavior(s.close_behavior);
         ui.set_power_saving_on(s.power_saving_on);
         ui.set_logo_led_on(s.logo_led_on);
@@ -109,6 +110,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Felder mit).
         if s.sound_mode_preset_index >= 0 {
             ui.set_sound_mode_selected_index(s.sound_mode_preset_index + 1);
+        }
+        // Name des EQ-Presets wiederherstellen, ohne dass der changed-
+        // Handler die gespeicherten Bänder überschreibt. Index 0 ist der
+        // UI-Standard (kein changed-Event), 71+ sind nicht persistierte
+        // Custom-Slots.
+        // Ältere Einstellungsdateien kennen den EQ-Index noch nicht (-1):
+        // dann aus dem gespeicherten Sound-Modus-Preset ableiten.
+        let eq_idx = if s.eq_preset_index >= 0 {
+            s.eq_preset_index
+        } else if s.sound_mode_preset_index >= 0 {
+            sound_mode::PRESETS
+                .get(s.sound_mode_preset_index as usize)
+                .map_or(-1, |(_, p)| p.eq_preset_index)
+        } else {
+            -1
+        };
+        if eq_idx > 0 && eq_idx < 71 {
+            ui.set_eq_skip_next_apply(true);
+            ui.set_ae_eq_preset_index(eq_idx);
+        } else if eq_idx == 0 {
+            ui.set_ae_eq_preset_index(0);
         }
 
         if let Some(dev) = device.borrow().clone() {
@@ -249,6 +271,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 s.ae_dialog_level = p.dialog_level;
                 s.ae_eq_on = true;
                 s.sound_mode_preset_index = index;
+                s.eq_preset_index = p.eq_preset_index;
                 persist::save(&s);
             }
             // acoustic_engine-Level-Parameter sind 0.0-1.0-Floats fürs
@@ -297,6 +320,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Kein direkter Preamp/Bänder-Report hier mehr nötig – kommt
             // bereits über den eq-param-changed-Callback oben an, ausgelöst
             // durch set_ae_eq_preset_index().
+        });
+    }
+
+    {
+        let settings = settings.clone();
+        ui.on_eq_preset_user_selected(move |index| {
+            let mut s = settings.borrow_mut();
+            s.eq_preset_index = if index < 71 { index } else { -1 };
+            s.sound_mode_preset_index = -1;
+            persist::save(&s);
         });
     }
 
@@ -360,6 +393,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let device = device.clone();
+        let weak_dm = ui.as_weak();
         ui.on_direct_mode_toggled(move |on| {
             let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             // Direct Mode ist ein echtes einzelnes Hardware-Register:
@@ -376,6 +410,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Begründung, warum sie ursprünglich eingebaut wurde (Verwechs-
             // lung mit einem separaten "SBX-Masterschalter" in der
             // Windows-Software, anderes Byte-Muster `5a 11 2c 07 00...`).
+            if let Some(ui) = weak_dm.upgrade() {
+                ui.set_direct_mode_busy(true);
+                // Sicherheitsnetz, falls das Gerät nicht neu verbindet
+                // (dann kommt keine Abfrage, die den Schalter freigibt).
+                let weak = weak_dm.clone();
+                slint::Timer::single_shot(Duration::from_secs(8), move || {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.set_direct_mode_busy(false);
+                    }
+                });
+            }
             if let Err(e) = dev.send_report(&special::device_setting(special::setting_id::DIRECT_MODE, on)) {
                 eprintln!("Senden fehlgeschlagen: {e}");
             }
@@ -499,51 +544,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::spawn(move || {
             let mut dev: Option<G8Device> = G8Device::open().ok();
             let mut last_target: Option<i32> = None;
-            // DIAGNOSE (temporär, siehe HANDOFF.md Abschnitt 7 "Nachtrag
-            // 2026-08-24: Direct-Mode-Status-Bitfeld"): Im Directmode-
-            // Capture sendet das Gerät nach dem Umschalten dreimal
-            // `5a 39 05 01 ...`, wovon eine Nachricht ein Byte zwischen
-            // Direct-Mode an/aus ändert (0x20/0x00) – aber nur in diesem
-            // einen Capture beobachtet, kein Quervergleich mit anderen
-            // Einstellungen möglich. Ziel hier: alles, was mit `5a 39`
-            // anfängt, mitloggen (statt wie bisher blind zu verwerfen),
-            // um live zu sehen, ob/wie sich das Muster bei Logo/Energie-
-            // sparen/SPDIF/Volume-Sync/physischem MODE-Knopf verhält.
-            // Danach entfernen.
-            let mut last_5a39: Option<[u8; 16]> = None;
+            // Direct-Mode-Zustand nur nach (Neu-)Öffnen des Handles abfragen,
+            // genau wie die Original-Software nach der Neu-Initialisierung
+            // (der MODE-Knopf löst eine echte Neuenumeration aus, Issue #1).
+            // Kein Dauer-Polling, und bewusst im selben Handle/Thread.
+            let mut dm_query_due: Option<(Instant, u32)> =
+                dev.as_ref().map(|_| (Instant::now() + Duration::from_millis(1500), 0));
             loop {
                 let Some(d) = &dev else {
                     thread::sleep(Duration::from_secs(2));
                     dev = G8Device::open().ok();
+                    if dev.is_some() {
+                        dm_query_due = Some((Instant::now() + Duration::from_millis(1500), 0));
+                    }
                     continue;
                 };
                 // Erst liegen gebliebene Reports verwerfen (z.B. vom
                 // periodischen Status-Heartbeat, der zufällig dieselbe
                 // "5a 2c 05 01 xx"-Form hat) – sonst wird eine alte,
                 // ungültige Antwort mit der frischen Anfrage verwechselt.
-                // [diag] TEMPORÄR breiter gefasst: alle 5a-Reports loggen
-                // (nicht nur 0x39), um zu sehen, was der physische MODE-
-                // Knopf tatsächlich sendet – laut HANDOFF.md vermutlich
-                // eher die bekannten "unaufgeforderten Pushes" 5a6e/5a1a
-                // + Heartbeat-Dump, nicht das 5a39-Muster.
-                while let Ok(Some(buf)) = d.read_report(20) {
-                    if buf[0] == 0x5a {
-                        let mut snap = [0u8; 16];
-                        snap.copy_from_slice(&buf[0..16]);
-                        if last_5a39 != Some(snap) {
-                            // Param 0x70 in Namespace 0x96 ist in keiner
-                            // bekannten Tabelle -- moeglicher Direct-Mode-
-                            // Status-Kandidat, deshalb den Float-Wert
-                            // explizit mitloggen.
-                            if buf[5] == 0x96 && buf[6] == 0x70 {
-                                let f = f32::from_le_bytes([buf[7], buf[8], buf[9], buf[10]]);
-                                eprintln!("[diag] 96/70 (Kandidat) = {f} roh={:02x?}", &buf[7..11]);
-                            }
-                            eprintln!("[diag] 5a-Report: {:02x?}", &buf[0..16]);
-                            last_5a39 = Some(snap);
-                        }
-                    }
-                }
+                while let Ok(Some(_)) = d.read_report(20) {}
 
                 if d.send_report(&special::query_output_target()).is_err() {
                     dev = None; // Handle tot (z.B. nach Reset) – nächste Runde neu öffnen.
@@ -555,6 +575,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             last_target = Some(target);
                             let weak = weak.clone();
                             let _ = weak.upgrade_in_event_loop(move |ui| ui.set_output_target(target));
+                        }
+                    }
+                }
+
+                if let Some((due, attempts)) = dm_query_due {
+                    if Instant::now() >= due {
+                        let mut found = None;
+                        if d.send_report(&special::query_device_state()).is_ok() {
+                            let deadline = Instant::now() + Duration::from_millis(600);
+                            while found.is_none() && Instant::now() < deadline {
+                                if let Ok(Some(buf)) = d.read_report(100) {
+                                    found = special::direct_mode_from_reply(&buf);
+                                }
+                            }
+                        }
+                        match found {
+                            Some(on) => {
+                                dm_query_due = None;
+                                let weak = weak.clone();
+                                let _ = weak.upgrade_in_event_loop(move |ui| {
+                                    ui.set_direct_mode_on(on);
+                                    ui.set_direct_mode_busy(false);
+                                });
+                            }
+                            None if attempts + 1 < 3 => {
+                                dm_query_due = Some((Instant::now() + Duration::from_secs(2), attempts + 1));
+                            }
+                            None => {
+                                eprintln!("Direct-Mode-Abfrage ohne Antwort, gebe auf");
+                                dm_query_due = None;
+                            }
                         }
                     }
                 }

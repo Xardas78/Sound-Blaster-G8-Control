@@ -65,6 +65,10 @@ export component DeviceHubTab inherits TabWidget {
     callback mixer-level-changed(int, float);
     callback mixer-balance-changed(int, float);
     callback sound-mode-preset-selected(int);
+    callback eq-preset-user-selected(int);
+    in-out property <bool> eq-skip-next-apply: false;
+    in-out property <bool> direct-mode-on: false;
+    in property <bool> direct-mode-busy: false;
 
     Tab {
         title: @tr("Sound-Modus");
@@ -84,10 +88,13 @@ export component DeviceHubTab inherits TabWidget {
             eq-on <=> ae-eq-on;
             eq-preset-names: eq-tab.preset-names;
             eq-selected-preset-index <=> ae-eq-preset-index;
-            selected-sound-mode-index: sound-mode-selected-index;
+            selected-sound-mode-index <=> sound-mode-selected-index;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
             preset-selected(i) => { sound-mode-preset-selected(i); }
+            // Manuell gewähltes EQ-Preset = kein festes Sound-Modus-Preset
+            // mehr ("Im Gerät", Index 0).
+            eq-preset-user-selected(i) => { sound-mode-selected-index = 0; eq-preset-user-selected(i); }
         }
     }
     Tab {
@@ -116,6 +123,8 @@ export component DeviceHubTab inherits TabWidget {
             preamp <=> ae-eq-preamp;
             bands <=> ae-eq-bands;
             selected-preset-index <=> ae-eq-preset-index;
+            skip-next-apply <=> eq-skip-next-apply;
+            preset-user-selected(i) => { sound-mode-selected-index = 0; eq-preset-user-selected(i); }
             param-changed(id, v) => { eq-param-changed(id, v); }
         }
     }
@@ -130,6 +139,8 @@ export component DeviceHubTab inherits TabWidget {
     Tab {
         title: @tr("Modi & Decoder");
         ModiDecoderTab {
+            direct-mode-on <=> direct-mode-on;
+            direct-mode-busy: direct-mode-busy;
             direct-mode-toggled(on) => { direct-mode-toggled(on); }
             scout-toggled(on) => { scout-toggled(on); }
             decoder-mode-changed(m) => { decoder-mode-changed(m); }
@@ -138,8 +149,8 @@ export component DeviceHubTab inherits TabWidget {
     Tab {
         title: @tr("Mixer");
         MixerTab {
-            playback-speaker: footer-speaker-level;
-            rec-ext-mic: footer-mic-level;
+            playback-speaker <=> footer-speaker-level;
+            rec-ext-mic <=> footer-mic-level;
             level-changed(id, v) => { mixer-level-changed(id, v); }
             balance-changed(id, v) => { mixer-balance-changed(id, v); }
         }

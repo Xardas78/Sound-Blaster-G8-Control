@@ -365,9 +365,10 @@ pub mod special {
         buf
     }
 
-    /// Generischer SBX-Sync/Toggle-Befehl. Mode (ein/aus, Sound-Modus-Kachel)
-    /// und SBX sind praktisch derselbe zugrundeliegende Zustand (invers/exklusiv) –
-    /// dieser eine Befehl schaltet beide gemeinsam.
+    /// Abfrage des Global-Profile-Bitmasks (reines Lesen, schaltet nichts):
+    /// Antwort `5a 26 0b 08 ff ff [maske]`, Bit0 = SBX aktiv, Bit1 = Scout,
+    /// Bit2 = Aufnahme-DSP (Schema laut Upstream-Doku, siehe HANDOFF.md,
+    /// Nachtrag 2026-10-25). Auf dem G8 konstant 0x05, auch bei Direct Mode.
     pub fn sbx_sync() -> [u8; 64] {
         let mut buf = [0u8; 64];
         buf[0] = 0x5a;
@@ -395,6 +396,31 @@ pub mod special {
         buf[2] = 0x01;
         buf[3] = 0x01;
         buf
+    }
+
+    /// Zustandsabfrage der Geräteeinstellungen (reines Lesen). Exakt die
+    /// Anfrage, die die Original-Software in jedem Windows-Capture direkt
+    /// nach der Neu-Initialisierung sendet (siehe HANDOFF.md, Nachtrag
+    /// 2026-10-25). Die Antwort `5a 39 05 01 [b4..b7]` ist ein Zustandsfeld,
+    /// unabhängig von den Anfrage-Bytes.
+    pub fn query_device_state() -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        buf[0] = 0x5a;
+        buf[1] = 0x39;
+        buf[2] = 0x05;
+        buf[3] = 0x01;
+        buf[4] = 0x20;
+        buf
+    }
+
+    /// Direct Mode aus der Antwort auf query_device_state(): Bit 0x20 in
+    /// Byte 4. None, falls der Report keine solche Antwort ist.
+    pub fn direct_mode_from_reply(buf: &[u8; 64]) -> Option<bool> {
+        if buf[0] == 0x5a && buf[1] == 0x39 && buf[2] == 0x05 && buf[3] == 0x01 {
+            Some(buf[4] & 0x20 != 0)
+        } else {
+            None
+        }
     }
 
     /// Liest aus der Antwort auf query_output_target() den Zielwert
@@ -511,6 +537,20 @@ mod tests {
     fn scout_on_report() {
         let r = special::scout_mode(true);
         assert_eq!(&r[0..7], &[0x5a, 0x26, 0x05, 0x07, 0x02, 0x00, 0x01]);
+    }
+
+    #[test]
+    fn direct_mode_state_reply() {
+        let mut on = [0u8; 64];
+        on[..8].copy_from_slice(&[0x5a, 0x39, 0x05, 0x01, 0x20, 0x40, 0x00, 0x10]);
+        assert_eq!(special::direct_mode_from_reply(&on), Some(true));
+        let mut off = [0u8; 64];
+        off[..8].copy_from_slice(&[0x5a, 0x39, 0x05, 0x01, 0x00, 0x40, 0x00, 0x00]);
+        assert_eq!(special::direct_mode_from_reply(&off), Some(false));
+        let mut other = [0u8; 64];
+        other[..4].copy_from_slice(&[0x5a, 0x39, 0x09, 0x02]);
+        assert_eq!(special::direct_mode_from_reply(&other), None);
+        assert_eq!(&special::query_device_state()[0..8], &[0x5a, 0x39, 0x05, 0x01, 0x20, 0, 0, 0]);
     }
 
     #[test]

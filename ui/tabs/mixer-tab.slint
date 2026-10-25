@@ -24,8 +24,8 @@ export component MixerRow inherits HorizontalLayout {
     Text { text: label; width: 100px; vertical-alignment: center; }
     Slider {
         minimum: 0; maximum: 100;
-        value: level;
-        changed(v) => { level = v; level-changed(entity-id, v); }
+        value <=> level;
+        changed(v) => { level-changed(entity-id, v); }
     }
     Text { text: round(level) + "%"; width: 40px; }
 
@@ -128,7 +128,7 @@ export component MixerTab inherits VerticalLayout {
             Text { text: @tr("Wiedergabe"); font-weight: 700; }
             VerticalLayout {
                 spacing: 8px;
-                MixerRow { label: @tr("Lautsprecher"); entity-id: 0; level: playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: @tr("Lautsprecher"); entity-id: 0; level <=> playback-speaker; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
             }
         }
     }
@@ -162,7 +162,7 @@ export component MixerTab inherits VerticalLayout {
                 spacing: 8px;
                 MixerRow { label: "SPDIF In"; entity-id: 4; level: rec-spdif-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
                 MixerRow { label: "Line In"; entity-id: 5; level: rec-line-in; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
-                MixerRow { label: "External Mic"; entity-id: 6; level: rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
+                MixerRow { label: "External Mic"; entity-id: 6; level <=> rec-ext-mic; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
                 MixerRow { label: "What U Hear"; entity-id: 7; level: rec-what-u-hear; level-changed(id, v) => { level-changed(id, v); } balance-changed(id, v) => { balance-changed(id, v); } }
             }
         }

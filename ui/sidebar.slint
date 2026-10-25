@@ -89,9 +89,9 @@ export component Sidebar inherits VerticalLayout {
             Slider {
                 orientation: vertical;
                 minimum: 0; maximum: 100;
-                value: speaker-level;
+                value <=> speaker-level;
                 height: 300px;
-                changed(v) => { speaker-level = v; level-changed(0, v); }
+                changed(v) => { level-changed(0, v); }
             }
             // Feste Breite: ohne die verschiebt sich die andere Spalte beim
             // Ziehen (z.B. "0%" vs. "100%" sind unterschiedlich breit).
@@ -146,9 +146,9 @@ export component Sidebar inherits VerticalLayout {
             Slider {
                 orientation: vertical;
                 minimum: 0; maximum: 100;
-                value: mic-level;
+                value <=> mic-level;
                 height: 300px;
-                changed(v) => { mic-level = v; level-changed(6, v); }
+                changed(v) => { level-changed(6, v); }
             }
             Text { text: round(mic-level) + "%"; width: 40px; horizontal-alignment: center; }
         }

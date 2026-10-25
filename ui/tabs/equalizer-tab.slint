@@ -145,6 +145,13 @@ export component EqualizerTab inherits VerticalLayout {
     // Index in seiner eigenen Equalizer-Zeile (siehe device-hub-tab.slint),
     // damit beide Dropdowns immer denselben Preset-Namen zeigen.
     in-out property <int> selected-preset-index: 0;
+    // Von Rust beim Start gesetzt, bevor es den gespeicherten Namen
+    // wiederherstellt: dann soll der changed-Handler unten NICHT das
+    // Preset über die gespeicherten (evtl. von Hand geänderten) Bänder
+    // drüberbügeln.
+    in-out property <bool> skip-next-apply: false;
+    // Nur bei Auswahl durch den Nutzer (nicht bei programmatischer Änderung).
+    callback preset-user-selected(int);
 
     function apply-preset(idx: int) {
         if (idx == 71) {
@@ -224,7 +231,13 @@ export component EqualizerTab inherits VerticalLayout {
     // ae-eq-preset-index). `changed` feuert laut Slint nicht bei der
     // initialen Konstruktion, nur bei echten späteren Änderungen – beim
     // Programmstart wird also nicht ungefragt Preset 0 ans Gerät gesendet.
-    changed selected-preset-index => { apply-preset(selected-preset-index); }
+    changed selected-preset-index => {
+        if (skip-next-apply) {
+            skip-next-apply = false;
+        } else {
+            apply-preset(selected-preset-index);
+        }
+    }
 
     spacing: 16px;
     padding: 16px;
@@ -508,9 +521,10 @@ export component EqualizerTab inherits VerticalLayout {
 
                     ComboBox {
                         model: preset-names;
-                        current-index: selected-preset-index;
+                        current-index <=> selected-preset-index;
                         selected(name) => {
                             selected-preset-index = self.current-index;
+                            preset-user-selected(self.current-index);
                         }
                     }
 

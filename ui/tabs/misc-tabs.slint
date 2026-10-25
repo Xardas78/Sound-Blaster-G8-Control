@@ -7,6 +7,10 @@ import { CheckBox, LineEdit } from "std-widgets.slint";
 // zusammengelegt.
 export component ModiDecoderTab inherits VerticalLayout {
     in-out property <bool> direct-mode-on: false;
+    // Solange das Gerät nach einem Umschalten neu verbindet (ca. 2-5s),
+    // ist der Schalter gesperrt – ein Klick mitten in der Neuenumeration
+    // schaltet sonst sofort wieder zurück (Issue #1).
+    in property <bool> direct-mode-busy: false;
     // Direct Mode ist ein echtes Hardware-Register (`5a 39 03 00 05`,
     // per Capture `Directmode ein-aus.pcapng` bestätigt 2026-08-24) –
     // derselbe Zustand, den auch der physische MODE-Knopf schaltet.
@@ -36,7 +40,8 @@ export component ModiDecoderTab inherits VerticalLayout {
         HorizontalLayout {
             EffectToggle {
                 label: "Direct Mode";
-                checked: direct-mode-on;
+                checked <=> direct-mode-on;
+                enabled: !direct-mode-busy;
                 toggled(on) => { direct-mode-on = on; direct-mode-toggled(on); }
             }
             Rectangle { horizontal-stretch: 1; }
