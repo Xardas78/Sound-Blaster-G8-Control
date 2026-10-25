@@ -873,6 +873,243 @@ verschiedene Einstellungen durchschalten, schauen ob/welches Bit
 kippt) – ähnlich dem bereits vorbereiteten Diagnose-Logging für die
 `09 02`-Antwort, nur auf `05 01` umgezielt.
 
+### Nachtrag 2026-08-26: physischer MODE-Knopf löst echten USB-Reconnect aus (GitHub-Issue #1)
+
+**Durchbruch, live bestätigt:** Der physische MODE-Knopf am Gerät löst
+bei jedem einzelnen Druck eine **echte USB-Neuinitialisierung** aus
+(Disconnect + Reconnect, `journalctl -k` zeigt `USB disconnect` gefolgt
+von `New USB device found` für die G8), kein reines Register-Write wie
+bei der Software-Umschaltung. Live 1:1 verifiziert: Nutzer drückte
+~alle 2s wiederholt, Kernel-Log zeigte im selben Rhythmus einen
+Disconnect/Reconnect-Zyklus pro Druck. Passt zur unabhängigen
+Beobachtung des Nutzers unter Windows: die Original-Software zeigt
+beim Knopfdruck sichtbar einen kurzen "Reset" der App-Verbindung, dann
+Anzeige des neuen Direct-Mode-Zustands.
+
+**Erklärt mehrere bisherige Beobachtungen auf einen Schlag:**
+- Warum das Auslesen eines Status-Bitfelds per Diagnose-Logging so
+  unzuverlässig war – das Gerät ist im fraglichen Moment oft gerade
+  mitten im Reconnect, nicht stabil ansprechbar.
+- Warum frühere Live-Tests (2026-08-24) beim Direct-Mode-Knopfdruck
+  gemischte/keine Ergebnisse lieferten.
+
+**Wichtige Nebenerkenntnis (Vorsicht für künftige Diagnose-Threads):**
+Beim Versuch, dies robuster zu greifen, wurde testweise ein zweiter,
+dedizierter Thread mit einem EIGENEN zweiten `G8Device`-Handle auf
+Interface 4 eingebaut (parallel zum bereits bestehenden Schalterstand-
+Poll-Thread, der ebenfalls ein Handle auf Interface 4 hält). Das löste
+selbst einen Disconnect-Sturm aus (alle 1-5s, über mehrere Minuten,
+sofort nach App-Start, sofort vorbei nach App-Stop) – vermutlich
+Konflikt zweier gleichzeitiger blockierender `hidapi`-Lesevorgänge auf
+demselben Interface. **Lehre: nur EIN Geräte-Handle pro Interface
+gleichzeitig verwenden**, zusätzliche Diagnose-Logik in einen bereits
+bestehenden Poll-Thread einbauen statt einen neuen mit eigenem Handle
+zu starten. Der entsprechende Code wurde sofort wieder entfernt, aktuell
+läuft die Diagnose sicher im bestehenden Schalterstand-Poll-Thread mit.
+
+**Nächster Schritt für die Status-Rücklese (Issue #1):** Statt einen
+Wert WÄHREND einer stabilen Verbindung abzufragen, wahrscheinlich
+sinnvoller: auf das Reconnect-Ereignis selbst reagieren (die App hat
+bereits Reconnect-Erkennung für den `special::reset_device()`-Fall,
+siehe Abschnitt 5a) und direkt NACH einem erkannten Reconnect eine
+gezielte Statusabfrage senden – der neue Direct-Mode-Zustand sollte zu
+diesem Zeitpunkt bereits gültig sein, auch wenn die genaue Kodierung
+noch nicht sicher entschlüsselt ist.
+
+**Unabhängig im Windows-Capture bestätigt:** Im Mitschnitt
+`2026-08-24_absturz-dm-reset-sequenz.pcapng` beginnt die G8
+(Geräteadresse 5) ca. 5-6s nach der im Notizen-Zeitstempel vermerkten
+Marke "via Tastendruck" (Frame 2453, ~197,0s) eine vollständige
+USB-Neuenumeration – `GET_DESCRIPTOR`-Anfragen für Device-,
+Configuration- und mehrere Class-spezifische Deskriptoren (Frames
+2473-2478, ~202,8s). Kein spezieller "Status"-Report dabei, reine
+Standard-Enumeration. Der eigentliche Direct-Mode-Zustand wird dem
+Original-Client vermutlich über denselben periodischen Status-Heartbeat
+mitgeteilt, der laut `device.rs`-Kommentar automatisch losläuft, sobald
+das Gerät nach dem Reconnect wieder "aktiv" wird – passt zur oben
+dokumentierten `5a 39 05 01`-Burst-Beobachtung direkt nach jedem
+Direct-Mode-Wechsel.
+
+### Nachtrag 2026-08-26 (2): Warnung – `5a 39 01 00 05` ist KEIN sicheres GET, hat Endpoint blockiert
+
+Beim Versuch, live nach einem Status-GET für Issue #1 zu suchen, wurde
+`5a 39 01 00 05` roh über `/dev/hidraw` (Interface 4, Vendor-Kanal)
+gesendet, während die App lief bzw. kurz danach. Beobachtete Folgen,
+in dieser Reihenfolge:
+
+1. Hörbarer physischer "Klick" am Gerät selbst (Nutzer-Beobachtung) –
+   bisher im Projekt immer ein Zeichen für eine ECHTE Zustandsänderung,
+   nie für eine reine Abfrage.
+2. Der physische MODE-Taster reagierte danach nicht mehr normal bzw.
+   wurde sofort wieder zurückgesetzt ("der GET blockiert den
+   Tastendruck bzw. macht ihn wieder direkt rückgängig" – Nutzer-O-Ton).
+3. Kurz danach eigenständige Disconnect/Reconnect-Schleife am Gerät
+   (Device-Nummer 30→31→32 innerhalb von ~20s, ohne dass in diesem
+   Moment ein Kommando gesendet wurde).
+4. Danach lehnte der Endpoint JEDEN weiteren Schreibversuch mit
+   `Broken pipe` (USB-Stall) ab – auch den bekannten, sonst
+   zuverlässigen SET-Befehl `5a 39 03 00 05 01` (Direct Mode an).
+5. Erst nach einem physischen Stromverlust von ca. 15s (Kabel gezogen)
+   kam das Gerät wieder in einen sauberen Zustand zurück – interessant:
+   der zuvor gesendete SET-Befehl war offenbar im Stack hängen
+   geblieben und wurde erst nach dem Reconnect zugestellt (Direct Mode
+   war danach tatsächlich an, wie vom Nutzer beabsichtigt).
+
+**Schlussfolgerung:** `5a 39 01 00 05` (und vermutlich die gesamte
+`5a 39 01 ...`-Namensraum-Familie mit ungewöhnlicher Byte-Struktur) ist
+NICHT als harmloses GET zu behandelt – es kann den Vendor-Endpoint in
+einen blockierten Zustand bringen, der nur durch einen echten
+Stromzyklus behebbar ist. **Für künftige Protokoll-Exploration: keine
+weiteren rohen Kommando-Kandidaten per Trial-and-Error an dieses
+Interface senden, solange die App parallel läuft oder das Gerät gerade
+erst aus einem Reconnect kommt.** Passiv aus vorhandenen Captures
+ableiten (siehe Windows-Mitschnitte) ist der sicherere Weg zur
+Status-Rücklese für Issue #1.
+
+### Nachtrag 2026-10-25: Direct-Mode-Statusabfrage in den eigenen Windows-Captures gefunden (Issue #1)
+
+Anlass: Abgleich mit dem Upstream-Repo `RizeCrime/linuxblaster_control`
+(G6, nicht G8, aber dieselbe `5a`-Protokollfamilie; `UsbProtocol.md` v5,
+Stand 2026-10-12, gegen Hardware verifiziert). Daraus übernommenes
+Schema: Byte 3 ist bei `0x2c`/`0x3c`/`0x6c` ein Richtungs-Flag
+(`00`=schreiben, `01`=lesen, `02`=aufzählen). Mit dieser Brille ist
+`5a 39 05 01 ...` in unseren G8-Captures eindeutig eine **Lese-Anfrage**
+der Original-Software, kein Schreibbefehl.
+
+**Befund (rein offline, aus allen 157 Captures, nichts ans Gerät gesendet):**
+- Anfrage der Windows-Software: `5a 39 05 01 20 00 00 00` (danach
+  zweimal `5a 39 05 01 00 04 00 00`). Die Antwort ist in allen Fällen
+  `5a 39 05 01 [b4] [b5] [b6] [b7]`, unabhängig von den Anfrage-Bytes
+  (Zustandsfeld, keine Maske).
+- **`b4 & 0x20` = Direct Mode.** `Directmode ein-aus.pcapng`: ein →
+  `20 00 00 10`, aus → `00 00 00 10`. `2026-08-24_absturz-dm-reset-sequenz.pcapng`:
+  `00 40 00 00` (aus, 64,9s) → `20 40 00 00` (ein, 127,9s) →
+  `00 40 00 00` (aus, 171,7s). In allen Reset-/Schritt-Captures
+  durchgehend `00 40 ..` = Direct Mode aus.
+- `b5 & 0x40` und `b7 & 0x10` sind weitere, noch unbenannte Zustandsbits
+  (b5=0x40 meist gesetzt; b7=0x10 mal gesetzt, mal nicht).
+- Die Windows-Software sendet diese Abfrage **ausschließlich direkt nach
+  der Neu-Initialisierung** (`5a 09 01 02/03/00 ...`-Handshake) – nie
+  während einer stabilen Verbindung. Das passt exakt zum Fund vom
+  26.08., dass der MODE-Knopf eine echte Neu-Enumeration auslöst: Gerät
+  verschwindet, kommt wieder, Software initialisiert neu und liest dann
+  den Zustand.
+
+**Umsetzung für Issue #1 (noch offen):** Nach Start der App und nach
+jedem erkannten Reconnect genau einmal `5a 39 05 01 20 00 00 00` senden
+(im bestehenden Poll-Thread, kein zweites Handle!), Antwort-Byte 4 mit
+`0x20` maskieren, `direct-mode-on` in der UI setzen. Kein Dauer-Polling.
+
+**Erklärung für den Klick vom 26.08.:** In *keinem* der 157 Captures
+sendet die Original-Software jemals `5a 39 01 00` oder `5a 39 01 01`;
+als Längen-1-Unterkommando kommt nur `5a 39 01 02` vor (50 Mal).
+Upstream führt Sub `01` als "Commit" und Sub `04`/`05` als abgelehnt
+(ACK-Status `0x81`, deckt sich mit unserer Beobachtung). Sub `00` ist
+undokumentiert und hat offenbar eine echte Wirkung. **Regel: an dieses
+Interface nur Byte-Folgen senden, die in einem Windows-Capture
+nachweisbar vorkommen.**
+
+**Weitere Erkenntnisse aus dem Abgleich:**
+- ACK-Statusbyte (`5a 02 0a [cmd] [status]`): `00`=OK, `80`/`81`/`83`=
+  abgelehnt. Unsere "akzeptierte" Antwort `5a 02 0a 39 00 ..` auf den
+  Fuzz-Versuch hieß also "ausgeführt", nicht "gelesen".
+- `sbx_sync()` (`5a 26 03 08 ff ff`) ist laut Upstream **kein Toggle**,
+  sondern die Abfrage des Global-Profile-Bitmasks (Bit0=SBX aktiv,
+  Bit1=Scout, Bit2=Aufnahme-DSP). Der Kommentar in `protocol.rs` ist
+  irreführend. Auf dem G8 liefert er in `Directmode ein-aus.pcapng`
+  konstant `0x05`, egal ob Direct Mode an oder aus – taugt also nicht
+  als Direct-Mode-Anzeige.
+- Issue #7 (undekodierte Namespaces): `0x26` = Global-Profile/SBX/Scout,
+  `0x10` = Seriennummer, `0x6c` = DAC-Filter (die G8-Antwort auf
+  `5a 6c 01 02` hat dasselbe Format wie beim G6, 5 Einträge – ein
+  Filter-Auswahlfeld wäre möglicherweise auch beim G8 machbar, ungeprüft).
+  `0x09` kommt im G6-Dokument nicht vor (G8-spezifischer Identify-
+  Namespace). Genaue Tabellen: `UsbProtocol.md` im Upstream-Repo.
+- Upstream bestätigt: hidraw-Backend vermeidet den USB-Reset, den
+  libusb braucht. Wir nutzen bereits hidraw (`ldd` zeigt nur libudev).
+- Upstream-Mixer öffnet den ALSA-Mixer pro Aufruf (`alsa`-Crate),
+  keine persistente Verbindung – für Issue #8/#14 also keine fertige
+  Vorlage, aber ein Beleg, dass die Mixer-Controls der Karte direkt
+  ansprechbar sind.
+
+### Nachtrag 2026-10-25 (2): Fehlerbehebungen, Direct-Mode-Abfrage eingebaut, Neustart-Schleife im Direct Mode (Issue #1)
+
+**Behoben (Issues #11-#14):**
+- **Slint-Bindungsfalle (wichtigste Lehre):** `prop: parent-prop;` ist nur
+  eine EINSEITIGE Bindung. Sobald das Kind die Property selbst beschreibt
+  (Slider ziehen, Dropdown wählen, `current-index`/`checked`/`value`),
+  wird die Bindung ersetzt, spätere Änderungen von Rust oder aus anderen
+  Tabs kommen nicht mehr an. Für Zustand, der von mehreren Stellen
+  geschrieben wird, immer `<=>` verwenden. Betraf: AppWindow→DeviceHubTab
+  (alle `ae-*`, Preset-Indizes, `footer-*-level`), Sound-Modus-/EQ-
+  Dropdowns, Mixer-Zeilen, Seitenleisten-Slider, Direct-Mode-Schalter.
+  Acoustic-Engine-Slider (`value: x`) sind laut Nutzertest nicht betroffen.
+- Dark Mode beim Start (#13): `init =>` feuerte in `AppWindow::new()`,
+  vor `set_dark_mode_on()`. Jetzt `public function apply-dark-mode()`,
+  von main.rs einmal nach dem Setzen aufgerufen.
+- EQ-Preset (#11/#12): neuer persistierter `eq_preset_index`
+  (Altdateien: aus dem gespeicherten Sound-Modus abgeleitet). Beim
+  Wiederherstellen setzt Rust `eq-skip-next-apply`, damit der
+  `changed selected-preset-index`-Handler die gespeicherten Bänder nicht
+  überschreibt. Manuelle EQ-Auswahl setzt den Sound-Modus auf "Im Gerät"
+  (wie im Original, vom Nutzer bestätigt). `CompactComboBox`: Popup in
+  ScrollView (max. 260px), Farben folgen dem Dark/Light-Modus.
+- Mixer (#14): siehe Bindungsfalle. Zusätzlich war `proc_util::
+  run_with_timeout` die Ursache für träges Reagieren auf den
+  Lautstärkeknopf: `pactl list cards` (alle ~2s im Mixer-Poll-Thread)
+  blockierte in `anon_pipe_write`, weil stdout erst nach `try_wait()`
+  gelesen wurde; Folge: alle 3s Timeout, Poll stand still. Jetzt lesen
+  zwei Threads stdout/stderr parallel, seitdem 0 Timeouts.
+- **Installationsfalle:** Der Starter (`Exec=g8-control`) nutzt
+  `~/.local/bin/g8-control`, NICHT `target/release/`. Nach jedem Build dort
+  hinein kopieren, sonst testet man die alte Version (am 25.10. passiert;
+  Sicherung der alten Datei: `g8-control.bak-2026-08-25`).
+
+**Direct-Mode-Abfrage (Issue #1), eingebaut:** `special::query_device_state()`
+(`5a 39 05 01 20 ...`) und `direct_mode_from_reply()` (Byte 4, Bit 0x20),
+mit Unit-Test. Im bestehenden Schalterstand-Poll-Thread (kein zweites
+Handle) einmal 1,5s nach jedem (Neu-)Öffnen des Handles, bis zu 3
+Versuche, Ergebnis nach `direct-mode-on`. Live bestätigt: Register meldet
+`20 40 00 10` (an) / `00 40 00 10` (aus), deckt sich mit dem Schalter.
+Schalter ist nach einem Umschalten gesperrt (`direct-mode-busy`), bis die
+Abfrage nach der Neuverbindung zurückkommt (Sicherheitsnetz: 8s), weil
+ein Klick mitten in der Neu-Enumeration das Umschalten sofort umkehrte.
+Jeder Schreibbefehl (auch einer ohne Wertänderung) löst eine
+Neu-Enumeration des Geräts aus (~0,1s später Disconnect, ~1s später
+wieder da).
+
+**Offen: Neustart-Schleife im Direct Mode.** Bei eingeschaltetem Direct
+Mode startet das G8 unregelmäßig von selbst neu (Disconnect/Reconnect),
+oft alle 2,4-3,7s, und kommt dabei mit Direct Mode = an zurück – das ist
+das "kurz an, dann wieder aus" der LED. Messreihe 2026-10-25 (immer
+App gestoppt oder irrelevant, Gerät am gespeisten 4-Port-Hub, Bus 5):
+- Mit App, ohne App, ohne App und ohne WirePlumber: Schleife tritt auf
+  (ohne WirePlumber 5 Neustarts in 45s). Ohne Direct Mode über Minuten
+  stabil. Unregelmäßig: manche Läufe auch 40-80s stabil.
+- Windows (laut Nutzer): Direct Mode bleibt dauerhaft an bzw. aus, per
+  Software und per Taste. Unklar, ob am selben Hub/Port gemessen.
+- Linux-usbmon-Mitschnitt (`captures/linux/verbinden-trennen/
+  2026-10-25_dm-ein-stabil-vs-neustart_usbmon5.pcapng`): Eine Enumeration,
+  die nach 3,8s starb, und eine, die >80s lebte, haben in den ersten 2s
+  BYTE-IDENTISCHE Steuerverkehr (570 Transfers inkl. Antwortdaten:
+  `SET_INTERFACE`-Schleife, Takt-/Lautstärke-Abfragen bei +0,9..1,15s,
+  danach Funkstille). Der Tod kommt ohne Host-Aktivität in den letzten
+  ~2,6s. Kernel-Log: keine Hub-/Port-/Over-Current-Meldungen. Gerät
+  `power/control=on`.
+- **`dumpcap` selbst stört:** Beim Start des Mitschnitts gab es zweimal
+  hintereinander einen Disconnect (~1s nach Start), und das Gerät kam
+  mit Direct Mode = an zurück. Mitschnitte unter Linux sind also
+  verfälscht; nur zur Verlaufsanalyse nutzen.
+- Offene Hypothesen: (a) Windows hält im Direct Mode ständig einen
+  Audio-Stream offen, Linux hat danach Funkstille (Neustart ~2,5s nach
+  letztem Verkehr) – ungeprüft; ein laufender Stream ließ sich wegen der
+  `dumpcap`-Störung nicht sauber testen. (b) Host-/Controller-spezifisch
+  (AMD Raphael USB2 xHCI `0f:00.0`, zwei Hubs hintereinander).
+- **Nächster Schritt:** Windows-Mitschnitt am GLEICHEN Hub/Port, Direct
+  Mode an, 60s idle, einmal ohne und einmal mit Musik; vergleichen, ob
+  Windows im Leerlauf Datenverkehr erzeugt. Unter Linux Direct Mode mit
+  laufendem Audio testen, ohne `dumpcap`.
+
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
   Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
   (mehrfache PipeWire-Profilwechsel `pro-audio`↔`analog-stereo`, mehrere
