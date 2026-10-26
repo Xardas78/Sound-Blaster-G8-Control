@@ -469,6 +469,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Beim Ausgabewechsel liefert das Gerät seinen eigenen Parameter-Dump (ca. 1-2 s später);
+    // die Windows-App schreibt danach den gespeicherten EQ wieder ins Gerät (Capture
+    // "steckerwechsel mit eq preset"), damit der gewählte Preset "mitwandert". Hier genauso.
+    {
+        let device = device.clone();
+        let settings = settings.clone();
+        ui.on_output_changed(move |_| {
+            let device = device.clone();
+            let settings = settings.clone();
+            slint::Timer::single_shot(Duration::from_secs(3), move || {
+                let Some(dev) = device.borrow().clone() else { return };
+                let s = settings.borrow();
+                let send = |report: [u8; 64]| {
+                    if let Err(e) = dev.send_report(&report) {
+                        eprintln!("EQ-Übernahme nach Ausgabewechsel fehlgeschlagen: {e}");
+                    }
+                };
+                send(build_toggle_report(equalizer::TOGGLE, s.ae_eq_on));
+                send(build_level_report(equalizer::PREAMP, s.ae_eq_preamp));
+                for (i, &band) in s.ae_eq_bands.iter().enumerate() {
+                    send(build_level_report(equalizer::band(i), band));
+                }
+            });
+        });
+    }
+
     {
         let settings = settings.clone();
         let weak = ui.as_weak();

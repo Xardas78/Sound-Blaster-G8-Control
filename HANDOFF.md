@@ -1224,7 +1224,11 @@ Mitschnitte: `SB G8/von windows/2026-10-26-Wireshark-mitschnitte/` (`soundmodus 
 - **Logos im Dark Mode:** die SVG-Logos (CrystalVoice, Direct/Scout Mode, Dolby, Lautsprecher-Grafik) werden per `colorize` mit
   `Palette.foreground` eingefärbt, im Hell-Modus unverändert.
 - Version `0.1.1` -> `0.2.0` (neue Funktionsgruppen seit 0.1.1: Sprachwahl, ALSA-Mixer, Direct-Mode-Statusabfrage und -Fix, eigene Modi).
-- Noch offen: #9 (getrennte EQ-Kurven je Ausgang, laut Capture reine App-Funktion), #10 (Scout-Hotkey, geplant über das
+- **Ausgabewechsel (#9):** `changed output-target` in `app-window.slint` -> Rust spielt 3 s später EQ-Toggle, Preamp und 10 Bänder
+  aus den gespeicherten Einstellungen neu ins Gerät (wie die Windows-App im Capture "steckerwechsel mit eq preset"). Der gewählte
+  Preset wandert so mit; getrennte Kurven je Ausgang sind damit nicht nötig (Nutzer bestätigt: unter Windows wird der Preset
+  beim Wechsel ebenfalls übernommen). Live bestätigt.
+- Noch offen: (#9 erledigt, siehe oben; war: getrennte EQ-Kurven je Ausgang, laut Capture reine App-Funktion), #10 (Scout-Hotkey, geplant über das
   KDE-GlobalShortcuts-Portal), #2, #3 (Beobachtung), Hinweis: der Lautsprecher-Tab-Audioqualität/"Standard festlegen" ist host-seitig.
 
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten

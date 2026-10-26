@@ -80,6 +80,9 @@ export component AppWindow inherits Window {
     out property <string> label-im-geraet: @tr("Im Gerät");
     callback sound-mode-save(string);
     callback sound-mode-reset();
+    // Ausgabewechsel (Kopfhörer<->Lautsprecher), egal ob per Taste, Umschalter oder Software: Rust spielt den EQ neu ein.
+    callback output-changed(int);
+    changed output-target => { output-changed(output-target); }
     callback sound-mode-delete(int);
     // Dropdown-Index des ersten eigenen Modus (alles davor sind eingebaute Presets, nicht löschbar).
     in-out property <int> user-modes-start: 61;
