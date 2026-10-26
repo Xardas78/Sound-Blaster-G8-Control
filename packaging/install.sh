@@ -86,3 +86,44 @@ if [ -n "$G8_DEV_PATH" ]; then
         fi
     fi
 fi
+
+# --- Optionaler Schritt: ALSA-Restore für die G8 abschalten (braucht root) ---
+#
+# Live 2026-10-26 als Ursache für "Direct Mode geht sofort wieder aus"
+# bestätigt (siehe HANDOFF.md, Nachtrag 2026-10-26): Die Systemregel
+# 90-alsa-restore.rules führt bei JEDER Registrierung der Soundkarte
+# `alsactl restore` aus. Das schreibt die zuletzt gespeicherten Werte von
+# "PCM Capture Source" und "Speaker Clock Source" (UAC-Selector 0x11/0x0e)
+# zurück, die beim G8 zugleich den Direct Mode ausmachen. Da jeder
+# Direct-Mode-Wechsel das Gerät neu am USB anmeldet, wird er so sofort
+# wieder rückgängig gemacht. Windows schreibt diese Selektoren nie zurück.
+ALSA_SYS_RULE="/usr/lib/udev/rules.d/90-alsa-restore.rules"
+ALSA_OVERRIDE="/etc/udev/rules.d/90-alsa-restore.rules"
+if [ -f "$ALSA_SYS_RULE" ] && ! grep -q '041e' "$ALSA_OVERRIDE" 2>/dev/null; then
+    echo ""
+    echo "Hinweis: Das System stellt beim Anstecken die zuletzt gespeicherten ALSA-"
+    echo "Mixerwerte wieder her (alsactl restore). Bei der G8 setzt das die Schalter"
+    echo "zurück, die auch den Direct Mode ausmachen: der Direct Mode geht dann etwa"
+    echo "eine Sekunde nach dem Einschalten von selbst wieder aus."
+    echo ""
+    echo "Vorteil beim Abschalten (nur für die G8): Direct Mode bleibt, wie vom Gerät"
+    echo "oder der App gesetzt, dauerhaft an."
+    echo "Nachteil: ALSA stellt für die G8 beim Anstecken und beim Booten keine"
+    echo "gespeicherten Mixerwerte mehr wieder her (die G8 behält ihre Einstellungen"
+    echo "in der eigenen Hardware). Die Änderung legt eine Kopie der Systemregel an;"
+    echo "spätere Updates von alsa-utils wirken für diese Datei nicht mehr, der"
+    echo "Installer kann sie jederzeit neu erzeugen. Rückgängig machen:"
+    echo "  sudo rm $ALSA_OVERRIDE && sudo udevadm control --reload-rules"
+    echo ""
+    read -r -p "alsactl restore für die G8 abschalten? [y/N] " REPLY
+    if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+        awk -v c='# G8 (041e:329b): kein alsactl restore - es setzt die Direct-Mode-Selektoren zurueck' \
+            -v r='ACTION=="add", SUBSYSTEM=="sound", KERNEL=="controlC*", ATTRS{idVendor}=="041e", ATTRS{idProduct}=="329b", GOTO="alsa_restore_end"' \
+            '!done && $0 !~ /^#/ && $0 !~ /^[[:space:]]*$/ { print c; print r; done=1 } { print }' \
+            "$ALSA_SYS_RULE" | sudo tee "$ALSA_OVERRIDE" >/dev/null
+        sudo udevadm control --reload-rules
+        echo "Erledigt: $ALSA_OVERRIDE angelegt. Gilt ab dem nächsten An-/Abmelden der Karte."
+    else
+        echo "Übersprungen -- keine Änderung vorgenommen."
+    fi
+fi

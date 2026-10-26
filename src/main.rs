@@ -592,6 +592,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         match found {
                             Some(on) => {
+                                eprintln!("Direct-Mode-Status nach Verbinden: {}", if on { "an" } else { "aus" });
                                 dm_query_due = None;
                                 let weak = weak.clone();
                                 let _ = weak.upgrade_in_event_loop(move |ui| {

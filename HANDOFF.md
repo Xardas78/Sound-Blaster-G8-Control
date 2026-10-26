@@ -1078,7 +1078,8 @@ Jeder Schreibbefehl (auch einer ohne Wertänderung) löst eine
 Neu-Enumeration des Geräts aus (~0,1s später Disconnect, ~1s später
 wieder da).
 
-**Offen: Neustart-Schleife im Direct Mode.** Bei eingeschaltetem Direct
+**(GELÖST am 2026-10-26, siehe Nachtrag direkt darunter: Ursache war `alsactl restore`.)**
+**Neustart-Schleife im Direct Mode.** Bei eingeschaltetem Direct
 Mode startet das G8 unregelmäßig von selbst neu (Disconnect/Reconnect),
 oft alle 2,4-3,7s, und kommt dabei mit Direct Mode = an zurück – das ist
 das "kurz an, dann wieder aus" der LED. Messreihe 2026-10-25 (immer
@@ -1109,6 +1110,71 @@ App gestoppt oder irrelevant, Gerät am gespeisten 4-Port-Hub, Bus 5):
   Mode an, 60s idle, einmal ohne und einmal mit Musik; vergleichen, ob
   Windows im Leerlauf Datenverkehr erzeugt. Unter Linux Direct Mode mit
   laufendem Audio testen, ohne `dumpcap`.
+
+### Nachtrag 2026-10-26: Ursache für "Direct Mode geht wieder aus" und die Neustart-Schleife gefunden und behoben (Issue #1)
+
+**Ursache: `alsactl restore` (udev-Regel `90-alsa-restore.rules`).** Bei JEDER
+Registrierung der G8-Soundkarte schreibt es die zuletzt gespeicherten
+ALSA-Mixerwerte zurück, darunter `PCM Capture Source` (UAC-Selector `0x11`,
+gespeichert: "Line In") und `Speaker Clock Source` (UAC-Clock-Selector `0x0e`,
+gespeichert: "DSP Clock"). Im Direct Mode steht `Speaker Clock Source` auf
+**"Stereo Direct"** (Selector-Wert 2) und `PCM Capture Source` auf Wert 2:
+Das ist der echte Direct-Mode-Zustand. Weil jeder Direct-Mode-Wechsel das Gerät
+neu am USB anmeldet, die Karte danach neu registriert wird und die Wiederherstellung
+den Takt zurückschaltet, fällt der Modus nach ca. 1 s wieder aus. Das HID-Flag
+(`5a 39 05 01`, Bit 0x20) bleibt dabei gesetzt: Flag = angeforderter Modus, nicht
+tatsächlicher Zustand. Mit gesetztem Flag schaltet das Gerät beim nächsten Hochfahren
+wieder in den Direct Mode, wird wieder zurückgesetzt, usw.: das war die
+**Neustart-Schleife alle 2,4-3,7 s** (und die Störgeräusche: Audio lief gegen
+einen zurückgeschalteten Takt). Windows schreibt diese Selektoren nie zurück.
+
+Nachweis (alles bei laufendem Gerät, ohne `dumpcap`):
+- Kernel-Treiber nur von Interface 0 abgehängt (Karte nicht registriert): Direct Mode
+  bleibt an. Treiber wieder angehängt (Karte registriert, Restore läuft): LED aus,
+  ohne Disconnect, Flag bleibt gesetzt.
+- Einzelschritte des Kartenaufbaus nachgespielt (SET_INTERFACE-Folge, Lautstärke-
+  Schreiben, nur Lesen, 384-kHz-Takt auf Einheit `0x10`): keiner schaltet aus.
+  Capture-Selector `0x11` von 2 auf 1 geschrieben: LED aus, sofort.
+- Udev-Ausnahme nur für das G8 (`041e:329b`, `controlC*`) vor dem
+  `alsactl restore`: Direct Mode bleibt an, 0 Neustarts über Minuten, Audio sauber,
+  `Speaker Clock Source = Stereo Direct`. Der Versuch mit `OPTIONS+="last_rule"` war
+  wirkungslos (wird von neuem udev ignoriert: "Invalid value for OPTIONS key").
+- Windows-Captures (`SB G8/von windows/`): pro Direct-Mode-Wechsel genau eine
+  Neuanmeldung, danach Stabilität; Windows schreibt nach der Anmeldung selbst
+  `SET_CUR 0x0e = 2` (Stereo Direct) und alle Mixer-Defaults, nie `SET_INTERFACE`.
+
+**Fix:** Kopie der Systemregel nach `/etc/udev/rules.d/90-alsa-restore.rules` mit
+einer Sprungzeile vor dem ersten Regelblock:
+`ACTION=="add", SUBSYSTEM=="sound", KERNEL=="controlC*", ATTRS{idVendor}=="041e", ATTRS{idProduct}=="329b", GOTO="alsa_restore_end"`.
+Im Installer (`packaging/install.sh`) als zusätzlicher Schritt mit Rückfrage,
+Vor-/Nachteilen und Rückgängig-Hinweis (Nachteil: Kopie der Systemregel, spätere
+alsa-utils-Updates wirken für diese Datei nicht; kein Mixer-Restore für das G8,
+das Gerät behält seine Werte selbst).
+
+**Objektive Anzeiger für den echten Direct-Mode-Zustand** (zusätzlich zum HID-Flag):
+ALSA-Regler `Speaker Clock Source` (`numid` kann variieren, per Name suchen): "Stereo
+Direct" = an. Per USB: Clock-Selector `0x0e` (`a1 01 wV=0100 wI=0e00`),
+Capture-Selector `0x11`, Takt-Einheit `0x10` (384000 Hz im Direct Mode).
+Der GET_RANGE der Takt-Einheit `0x0f` ist KEIN Anzeiger (immer bis 48 kHz).
+
+**Weitere Befunde der Windows-Session (2026-10-26), aus ihrer HANDOFF-Kopie auf dem
+Austauschlaufwerk (`SB G8/g8-scaffold/HANDOFF.md`, veraltete Basis, nur die
+Nachträge zählen):** Weitere Statusbits in `5a 39 05 01`: `b5 & 0x40` Logo-LED,
+`b6 & 0x02` Energiesparen, `b5 & 0x20` SPDIF-Direct (dabei zusätzlich `5a 6e 02 01`),
+`b7 & 0x10` Volume Sync. `5a 39 01 01` liefert dieselben Statusflags. Nach jeder
+USB-Enumeration schickt das Gerät ~1,1 s später ohne Host-Befehl das Trio
+`6e`/`2c`/`1a` plus vollen Parameter-Dump (außer bei Direct Mode an). Fehlerquittung
+`5a 02 0a <fam> <code>`: `0x81` unbekannte Sub-ID, `0x80`/`0x83` Befehl existiert,
+aber nicht als GET lesbar. Neue Mitschnitte und Skripte liegen unter
+`SB G8/von windows/2026-10-25-*/2026-10-26-*` (Skripte: `g8_query.py` u. a., NIE
+senden: `5a 9b ...` Reset, Header `3e`/`3f` Firmware-Kanal).
+
+**Lehren:**
+- `modprobe -r snd_usb_audio` hält nur bis zur nächsten Neuanmeldung des G8 (Autoload).
+- `dumpcap` löst beim Start einen Disconnect aus; für UAC-Verhalten besser Schritt für
+  Schritt per `pyusb` nachspielen (Interface 0-2 abhängen, einzelne Requests senden,
+  danach `attach_kernel_driver`).
+- Zwei "unabhängige" Symptome (Schleife und Störgeräusche) hatten dieselbe Ursache.
 
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
   Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
