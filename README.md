@@ -6,13 +6,28 @@ Natives Linux-Kontrollpanel für den Creative Sound Blaster G8 (USB-DAC/Kopfhör
 
 Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Technology Ltd.
 
+## English summary
+
+A native Linux control panel for the Creative Sound Blaster G8 USB DAC/headphone amp (Rust + [Slint](https://slint.dev/)), reverse-engineered from USB captures because Creative offers no Linux support. Unofficial, not affiliated with Creative Technology Ltd. The UI is available in English, German and French (Settings → Language).
+
+**Features:** Acoustic Engine (Surround, Crystalizer, Bass, Smart Volume, Dialog+), 60 sound-mode presets plus your own saved modes, 10-band equalizer with 71 presets (carried over when you switch headphones/speakers), CrystalVoice, Direct Mode and Scout Mode (with a global hotkey through the desktop's shortcut portal), Dolby decoder, mixer (levels, mute, balance), live volume-knob sync, headphone/speaker switching, virtual HRTF headphone surround via PipeWire, tray icon, autostart, dark mode.
+
+**Build:** Rust toolchain plus ALSA development files (`libasound2-dev` on Debian/Ubuntu, `alsa-lib` on Arch) and `pkg-config`; run with PipeWire. `cargo run --release`, or `./packaging/install.sh` for the desktop entry (no root needed; it can optionally ask for two small system tweaks, see below).
+
+**Good to know:**
+- Direct Mode only stays on if `alsactl restore` does not reset the G8's clock/capture selectors. The installer offers an optional, explained G8-only udev exception for this (see [HANDOFF.md](HANDOFF.md), section 7).
+- If the G8 hangs behind a USB hub, hub autosuspend can cause dropouts; the installer detects this and offers a fix.
+- Global hotkey: the key is assigned in your desktop's shortcut settings (KDE: Shortcuts → Sound Blaster G8 Control, then Apply).
+- Firmware flashing is deliberately not implemented (risk of bricking the device).
+- Releases and issues are in English and German.
+
 ## Funktionen
 
 - **Acoustic Engine** – Surround, Crystalizer, Bass, Smart Volume (inkl. Nacht/Normal/Laut), Dialog+
 - **Sound-Modus** – 60 komplette Klangbild-Presets (Surround/Crystalizer/Bass/Smart Volume/Dialog+ + passende Equalizer-Kurve in einem Klick), plus dieselben Live-Regler wie Acoustic Engine direkt eingebettet, im selben Zustand wie der Acoustic-Engine-Tab (Regler-Dreh an einer Stelle zeigt sich sofort an der anderen) – wählt ein Preset auch im Equalizer-Tab denselben Namen aus, nicht nur die Kurve
 - **10-Band-Equalizer** mit Vorverstärkung und 71 echten Original-Presets
 - **CrystalVoice** – Noise Reduction, Echo Cancellation, Voice Morph, Mikrofon-Equalizer
-- **Modi & Decoder** – Direct Mode, Scout Mode (inkl. Zugriffstaste), Dolby-Decoder
+- **Modi & Decoder** – Direct Mode (Zustand wird nach jedem Verbinden gelesen, folgt auch der MODE-Taste am Gerät), Scout Mode mit **globaler Zugriffstaste** (über das Tastenkürzel-Portal des Desktops, Taste in den Systemeinstellungen festlegen), Dolby-Decoder
 - **Mixer** – alle Ein-/Ausgangspegel inkl. Stummschaltung und Balance (L/R)
 - **Wiedergabe** – 7.1-Positionsdiagramm mit Testtönen, Kopfhörer/Lautsprecher-Umschaltung
 - **Virtueller HRTF-Kopfhörer-Surround**: PipeWire-Filter-Chain mit HeSuVi-Faltung, da die G8-Hardware selbst nur Stereo ausgibt
@@ -20,6 +35,8 @@ Inoffizielles Projekt, keine Verbindung zu oder Unterstützung von Creative Tech
 - **Autostart, Tray-Icon, Einstellungen merken sich selbst**: Autostart mit dem System, Schließen-Verhalten wählbar (beenden oder in den Tray minimieren), App-seitige Einstellungen (Acoustic Engine, Equalizer, Energiesparen, Logo-LED, Dark Mode) werden gespeichert und beim Start automatisch wieder angezeigt und ans Gerät gesendet
 - **Automatischer Reconnect**: verliert die App die Geräteverbindung (z.B. nach "Gerät zurücksetzen"), verbindet sie sich von selbst wieder, sobald das Gerät zurück ist
 - **Firmware-Versions-Check**: zeigt die aktuelle Firmware an und prüft gegen Creatives Update-Feed, ob eine neuere verfügbar ist (reiner Versions-Check, kein Update-Flash – siehe Status unten)
+- **Eigene Sound-Modi**: aktuelle Einstellung unter eigenem Namen speichern (💾), erneut anwenden (↺) oder löschen (🗑, nur eigene)
+- **Sprachumschalter** (Automatisch/Deutsch/English/Français) in den Einstellungen
 - Dark Mode
 
 ## Status
@@ -38,17 +55,18 @@ Weiterhin bekannt:
 - Der Lautstärkeknopf kann in einen Zustand geraten, in dem er gar nicht mehr reagiert (weder Software- noch Hardware-Bug in g8-control) – meist durch echten Stromverlust am USB-Kabel behebbar, manchmal erst durch einen vollständigen PC-Neustart. Siehe HANDOFF.md Abschnitt 7 für die Diagnose und Details.
 
 **Funktioniert noch nicht** (UI vorhanden, aber ohne Wirkung – Protokoll unbekannt):
-- Sound-Modus-Preset **auf dem Gerät selbst** speichern/auslesen (bräuchte einen neuen USB-Capture, siehe HANDOFF.md Abschnitt 8) – **software-seitig** merkt sich die App das zuletzt gewählte Preset aber bereits und wendet es beim nächsten Start automatisch wieder an
+- Sound-Modi **im Gerät** speichern: gibt es nicht – laut Windows-Mitschnitt speichert auch die Original-Software eigene Modi nur lokal; die App tut dasselbe
 - Bass-Crossover-Frequenz aus den Sound-Modus-Presets (kein bekannter Geräteparameter)
 - Firmware-**Flash** – **bewusst dauerhaft nicht implementiert** (Bricking-Risiko bei falscher Byte-Sequenz), nicht nur vorläufig offen; bei verfügbarem Update verweist die App auf die offizielle Windows-Software; siehe [HANDOFF.md](HANDOFF.md) Abschnitt 5
-- Scout-Mode-Zugriffstaste (Hotkey) ist nur UI-seitig vorbereitet, kein echter globaler Tastatur-Hook
 
-**Bekannte Einschränkung:** Windows führt für Equalizer-Presets separate Kopfhörer-/Lautsprecher-Kurven; unser Equalizer hat nur eine gemeinsame Kurve unabhängig vom Kopfhörer/Lautsprecher-Umschalter (wir übernehmen nur die Kopfhörer-Variante der Original-Presets).
+**Equalizer bei Ausgabewechsel:** Das Gerät kennt nur eine Equalizer-Kurve; die App spielt den gewählten Preset nach jedem Wechsel Kopfhörer/Lautsprecher neu ein (wie die Windows-Software), der Preset wandert also mit.
 
 ## Voraussetzungen
 
 - Linux mit PipeWire (für den virtuellen Surround) und ALSA
-- Rust-Toolchain (`cargo`)
+- Rust-Toolchain (`cargo`) und `pkg-config`
+- ALSA-Entwicklungsdateien zum Bauen: `libasound2-dev` (Debian/Ubuntu) bzw. `alsa-lib` (Arch/CachyOS)
+- Für die globale Scout-Mode-Taste ein Desktop mit Portal-Unterstützung (KDE Plasma, GNOME 48+); ohne läuft die App normal, nur ohne Hotkey
 - Ein angeschlossener Sound Blaster G8 (USB-ID `041e:329b`)
 
 ## Bauen & Starten
@@ -66,6 +84,12 @@ Ohne angeschlossenes Gerät startet die App trotzdem – alle proprietären Befe
 ```
 
 Baut die Release-Version und installiert Binary, Icon und `.desktop`-Eintrag nach `~/.local/{bin,share}` (kein root nötig). Zum Deinstallieren einfach die dort angelegten Dateien wieder löschen.
+
+Optional und nur nach Rückfrage (mit Vor-/Nachteilen erklärt, braucht `sudo`):
+- **ALSA-Restore für die G8 abschalten**: sonst setzt `alsactl restore` bei jeder Neuanmeldung der Karte die Direct-Mode-Schalter zurück und der Direct Mode geht nach einer Sekunde wieder aus. Rückgängig: `sudo rm /etc/udev/rules.d/90-alsa-restore.rules && sudo udevadm control --reload-rules`
+- **USB-Hub-Autosuspend abschalten**, falls die G8 an einem Hub hängt, der sie sonst sporadisch trennt
+
+Tipp: Die App über das Anwendungsmenü starten, nicht aus einem fremden Terminal – nur so ordnet das Tastenkürzel-Portal die globale Zugriffstaste der richtigen Anwendung zu.
 
 ## Technische Details
 
