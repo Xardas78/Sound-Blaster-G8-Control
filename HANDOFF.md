@@ -1195,6 +1195,24 @@ senden: `5a 9b ...` Reset, Header `3e`/`3f` Firmware-Kanal).
   Aufnahmequelle laufen weiter über `amixer` (seltene Klicks). Live-Test: `cargo test -- --ignored mixer_roundtrip`.
   Neue Build-Abhängigkeit: ALSA-Entwicklungsdateien (`libasound2-dev`/`alsa-lib`).
 
+### Nachtrag 2026-10-26 (3): Windows-Mitschnitte zu 💾/↺, Ausgabewechsel, Verstärkung und Rückseiten-Schalter
+
+Mitschnitte: `SB G8/von windows/2026-10-26-Wireshark-mitschnitte/` (`soundmodus speichern und so`, `eq tab speichern und so`,
+`steckerwechsel mit eq preset`, `hp in mic`, `gain h-l`, `schalter an der rückseite`, Screenshot "Neuen Modus hinzufügen").
+- **💾 = "Neuen Modus hinzufügen"** (Dialog "Neu speichern", Vorgabename "Neuer Modus", Abbrechen/OK). Dabei und beim
+  Zurücksetzen (↺) gibt es **keinen neuen Befehl** an das Gerät: nur die üblichen `5a 12 07 01 96 <param> <f32>`-Schreibzugriffe.
+  Einen Modus anwenden (Preset wählen, ↺) = Burst aus allen Acoustic-Engine-Parametern (`96:00..08, 18, 02`), den EQ-Bändern
+  (`96:0b..14`) und dem Preamp (`96:0a`) in ca. 0,1 s. Beispiele im Mitschnitt: "Gaming" (Surround an 0,12, Bänder
+  `3,4,-1,-2,0,2,2,-5,2,0`) und "Effects Off" (alles aus, Surround-Level 0,67). Eigene Modi liegen also **lokal in der Creative-App**,
+  nicht im Gerät -> bei uns lokal in der App nachbaubar.
+- **Ausgabewechsel (Stecker/Kopfhörer<->Lautsprecher):** Das Gerät schickt den vollen Parameter-Dump (`5a 11 32 08 ...`) plus
+  `5a 6e`/`5a 1a`, etwa 2 s später schreibt die **Windows-App den gespeicherten EQ-Preset selbst wieder** ins Gerät (Burst `96:0b..14,0a`).
+  Das Gerät hält nur EIN Kurvenset; die pro-Ausgang-Kurven (Issue #9, Kopfhörer-/Lautsprechersymbol unten im EQ-Tab) sind also
+  eine reine App-Funktion, die bei jedem Ausgabewechsel neu eingespielt wird.
+- **Verstärkung (`gain h-l`) und Rückseiten-Schalter:** In den Mitschnitten gibt es **weder `5a`-Befehle noch UAC-`SET_CUR`
+  oder G8-Interrupts**. Beides ist reine Hardware, ohne für den Host sichtbare Protokolländerung (nichts nachzubauen).
+- "Bearbeiten" am Geräte-Bild blendet nur Kacheln der Hauptseite ein/aus (laut Nutzer, nicht nachzubauen).
+
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
   Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
   (mehrfache PipeWire-Profilwechsel `pro-audio`↔`analog-stereo`, mehrere
