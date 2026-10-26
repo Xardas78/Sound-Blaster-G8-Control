@@ -1228,6 +1228,16 @@ Mitschnitte: `SB G8/von windows/2026-10-26-Wireshark-mitschnitte/` (`soundmodus 
   aus den gespeicherten Einstellungen neu ins Gerät (wie die Windows-App im Capture "steckerwechsel mit eq preset"). Der gewählte
   Preset wandert so mit; getrennte Kurven je Ausgang sind damit nicht nötig (Nutzer bestätigt: unter Windows wird der Preset
   beim Wechsel ebenfalls übernommen). Live bestätigt.
+- **Scout-Mode-Hotkey (#10) über das XDG-GlobalShortcuts-Portal** (`src/hotkey.rs`, Crate `ashpd` 0.13 mit `async-io`,
+  kein tokio): Thread mit `futures_lite::block_on`, Sitzung + `bind_shortcuts` ("scout-mode-toggle"), `receive_activated` ->
+  Scout-Schalter im UI umlegen und `scout_toggled` auslösen. Checkbox "Zugriffstaste" (Modi & Decoder) schaltet die Reaktion
+  (`scout_hotkey` in settings.txt). Die Taste vergibt der Nutzer in den KDE-Systemeinstellungen (Kurzbefehle -> Sound Blaster G8
+  Control -> **Anwenden** nicht vergessen!); KDE warnt dort bei Kollisionen und merkt sie sich über Neustarts (kglobalshortcutsrc,
+  `[g8-control] scout-mode-toggle=...`). `preferred_trigger` wird von KDE ignoriert. Das Portal erkennt die App an ihrer
+  systemd-Scope/Desktop-Datei (`g8-control.desktop`): Start über das Anwendungsmenü passt; für Tests von Hand
+  `systemd-run --user --unit='app-g8\x2dcontrol@test.service' g8-control` (ein reines `nohup` aus einer fremden Sitzung läuft
+  unter deren App-ID). Live bestätigt (8 Aktivierungen, Taste überlebt Neustart). Nur KDE/GNOME mit Portal-Unterstützung;
+  ohne Portal meldet die App "Globaler Hotkey nicht verfügbar" im Log und läuft normal weiter.
 - Noch offen: (#9 erledigt, siehe oben; war: getrennte EQ-Kurven je Ausgang, laut Capture reine App-Funktion), #10 (Scout-Hotkey, geplant über das
   KDE-GlobalShortcuts-Portal), #2, #3 (Beobachtung), Hinweis: der Lautsprecher-Tab-Audioqualität/"Standard festlegen" ist host-seitig.
 

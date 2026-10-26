@@ -25,7 +25,7 @@ export component ModiDecoderTab inherits VerticalLayout {
     // echter globaler Tastatur-Hook bräuchte eine eigene Rust-Bibliothek
     // (z.B. global-hotkey-Crate) – noch nicht angebunden.
     in-out property <bool> scout-hotkey-enabled: false;
-    in-out property <string> scout-hotkey-text: "";
+    callback scout-hotkey-toggled(bool);
 
     callback direct-mode-toggled(bool);
     callback scout-toggled(bool);
@@ -97,22 +97,15 @@ export component ModiDecoderTab inherits VerticalLayout {
             spacing: 8px;
             CheckBox {
                 text: @tr("Zugriffstaste");
-                checked: scout-hotkey-enabled;
-                toggled => { scout-hotkey-enabled = self.checked; }
+                checked <=> scout-hotkey-enabled;
+                toggled => { scout-hotkey-toggled(self.checked); }
             }
         }
         Text {
             wrap: word-wrap;
             font-size: 14px;
             color: gray;
-            text: @tr("Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift.");
-        }
-        LineEdit {
-            width: 260px;
-            enabled: scout-hotkey-enabled;
-            placeholder-text: @tr("Klicken Sie, um den Tastaturanschlag zuzuweisen");
-            text: scout-hotkey-text;
-            edited(t) => { scout-hotkey-text = t; }
+            text: @tr("Die Taste legst du in den Systemeinstellungen unter Tastenkürzel fest (danach auf Anwenden klicken). Dein Desktop warnt dort bei Kollisionen mit anderen Kürzeln.");
         }
     }
 

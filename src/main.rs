@@ -2,6 +2,7 @@ mod audio_profile;
 mod autostart;
 mod device;
 mod firmware;
+mod hotkey;
 mod mixer;
 mod modes;
 mod persist;
@@ -15,6 +16,8 @@ use protocol::{acoustic_engine, build_level_report, build_report, build_toggle_r
 use slint::{ModelRc, VecModel};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -440,6 +443,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut s = settings.borrow_mut();
             s.sound_mode_preset_index = preset_index;
             s.eq_preset_index = -1;
+            persist::save(&s);
+        });
+    }
+
+    // Scout-Mode-Hotkey über das XDG-GlobalShortcuts-Portal (siehe hotkey.rs).
+    {
+        let enabled = Arc::new(AtomicBool::new(settings.borrow().scout_hotkey));
+        let started = Rc::new(Cell::new(false));
+        let weak = ui.as_weak();
+        ui.set_scout_hotkey_enabled(settings.borrow().scout_hotkey);
+        let start = {
+            let enabled = enabled.clone();
+            let started = started.clone();
+            let weak = weak.clone();
+            move || {
+                if started.replace(true) {
+                    return;
+                }
+                let weak = weak.clone();
+                hotkey::spawn(enabled.clone(), move || {
+                    let _ = weak.upgrade_in_event_loop(|ui| {
+                        let on = !ui.get_scout_on();
+                        ui.set_scout_on(on);
+                        ui.invoke_scout_toggled(on);
+                    });
+                });
+            }
+        };
+        if settings.borrow().scout_hotkey {
+            start();
+        }
+        let settings = settings.clone();
+        ui.on_scout_hotkey_toggled(move |on| {
+            enabled.store(on, Ordering::Relaxed);
+            if on {
+                start();
+            }
+            let mut s = settings.borrow_mut();
+            s.scout_hotkey = on;
             persist::save(&s);
         });
     }

@@ -60,6 +60,9 @@ export component DeviceHubTab inherits TabWidget {
     callback mic-eq-profile-changed(int);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
+    callback scout-hotkey-toggled(bool);
+    in-out property <bool> scout-on: false;
+    in-out property <bool> scout-hotkey-enabled: false;
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
@@ -152,6 +155,9 @@ export component DeviceHubTab inherits TabWidget {
             direct-mode-on <=> direct-mode-on;
             direct-mode-busy: direct-mode-busy;
             direct-mode-toggled(on) => { direct-mode-toggled(on); }
+            scout-on <=> scout-on;
+            scout-hotkey-enabled <=> scout-hotkey-enabled;
+            scout-hotkey-toggled(on) => { scout-hotkey-toggled(on); }
             scout-toggled(on) => { scout-toggled(on); }
             decoder-mode-changed(m) => { decoder-mode-changed(m); }
         }

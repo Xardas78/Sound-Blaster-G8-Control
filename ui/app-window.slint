@@ -100,6 +100,9 @@ export component AppWindow inherits Window {
     callback mic-eq-profile-changed(int);
     callback eq-param-changed(int, float);
     callback scout-toggled(bool);
+    callback scout-hotkey-toggled(bool);
+    in-out property <bool> scout-on: false;
+    in-out property <bool> scout-hotkey-enabled: false;
     callback direct-mode-toggled(bool);
     callback decoder-mode-changed(int);
     callback mixer-level-changed(int, float);
@@ -219,6 +222,9 @@ export component AppWindow inherits Window {
                         voice-morph-profile-changed(i) => { voice-morph-profile-changed(i); }
                         mic-eq-profile-changed(i) => { mic-eq-profile-changed(i); }
                         eq-param-changed(id, v) => { eq-param-changed(id, v); }
+                        scout-on <=> scout-on;
+                        scout-hotkey-enabled <=> scout-hotkey-enabled;
+                        scout-hotkey-toggled(on) => { scout-hotkey-toggled(on); }
                         scout-toggled(on) => { scout-toggled(on); }
                         direct-mode-toggled(on) => { direct-mode-toggled(on); }
                         decoder-mode-changed(m) => { decoder-mode-changed(m); }

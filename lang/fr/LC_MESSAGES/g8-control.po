@@ -21,27 +21,27 @@ msgctxt "AppWindow"
 msgid "Im Gerät"
 msgstr "Sur l'appareil"
 
-#: ui/app-window.slint:176
+#: ui/app-window.slint:182
 msgctxt "AppWindow"
 msgid "Gerät"
 msgstr "Appareil"
 
-#: ui/app-window.slint:232
+#: ui/app-window.slint:241
 msgctxt "AppWindow"
 msgid "Wiedergabe"
 msgstr "Lecture"
 
-#: ui/app-window.slint:242
+#: ui/app-window.slint:251
 msgctxt "AppWindow"
 msgid "Aufnahme"
 msgstr "Enregistrement"
 
-#: ui/app-window.slint:248
+#: ui/app-window.slint:257
 msgctxt "AppWindow"
 msgid "Einstellungen"
 msgstr "Paramètres"
 
-#: ui/app-window.slint:281
+#: ui/app-window.slint:290
 msgctxt "AppWindow"
 msgid "✗ G8 nicht gefunden – ist das Gerät angeschlossen?"
 msgstr "✗ G8 introuvable – l'appareil est-il connecté ?"
@@ -151,22 +151,22 @@ msgctxt "MixerTab"
 msgid "Aufnahme"
 msgstr "Enregistrement"
 
-#: ui/tabs/device-hub-tab.slint:79
+#: ui/tabs/device-hub-tab.slint:82
 msgctxt "DeviceHubTab"
 msgid "Sound-Modus"
 msgstr "Mode sonore"
 
-#: ui/tabs/device-hub-tab.slint:130
+#: ui/tabs/device-hub-tab.slint:133
 msgctxt "DeviceHubTab"
 msgid "Equalizer"
 msgstr "Égaliseur"
 
-#: ui/tabs/device-hub-tab.slint:150
+#: ui/tabs/device-hub-tab.slint:153
 msgctxt "DeviceHubTab"
 msgid "Modi & Decoder"
 msgstr "Modes et décodeur"
 
-#: ui/tabs/device-hub-tab.slint:160
+#: ui/tabs/device-hub-tab.slint:166
 msgctxt "DeviceHubTab"
 msgid "Mixer"
 msgstr "Mixeur"
@@ -398,35 +398,30 @@ msgstr "Touche d'accès"
 
 #: ui/tabs/misc-tabs.slint:108
 msgctxt "ModiDecoderTab"
-msgid "Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift."
-msgstr "Pour attribuer un raccourci, appuyez sur la touche du clavier en combinaison avec Ctrl, Alt ou Maj."
+msgid "Die Taste legst du in den Systemeinstellungen unter Tastenkürzel fest (danach auf Anwenden klicken). Dein Desktop warnt dort bei Kollisionen mit anderen Kürzeln."
+msgstr "Vous définissez la touche dans les paramètres système, sous Raccourcis (puis cliquez sur Appliquer). Votre bureau signale les conflits avec d'autres raccourcis."
 
-#: ui/tabs/misc-tabs.slint:113
-msgctxt "ModiDecoderTab"
-msgid "Klicken Sie, um den Tastaturanschlag zuzuweisen"
-msgstr "Cliquez pour attribuer la combinaison de touches"
-
-#: ui/tabs/misc-tabs.slint:124
+#: ui/tabs/misc-tabs.slint:117
 msgctxt "ModiDecoderTab"
 msgid "Decoder"
 msgstr "Décodeur"
 
-#: ui/tabs/misc-tabs.slint:138
+#: ui/tabs/misc-tabs.slint:131
 msgctxt "ModiDecoderTab"
 msgid "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder."
 msgstr "Lisez facilement vos médias Dolby Digital avec le décodeur intégré."
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Normal"
 msgstr "Normal"
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Voll"
 msgstr "Complet"
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Nacht"
 msgstr "Nuit"

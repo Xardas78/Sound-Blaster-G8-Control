@@ -8,6 +8,8 @@ name = "g8-control"
 path = "src/main.rs"
 
 [dependencies]
+ashpd = { version = "0.13", default-features = false, features = ["async-io", "global_shortcuts"] }
+futures-lite = "2"
 slint = "1.8"
 hidapi = "2.6"
 alsa = "0.11"

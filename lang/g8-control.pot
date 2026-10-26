@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: g8-control 0.2.0\n"
-"POT-Creation-Date: 2026-10-26 12:50+0000\n"
+"POT-Creation-Date: 2026-10-26 13:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,27 +22,27 @@ msgctxt "AppWindow"
 msgid "Im Gerät"
 msgstr ""
 
-#: ui/app-window.slint:176
+#: ui/app-window.slint:182
 msgctxt "AppWindow"
 msgid "Gerät"
 msgstr ""
 
-#: ui/app-window.slint:232
+#: ui/app-window.slint:241
 msgctxt "AppWindow"
 msgid "Wiedergabe"
 msgstr ""
 
-#: ui/app-window.slint:242
+#: ui/app-window.slint:251
 msgctxt "AppWindow"
 msgid "Aufnahme"
 msgstr ""
 
-#: ui/app-window.slint:248
+#: ui/app-window.slint:257
 msgctxt "AppWindow"
 msgid "Einstellungen"
 msgstr ""
 
-#: ui/app-window.slint:281
+#: ui/app-window.slint:290
 msgctxt "AppWindow"
 msgid "✗ G8 nicht gefunden – ist das Gerät angeschlossen?"
 msgstr ""
@@ -154,22 +154,22 @@ msgctxt "MixerTab"
 msgid "Aufnahme"
 msgstr ""
 
-#: ui/tabs/device-hub-tab.slint:79
+#: ui/tabs/device-hub-tab.slint:82
 msgctxt "DeviceHubTab"
 msgid "Sound-Modus"
 msgstr ""
 
-#: ui/tabs/device-hub-tab.slint:130
+#: ui/tabs/device-hub-tab.slint:133
 msgctxt "DeviceHubTab"
 msgid "Equalizer"
 msgstr ""
 
-#: ui/tabs/device-hub-tab.slint:150
+#: ui/tabs/device-hub-tab.slint:153
 msgctxt "DeviceHubTab"
 msgid "Modi & Decoder"
 msgstr ""
 
-#: ui/tabs/device-hub-tab.slint:160
+#: ui/tabs/device-hub-tab.slint:166
 msgctxt "DeviceHubTab"
 msgid "Mixer"
 msgstr ""
@@ -416,37 +416,33 @@ msgstr ""
 #: ui/tabs/misc-tabs.slint:108
 msgctxt "ModiDecoderTab"
 msgid ""
-"Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der "
-"Kombination von Strg, Alt oder Shift."
+"Die Taste legst du in den Systemeinstellungen unter Tastenkürzel fest "
+"(danach auf Anwenden klicken). Dein Desktop warnt dort bei Kollisionen mit "
+"anderen Kürzeln."
 msgstr ""
 
-#: ui/tabs/misc-tabs.slint:113
-msgctxt "ModiDecoderTab"
-msgid "Klicken Sie, um den Tastaturanschlag zuzuweisen"
-msgstr ""
-
-#: ui/tabs/misc-tabs.slint:124
+#: ui/tabs/misc-tabs.slint:117
 msgctxt "ModiDecoderTab"
 msgid "Decoder"
 msgstr ""
 
-#: ui/tabs/misc-tabs.slint:138
+#: ui/tabs/misc-tabs.slint:131
 msgctxt "ModiDecoderTab"
 msgid ""
 "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder."
 msgstr ""
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Normal"
 msgstr ""
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Voll"
 msgstr ""
 
-#: ui/tabs/misc-tabs.slint:140
+#: ui/tabs/misc-tabs.slint:133
 msgctxt "ModiDecoderTab"
 msgid "Nacht"
 msgstr ""
