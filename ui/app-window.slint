@@ -27,6 +27,8 @@ export component AppWindow inherits Window {
     // Von Rust beim Start gesetzt (device.rs / G8Device::open()).
     in-out property <bool> device-connected: false;
     in-out property <string> device-status: @tr("Suche Gerät …");
+    // Von Rust gesetzt, wenn das erste Öffnen scheitert (Text liegt hier, damit er übersetzt wird).
+    in-out property <bool> device-search-failed: false;
     // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
     in property <string> app-version: "";
 
@@ -263,7 +265,7 @@ export component AppWindow inherits Window {
                     Text {
                         horizontal-alignment: center;
                         color: #e74c3c;
-                        text: device-status;
+                        text: device-search-failed ? @tr("✗ G8 nicht gefunden – ist das Gerät angeschlossen?") : device-status;
                     }
                 }
             }

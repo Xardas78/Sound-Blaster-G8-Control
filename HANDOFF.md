@@ -1176,6 +1176,25 @@ senden: `5a 9b ...` Reset, Header `3e`/`3f` Firmware-Kanal).
   danach `attach_kernel_driver`).
 - Zwei "unabhängige" Symptome (Schleife und Störgeräusche) hatten dieselbe Ursache.
 
+### Nachtrag 2026-10-26 (2): Sprache (#4, #5, #6) und Mixer (#8) erledigt
+
+- **Sprachumschalter** (Einstellungen -> "Sprache": Automatisch/Deutsch/English/Français), wirkt sofort per
+  `slint::select_bundled_translation()`, gespeichert in `settings.txt` (`language=0..3`). "Automatisch"
+  wertet `LANGUAGE`/`LC_ALL`/`LC_MESSAGES`/`LANG` aus (unbekannte Sprache -> Englisch). Slint wählt beim Start
+  ohnehin schon per `sys_locale` (deshalb war #5 praktisch schon erfüllt). Neue Texte: `slint-tr-extractor -d
+  g8-control --package-name g8-control --package-version 0.1.1 -o lang/g8-control.pot $(find ui -name '*.slint')`,
+  dann Einträge in `lang/make_po.py` ergänzen und das Skript ausführen.
+- **Build-Falle:** Cargo bemerkte geänderte `.po`-Dateien nicht (Build in 0,09 s, alte Texte). `build.rs` gibt jetzt
+  `cargo:rerun-if-changed=lang` aus.
+- **#6 Rust-Texte:** Es gibt nur einen nutzersichtbaren Rust-Text (Meldung "G8 nicht gefunden"); er liegt jetzt als
+  `@tr()` in `app-window.slint` (`device-search-failed`). Alle `eprintln!`-Ausgaben sind Entwickler-Logs und bleiben
+  bewusst deutsch.
+- **#8 Mixer:** `get_level`/`set_level`/`set_balance` nutzen eine pro Thread dauerhaft geöffnete ALSA-Verbindung
+  (`alsa`-Crate, einfacher Mixer, `handle_events()` vor jedem Lesen), die bei Fehlern (Karte nach einer
+  Neuanmeldung weg) verworfen und neu geöffnet wird. Keine `amixer`-Prozesse mehr im Leerlauf. Stumm und
+  Aufnahmequelle laufen weiter über `amixer` (seltene Klicks). Live-Test: `cargo test -- --ignored mixer_roundtrip`.
+  Neue Build-Abhängigkeit: ALSA-Entwicklungsdateien (`libasound2-dev`/`alsa-lib`).
+
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
   Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
   (mehrfache PipeWire-Profilwechsel `pro-audio`↔`analog-stereo`, mehrere
@@ -1311,9 +1330,8 @@ keine Eigenbau-Lösung nötig:
   g8-control --package-name g8-control --package-version 0.1.1 -o
   lang/g8-control.pot <dateien>` (aus `cargo install
   slint-tr-extractor`, war schon installiert).
-- Laufzeit-Sprachauswahl: über die `LANGUAGE`-Umgebungsvariable (z.B.
-  `LANGUAGE=fr`), **kein UI-Umschalter implementiert** – auf Wunsch
-  bewusst zurückgestellt, ebenso automatische Spracherkennung.
+- Laufzeit-Sprachauswahl: **inzwischen umgesetzt** (Einstellungen -> Sprache, siehe
+  Nachtrag 2026-10-26 (2)); die `LANGUAGE`-Variable wirkt nur noch bei "Automatisch".
   `LANGUAGE` braucht (anders als `LC_ALL`/`LANG`) keine installierte
   System-Locale, nur den Sprachcode.
 - Live getestet (2026-08-24): `LANGUAGE=fr LC_ALL=C.UTF-8` zeigt

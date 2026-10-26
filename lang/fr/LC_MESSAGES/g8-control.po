@@ -16,25 +16,30 @@ msgctxt "AppWindow"
 msgid "Suche Gerät …"
 msgstr "Recherche de l'appareil …"
 
-#: ui/app-window.slint:166
+#: ui/app-window.slint:168
 msgctxt "AppWindow"
 msgid "Gerät"
 msgstr "Appareil"
 
-#: ui/app-window.slint:217
+#: ui/app-window.slint:219
 msgctxt "AppWindow"
 msgid "Wiedergabe"
 msgstr "Lecture"
 
-#: ui/app-window.slint:227
+#: ui/app-window.slint:229
 msgctxt "AppWindow"
 msgid "Aufnahme"
 msgstr "Enregistrement"
 
-#: ui/app-window.slint:233
+#: ui/app-window.slint:235
 msgctxt "AppWindow"
 msgid "Einstellungen"
 msgstr "Paramètres"
+
+#: ui/app-window.slint:268
+msgctxt "AppWindow"
+msgid "✗ G8 nicht gefunden – ist das Gerät angeschlossen?"
+msgstr "✗ G8 introuvable – l'appareil est-il connecté ?"
 
 #: ui/effect-slider.slint:139
 msgctxt "CompactEffectRow"

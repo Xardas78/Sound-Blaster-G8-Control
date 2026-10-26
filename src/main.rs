@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => {
             eprintln!("G8 nicht verbunden, UI läuft ohne Hardware-Anbindung: {e}");
-            ui.set_device_status(format!("✗ {e}").into());
+            ui.set_device_search_failed(true);
             None
         }
     }));

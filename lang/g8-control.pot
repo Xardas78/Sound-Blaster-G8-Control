@@ -1,8 +1,8 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-10-26 11:09+0000\n"
+"Project-Id-Version: g8-control 0.1.1\n"
+"POT-Creation-Date: 2026-10-26 11:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,24 +17,29 @@ msgctxt "AppWindow"
 msgid "Suche Gerät …"
 msgstr ""
 
-#: ui/app-window.slint:166
+#: ui/app-window.slint:168
 msgctxt "AppWindow"
 msgid "Gerät"
 msgstr ""
 
-#: ui/app-window.slint:217
+#: ui/app-window.slint:219
 msgctxt "AppWindow"
 msgid "Wiedergabe"
 msgstr ""
 
-#: ui/app-window.slint:227
+#: ui/app-window.slint:229
 msgctxt "AppWindow"
 msgid "Aufnahme"
 msgstr ""
 
-#: ui/app-window.slint:233
+#: ui/app-window.slint:235
 msgctxt "AppWindow"
 msgid "Einstellungen"
+msgstr ""
+
+#: ui/app-window.slint:268
+msgctxt "AppWindow"
+msgid "✗ G8 nicht gefunden – ist das Gerät angeschlossen?"
 msgstr ""
 
 #: ui/effect-slider.slint:139
