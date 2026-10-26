@@ -1,5 +1,5 @@
 import { EffectToggle } from "../effect-slider.slint";
-import { CheckBox, LineEdit } from "std-widgets.slint";
+import { CheckBox, LineEdit, Palette } from "std-widgets.slint";
 
 // Direct Mode, Scout Mode und Decoder waren früher drei eigene Unterreiter,
 // wirkten dort aber jeweils sehr leer (nur ein Schalter + Beschreibung
@@ -46,7 +46,8 @@ export component ModiDecoderTab inherits VerticalLayout {
             }
             Rectangle { horizontal-stretch: 1; }
             Image {
-                source: @image-url("../assets/dm-logo.svg");
+                colorize: Palette.color-scheme == ColorScheme.dark ? Palette.foreground : transparent;
+            source: @image-url("../assets/dm-logo.svg");
                 width: 140px;
                 height: 64px;
                 image-fit: contain;
@@ -72,7 +73,8 @@ export component ModiDecoderTab inherits VerticalLayout {
             }
             Rectangle { horizontal-stretch: 1; }
             Image {
-                source: @image-url("../assets/sm-logo.svg");
+                colorize: Palette.color-scheme == ColorScheme.dark ? Palette.foreground : transparent;
+            source: @image-url("../assets/sm-logo.svg");
                 width: 140px;
                 height: 54px;
                 image-fit: contain;
@@ -122,7 +124,8 @@ export component ModiDecoderTab inherits VerticalLayout {
             Text { text: @tr("Decoder"); font-weight: 700; font-size: 18px; }
             Rectangle { horizontal-stretch: 1; }
             Image {
-                source: @image-url("../assets/decoder-logo.svg");
+                colorize: Palette.color-scheme == ColorScheme.dark ? Palette.foreground : transparent;
+            source: @image-url("../assets/decoder-logo.svg");
                 width: 140px;
                 height: 72px;
                 image-fit: contain;

@@ -1,5 +1,5 @@
 import { CompactEffectRow, CompactComboBox, CompactSwitch } from "../effect-slider.slint";
-import { ComboBox, Slider, Palette } from "std-widgets.slint";
+import { ComboBox, Slider, Palette, Button, LineEdit } from "std-widgets.slint";
 
 // Sound-Modus: der Original-Hub in einem Tab – kombiniertes Preset aus
 // Acoustic Engine + Equalizer oben (echte Original-Presets aus
@@ -35,6 +35,15 @@ export component SoundModeTab inherits VerticalLayout {
     // Index in protocol.rs::sound_mode::PRESETS (0-basiert, OHNE den
     // "Im Gerät"-Platzhalter unten in der Dropdown-Liste).
     callback preset-selected(int);
+    // Von Rust gefüllt: "Im Gerät", die eingebauten Presets, danach eigene Modi.
+    in property <[string]> sound-mode-names: [];
+    callback save-mode(string);
+    callback reset-mode();
+    callback delete-mode(int);
+    in property <int> user-modes-start: 61;
+    property <bool> confirm-delete: false;
+    property <bool> saving: false;
+    in-out property <string> new-mode-name: "";
     callback eq-preset-user-selected(int);
 
     // 0 = "Im Gerät" (kein festes Preset gewählt, aktuelle Live-Werte,
@@ -50,18 +59,85 @@ export component SoundModeTab inherits VerticalLayout {
 
     Text { text: @tr("Sound-Modus"); font-size: 20px; font-weight: 700; }
 
-    ComboBox {
-        width: 320px;
-        model: [
-            @tr("Im Gerät"),
-            "64 Audio Aspire Series", "Adventure and Action", "Apex Legends", "Arena Of Valor", "Assetto Corsa", "Baldur's Gate 3", "Bass Boost", "Bass Cut", "Battle Royale", "Battlefield Series", "Black Myth: Wukong", "Call of Duty Series", "Counter-Strike 2", "Counter-Strike: Global Offensive", "Cyberpunk 2077", "Death Stranding", "Delta Force", "Diablo Series", "Doom Eternal", "DOTA 2", "Dynamic Music", "Effects Off", "Escape from Tarkov", "Esports", "Fortnite", "Forza Horizon Series", "FPS", "Gaming", "Genshin Impact", "Halo Infinite", "Helldivers 2", "Hogswart Legacy", "League of Legends", "Marvel Rivals", "Marvel's Spider-Man Series", "Minecraft Dungeons", "MMORPG", "MOBA", "Movies", "Music", "Overwatch 2", "Path of Exile 2", "PUBG: BATTLEGROUNDS", "Racing Simulation", "Red Dead Redemption 2", "Resident Evil Series", "Rocket League", "RPG", "RTS", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Stadium", "Star War Jedi Series", "The Witcher Series", "Tom Clancy's Rainbow Six Siege", "Treble Boost", "Treble Cut", "Valorant", "Warframe", "Warhammer 40000 Space Marine 2", "World War 3",
-        ];
-        current-index <=> selected-sound-mode-index;
-        selected(name) => {
-            selected-sound-mode-index = self.current-index;
-            if (self.current-index > 0) {
-                preset-selected(self.current-index - 1);
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+
+        ComboBox {
+            width: 320px;
+            model: sound-mode-names;
+            current-index <=> selected-sound-mode-index;
+            selected(name) => {
+                selected-sound-mode-index = self.current-index;
+                if (self.current-index > 0) {
+                    preset-selected(self.current-index - 1);
+                }
             }
+        }
+
+        // Speichern: aktuelle Werte als neuen, benannten Modus ablegen (lokal).
+        Rectangle {
+            width: 36px;
+            height: 32px;
+            border-radius: 6px;
+            background: save-area.has-hover ? Palette.alternate-background : transparent;
+            save-area := TouchArea {
+                clicked => { new-mode-name = @tr("Neuer Modus"); saving = true; }
+            }
+            Text { text: "💾"; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
+        }
+        // Zurücksetzen: den gewählten Modus erneut anwenden.
+        Rectangle {
+            width: 36px;
+            height: 32px;
+            border-radius: 6px;
+            background: reset-area.has-hover ? Palette.alternate-background : transparent;
+            reset-area := TouchArea {
+                clicked => { reset-mode(); }
+            }
+            Text { text: "↺"; font-size: 20px; horizontal-alignment: center; vertical-alignment: center; }
+        }
+        // Löschen: nur für selbst angelegte Modi sichtbar, eingebaute Presets sind nie löschbar.
+        if selected-sound-mode-index >= user-modes-start: Rectangle {
+            width: 36px;
+            height: 32px;
+            border-radius: 6px;
+            background: delete-area.has-hover ? Palette.alternate-background : transparent;
+            delete-area := TouchArea {
+                clicked => { confirm-delete = true; }
+            }
+            Text { text: "🗑"; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
+        }
+    }
+
+    if confirm-delete && selected-sound-mode-index >= user-modes-start: Rectangle {
+        height: 56px;
+        border-radius: 8px;
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+        HorizontalLayout {
+            padding: 12px;
+            spacing: 10px;
+            Text { text: @tr("Diesen eigenen Modus löschen?"); vertical-alignment: center; font-weight: 600; }
+            Button { text: @tr("Löschen"); clicked => { delete-mode(selected-sound-mode-index - 1); confirm-delete = false; } }
+            Button { text: @tr("Abbrechen"); clicked => { confirm-delete = false; } }
+        }
+    }
+
+    if saving: Rectangle {
+        height: 56px;
+        border-radius: 8px;
+        background: Palette.color-scheme == ColorScheme.dark ? #2C2C2C : #f0f0f0;
+        HorizontalLayout {
+            padding: 12px;
+            spacing: 10px;
+            Text { text: @tr("Neuen Modus hinzufügen"); vertical-alignment: center; font-weight: 600; }
+            LineEdit {
+                width: 220px;
+                text <=> new-mode-name;
+                accepted(t) => { save-mode(t); saving = false; }
+            }
+            Button { text: @tr("OK"); clicked => { save-mode(new-mode-name); saving = false; } }
+            Button { text: @tr("Abbrechen"); clicked => { saving = false; } }
         }
     }
 

@@ -1,5 +1,5 @@
 import { EffectToggle, CompactComboBox } from "../effect-slider.slint";
-import { Slider } from "std-widgets.slint";
+import { Slider, Palette } from "std-widgets.slint";
 
 export component CrystalVoiceTab inherits VerticalLayout {
     in-out property <bool> noise-reduction-on: false;
@@ -149,6 +149,7 @@ export component CrystalVoiceTab inherits VerticalLayout {
     HorizontalLayout {
         Rectangle { horizontal-stretch: 1; }
         Image {
+            colorize: Palette.color-scheme == ColorScheme.dark ? Palette.foreground : transparent;
             source: @image-url("../assets/cv-logo.svg");
             width: 150px;
             height: 57px;

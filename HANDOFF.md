@@ -1213,6 +1213,20 @@ Mitschnitte: `SB G8/von windows/2026-10-26-Wireshark-mitschnitte/` (`soundmodus 
   oder G8-Interrupts**. Beides ist reine Hardware, ohne für den Host sichtbare Protokolländerung (nichts nachzubauen).
 - "Bearbeiten" am Geräte-Bild blendet nur Kacheln der Hauptseite ein/aus (laut Nutzer, nicht nachzubauen).
 
+### Nachtrag 2026-10-26 (4): Version 0.2.0 - eigene Sound-Modi, Logos im Dark Mode
+
+- **Eigene Modi** (Sound-Modus-Tab): 💾 öffnet eine Zeile "Neuen Modus hinzufügen" (Name, OK/Abbrechen), speichert die aktuellen
+  Acoustic-Engine-Werte und die EQ-Kurve lokal in `~/.config/g8-control/modes.txt` (`Name<TAB>23 Werte`, siehe `src/modes.rs`);
+  ↺ wendet den gewählten Modus erneut an; 🗑 (nur bei eigenen Modi, mit Rückfrage) löscht ihn, eingebaute Presets sind nie löschbar.
+  Dropdown-Reihenfolge: "Im Gerät", 60 eingebaute Presets, dann eigene Modi; Rust füllt die Liste (`refresh_mode_names`),
+  Index = Preset-Index + 1, eigene Modi ab `PRESETS.len()`. Eigene Modi haben `eq_preset_index = -1` (keine benannte EQ-Kurve,
+  Kurve wird direkt gesetzt und gesendet). Im Original entspricht das "Neuen Modus hinzufügen" (kein Gerätebefehl, siehe Nachtrag 3).
+- **Logos im Dark Mode:** die SVG-Logos (CrystalVoice, Direct/Scout Mode, Dolby, Lautsprecher-Grafik) werden per `colorize` mit
+  `Palette.foreground` eingefärbt, im Hell-Modus unverändert.
+- Version `0.1.1` -> `0.2.0` (neue Funktionsgruppen seit 0.1.1: Sprachwahl, ALSA-Mixer, Direct-Mode-Statusabfrage und -Fix, eigene Modi).
+- Noch offen: #9 (getrennte EQ-Kurven je Ausgang, laut Capture reine App-Funktion), #10 (Scout-Hotkey, geplant über das
+  KDE-GlobalShortcuts-Portal), #2, #3 (Beobachtung), Hinweis: der Lautsprecher-Tab-Audioqualität/"Standard festlegen" ist host-seitig.
+
 - **Vorfall: Lautstärkeknopf komplett unresponsiv, nur durch echten
   Stromverlust behoben (2026-08-23).** Nach einer intensiven Test-Session
   (mehrfache PipeWire-Profilwechsel `pro-audio`↔`analog-stereo`, mehrere

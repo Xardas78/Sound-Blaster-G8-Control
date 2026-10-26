@@ -3,6 +3,7 @@ mod autostart;
 mod device;
 mod firmware;
 mod mixer;
+mod modes;
 mod persist;
 mod proc_util;
 mod protocol;
@@ -47,6 +48,15 @@ fn apply_language(index: i32) {
     if let Err(e) = slint::select_bundled_translation(language_code(index)) {
         eprintln!("Sprache konnte nicht gesetzt werden: {e}");
     }
+}
+
+/// Füllt die Auswahl des Sound-Modus-Dropdowns: "Im Gerät", die eingebauten Presets,
+/// danach die eigenen Modi. Index im Dropdown = Preset-Index + 1.
+fn refresh_mode_names(ui: &AppWindow, user: &[modes::UserMode]) {
+    let mut names: Vec<slint::SharedString> = vec![ui.get_label_im_geraet()];
+    names.extend(sound_mode::PRESETS.iter().map(|(n, _)| slint::SharedString::from(*n)));
+    names.extend(user.iter().map(|m| slint::SharedString::from(m.name.as_str())));
+    ui.set_sound_mode_names(ModelRc::new(VecModel::from(names)));
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -111,10 +121,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let settings = Rc::new(RefCell::new(persist::load()));
     apply_language(settings.borrow().language);
     ui.set_language_index(settings.borrow().language);
+    let user_modes = Rc::new(RefCell::new(modes::load()));
+    refresh_mode_names(&ui, &user_modes.borrow());
+    ui.set_user_modes_start(sound_mode::PRESETS.len() as i32 + 1);
     {
         let settings = settings.clone();
+        let user_modes = user_modes.clone();
+        let weak = ui.as_weak();
         ui.on_language_changed(move |index| {
             apply_language(index);
+            if let Some(ui) = weak.upgrade() {
+                refresh_mode_names(&ui, &user_modes.borrow());
+            }
             let mut s = settings.borrow_mut();
             s.language = index;
             persist::save(&s);
@@ -286,8 +304,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let device = device.clone();
         let settings = settings.clone();
         let weak = ui.as_weak();
+        let user_modes = user_modes.clone();
         ui.on_sound_mode_preset_selected(move |index| {
-            let Some((name, p)) = sound_mode::PRESETS.get(index as usize) else {
+            let n_presets = sound_mode::PRESETS.len();
+            let (name, p): (String, sound_mode::SoundModePreset) = if (index as usize) < n_presets {
+                let (n, p) = &sound_mode::PRESETS[index as usize];
+                (n.to_string(), *p)
+            } else if let Some(m) = user_modes.borrow().get(index as usize - n_presets) {
+                (m.name.clone(), m.preset)
+            } else {
                 return eprintln!("Unbekannter Sound-Modus-Index {index}");
             };
             let ui_handle = weak.unwrap();
@@ -313,6 +338,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 s.ae_eq_on = true;
                 s.sound_mode_preset_index = index;
                 s.eq_preset_index = p.eq_preset_index;
+                if p.eq_preset_index < 0 {
+                    s.ae_eq_preamp = p.eq_preamp;
+                    s.ae_eq_bands = p.eq_bands;
+                }
                 persist::save(&s);
             }
             // acoustic_engine-Level-Parameter sind 0.0-1.0-Floats fürs
@@ -338,7 +367,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // BEIDE Equalizer-Dropdowns (Equalizer-Tab und die
             // Equalizer-Zeile im Sound-Modus-Tab) den richtigen Namen an,
             // statt nur die Kurve ohne erkennbaren Preset-Namen zu ändern.
-            ui_handle.set_ae_eq_preset_index(p.eq_preset_index);
+            if p.eq_preset_index >= 0 {
+                ui_handle.set_ae_eq_preset_index(p.eq_preset_index);
+            } else {
+                // Eigener Modus: keine benannte EQ-Voreinstellung, Kurve direkt setzen.
+                ui_handle.set_ae_eq_preamp(p.eq_preamp);
+                ui_handle.set_ae_eq_bands(ModelRc::new(VecModel::from(p.eq_bands.to_vec())));
+            }
 
             let Some(dev) = device.borrow().clone() else { return eprintln!("Ignoriert – kein Gerät verbunden") };
             let send = |report: [u8; 64]| {
@@ -358,9 +393,92 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             send(build_toggle_report(acoustic_engine::DIALOG_PLUS_TOGGLE, p.dialog_on));
             send(build_level_report(acoustic_engine::DIALOG_PLUS_LEVEL, p.dialog_level));
             send(build_toggle_report(equalizer::TOGGLE, true));
+            if p.eq_preset_index < 0 {
+                send(build_level_report(equalizer::PREAMP, p.eq_preamp));
+                for (i, &band) in p.eq_bands.iter().enumerate() {
+                    send(build_level_report(equalizer::band(i), band));
+                }
+            }
             // Kein direkter Preamp/Bänder-Report hier mehr nötig – kommt
             // bereits über den eq-param-changed-Callback oben an, ausgelöst
             // durch set_ae_eq_preset_index().
+        });
+    }
+
+    {
+        let settings = settings.clone();
+        let user_modes = user_modes.clone();
+        let weak = ui.as_weak();
+        ui.on_sound_mode_save(move |raw| {
+            let name = modes::clean_name(&raw);
+            if name.is_empty() {
+                return;
+            }
+            let preset = {
+                let s = settings.borrow();
+                sound_mode::SoundModePreset {
+                    surround_on: s.ae_surround_on, surround_level: s.ae_surround_level,
+                    crystalizer_on: s.ae_crystalizer_on, crystalizer_level: s.ae_crystalizer_level,
+                    bass_on: s.ae_bass_on, bass_level: s.ae_bass_level, bass_xover: 80.0,
+                    svm_on: s.ae_svm_on, svm_level: s.ae_svm_level, svm_mode: s.ae_svm_mode as f32,
+                    dialog_on: s.ae_dialog_on, dialog_level: s.ae_dialog_level,
+                    eq_preamp: s.ae_eq_preamp, eq_bands: s.ae_eq_bands, eq_preset_index: -1,
+                }
+            };
+            let pos = {
+                let mut list = user_modes.borrow_mut();
+                match list.iter().position(|m| m.name == name) {
+                    Some(i) => { list[i].preset = preset; i }
+                    None => { list.push(modes::UserMode { name, preset }); list.len() - 1 }
+                }
+            };
+            modes::save(&user_modes.borrow());
+            let Some(ui) = weak.upgrade() else { return };
+            refresh_mode_names(&ui, &user_modes.borrow());
+            let preset_index = (sound_mode::PRESETS.len() + pos) as i32;
+            ui.set_sound_mode_selected_index(preset_index + 1);
+            let mut s = settings.borrow_mut();
+            s.sound_mode_preset_index = preset_index;
+            s.eq_preset_index = -1;
+            persist::save(&s);
+        });
+    }
+
+    {
+        let settings = settings.clone();
+        let user_modes = user_modes.clone();
+        let weak = ui.as_weak();
+        ui.on_sound_mode_delete(move |index| {
+            // Nur eigene Modi: eingebaute Presets (Index < PRESETS.len()) sind tabu.
+            let n_presets = sound_mode::PRESETS.len();
+            let Some(pos) = (index as usize).checked_sub(n_presets) else { return };
+            {
+                let mut list = user_modes.borrow_mut();
+                if pos >= list.len() {
+                    return;
+                }
+                list.remove(pos);
+            }
+            modes::save(&user_modes.borrow());
+            let Some(ui) = weak.upgrade() else { return };
+            refresh_mode_names(&ui, &user_modes.borrow());
+            ui.set_sound_mode_selected_index(0);
+            let mut s = settings.borrow_mut();
+            s.sound_mode_preset_index = -1;
+            persist::save(&s);
+        });
+    }
+
+    {
+        let settings = settings.clone();
+        let weak = ui.as_weak();
+        ui.on_sound_mode_reset(move || {
+            let index = settings.borrow().sound_mode_preset_index;
+            if index >= 0 {
+                if let Some(ui) = weak.upgrade() {
+                    ui.invoke_sound_mode_preset_selected(index);
+                }
+            }
         });
     }
 

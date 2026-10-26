@@ -79,6 +79,10 @@ fn config_path() -> PathBuf {
     base.join("g8-control").join("settings.txt")
 }
 
+pub fn config_dir() -> PathBuf {
+    config_path().parent().map(|p| p.to_path_buf()).unwrap_or_else(|| PathBuf::from("."))
+}
+
 pub fn load() -> Settings {
     let mut s = Settings::default();
     let Ok(text) = fs::read_to_string(config_path()) else {

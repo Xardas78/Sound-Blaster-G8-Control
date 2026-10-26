@@ -75,6 +75,14 @@ export component AppWindow inherits Window {
     in-out property <bool> direct-mode-on: false;
     in-out property <int> language-index: 0;
     callback language-changed(int);
+    // Auswahlliste des Sound-Modus-Dropdowns (von Rust gefüllt: "Im Gerät", Presets, eigene Modi).
+    in-out property <[string]> sound-mode-names: [];
+    out property <string> label-im-geraet: @tr("Im Gerät");
+    callback sound-mode-save(string);
+    callback sound-mode-reset();
+    callback sound-mode-delete(int);
+    // Dropdown-Index des ersten eigenen Modus (alles davor sind eingebaute Presets, nicht löschbar).
+    in-out property <int> user-modes-start: 61;
     in-out property <bool> direct-mode-busy: false;
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
@@ -197,6 +205,8 @@ export component AppWindow inherits Window {
                         ae-eq-preset-index <=> ae-eq-preset-index;
                         sound-mode-selected-index <=> sound-mode-selected-index;
                         eq-skip-next-apply <=> eq-skip-next-apply;
+                        sound-mode-names: sound-mode-names;
+                        user-modes-start: user-modes-start;
                         direct-mode-on <=> direct-mode-on;
                         direct-mode-busy: direct-mode-busy;
                         eq-preset-user-selected(i) => { eq-preset-user-selected(i); }
@@ -212,6 +222,9 @@ export component AppWindow inherits Window {
                         mixer-level-changed(id, v) => { mixer-level-changed(id, v); }
                         mixer-balance-changed(id, v) => { mixer-balance-changed(id, v); }
                         sound-mode-preset-selected(i) => { sound-mode-preset-selected(i); }
+                        sound-mode-save(n) => { sound-mode-save(n); }
+                        sound-mode-reset() => { sound-mode-reset(); }
+                        sound-mode-delete(i) => { sound-mode-delete(i); }
                     }
                 }
             }

@@ -65,6 +65,11 @@ export component DeviceHubTab inherits TabWidget {
     callback mixer-level-changed(int, float);
     callback mixer-balance-changed(int, float);
     callback sound-mode-preset-selected(int);
+    in property <[string]> sound-mode-names: [];
+    callback sound-mode-save(string);
+    callback sound-mode-reset();
+    callback sound-mode-delete(int);
+    in property <int> user-modes-start: 61;
     callback eq-preset-user-selected(int);
     in-out property <bool> eq-skip-next-apply: false;
     in-out property <bool> direct-mode-on: false;
@@ -89,6 +94,11 @@ export component DeviceHubTab inherits TabWidget {
             eq-preset-names: eq-tab.preset-names;
             eq-selected-preset-index <=> ae-eq-preset-index;
             selected-sound-mode-index <=> sound-mode-selected-index;
+            sound-mode-names: sound-mode-names;
+            save-mode(n) => { sound-mode-save(n); }
+            reset-mode() => { sound-mode-reset(); }
+            delete-mode(i) => { sound-mode-delete(i); }
+            user-modes-start: user-modes-start;
             param-changed(id, v) => { playback-param-changed(id, v); }
             output-target-changed(t) => { output-target-changed(t); }
             preset-selected(i) => { sound-mode-preset-selected(i); }

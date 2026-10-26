@@ -11,7 +11,7 @@
 // Umschaltung – gemeinsamer Zustand mit dem Schalter auf der
 // Acoustic-Engine-Seite (siehe app-window.slint), steuert den virtuellen
 // HRTF-Surround-Sink (virtual_surround.rs).
-import { Switch } from "std-widgets.slint";
+import { Switch, Palette } from "std-widgets.slint";
 
 export component PlaybackSettingsTab inherits VerticalLayout {
     in property <int> output-target: 0; // 0=Kopfhörer, 1=Lautsprecher
@@ -101,7 +101,8 @@ export component PlaybackSettingsTab inherits VerticalLayout {
                 height: 327px;
 
                 Image {
-                    source: @image-url("../assets/virtual-sound.svg");
+                    colorize: Palette.color-scheme == ColorScheme.dark ? Palette.foreground : transparent;
+            source: @image-url("../assets/virtual-sound.svg");
                     width: 344px;
                     height: 327px;
                 }
