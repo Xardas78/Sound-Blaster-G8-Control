@@ -1,4 +1,5 @@
 import { Button, Switch, Palette } from "std-widgets.slint";
+import { CompactComboBox } from "../effect-slider.slint";
 
 // Entspricht der "Einstellungen"-Seite im Original, aber ohne die
 // Gerät/Anwendung-Unterreiter des Originals – auf Wunsch flach in einem
@@ -31,6 +32,8 @@ export component SettingsTab inherits HorizontalLayout {
     in-out property <bool> autostart-on: false;
     // 0 = Schließen (Programm beenden), 1 = In den Tray minimieren
     in-out property <int> close-behavior: 0;
+    // 0 = Automatisch (Systemsprache), 1 = Deutsch, 2 = English, 3 = Français
+    in-out property <int> language-index: 0;
     // Von Rust beim Start gesetzt (CARGO_PKG_VERSION, siehe main.rs).
     in property <string> app-version: "";
 
@@ -40,6 +43,7 @@ export component SettingsTab inherits HorizontalLayout {
     callback logo-led-toggled(bool);
     callback autostart-toggled(bool);
     callback close-behavior-changed(int);
+    callback language-changed(int);
     callback dark-mode-toggled(bool);
 
     padding: 16px;
@@ -221,6 +225,14 @@ export component SettingsTab inherits HorizontalLayout {
                     }
                 }
             }
+        }
+
+        Text { text: @tr("Sprache"); font-weight: 600; }
+        CompactComboBox {
+            width: 220px;
+            model: [@tr("Automatisch (System)"), "Deutsch", "English", "Français"];
+            current-index <=> language-index;
+            selected(i) => { language-changed(i); }
         }
 
         // Ersetzt den früheren "Lautstärke-Hintergrunddienst"-Schalter:

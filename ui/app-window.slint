@@ -71,6 +71,8 @@ export component AppWindow inherits Window {
     in-out property <int> sound-mode-selected-index: 0;
     // Von Rust gesetzt (Statusabfrage nach Start/Reconnect, Issue #1).
     in-out property <bool> direct-mode-on: false;
+    in-out property <int> language-index: 0;
+    callback language-changed(int);
     in-out property <bool> direct-mode-busy: false;
 
     // Rust bindet sich an diese Callbacks; siehe protocol.rs für die
@@ -240,6 +242,7 @@ export component AppWindow inherits Window {
                     show-firmware-result: show-firmware-result;
                     autostart-on: autostart-on;
                     close-behavior: close-behavior;
+                    language-index <=> language-index;
                     power-saving-on: power-saving-on;
                     logo-led-on: logo-led-on;
                     dark-mode-on: dark-mode-on;
@@ -249,6 +252,7 @@ export component AppWindow inherits Window {
                     logo-led-toggled(on) => { logo-led-toggled(on); }
                     autostart-toggled(on) => { autostart-on = on; autostart-toggled(on); }
                     close-behavior-changed(m) => { close-behavior = m; close-behavior-changed(m); }
+                    language-changed(i) => { language-changed(i); }
                     dark-mode-toggled(on) => { dark-mode-toggled(on); }
                 }
             }

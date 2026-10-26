@@ -16,22 +16,22 @@ msgctxt "AppWindow"
 msgid "Suche Gerät …"
 msgstr "Searching for device …"
 
-#: ui/app-window.slint:161
+#: ui/app-window.slint:166
 msgctxt "AppWindow"
 msgid "Gerät"
 msgstr "Device"
 
-#: ui/app-window.slint:208
+#: ui/app-window.slint:217
 msgctxt "AppWindow"
 msgid "Wiedergabe"
 msgstr "Playback"
 
-#: ui/app-window.slint:218
+#: ui/app-window.slint:227
 msgctxt "AppWindow"
 msgid "Aufnahme"
 msgstr "Recording"
 
-#: ui/app-window.slint:224
+#: ui/app-window.slint:233
 msgctxt "AppWindow"
 msgid "Einstellungen"
 msgstr "Settings"
@@ -141,22 +141,22 @@ msgctxt "MixerTab"
 msgid "Aufnahme"
 msgstr "Recording"
 
-#: ui/tabs/device-hub-tab.slint:70
+#: ui/tabs/device-hub-tab.slint:74
 msgctxt "DeviceHubTab"
 msgid "Sound-Modus"
 msgstr "Sound Mode"
 
-#: ui/tabs/device-hub-tab.slint:113
+#: ui/tabs/device-hub-tab.slint:120
 msgctxt "DeviceHubTab"
 msgid "Equalizer"
 msgstr "Equalizer"
 
-#: ui/tabs/device-hub-tab.slint:131
+#: ui/tabs/device-hub-tab.slint:140
 msgctxt "DeviceHubTab"
 msgid "Modi & Decoder"
 msgstr "Modes & Decoder"
 
-#: ui/tabs/device-hub-tab.slint:139
+#: ui/tabs/device-hub-tab.slint:150
 msgctxt "DeviceHubTab"
 msgid "Mixer"
 msgstr "Mixer"
@@ -236,177 +236,187 @@ msgctxt "PlaybackSettingsTab"
 msgid "Testen"
 msgstr "Test"
 
-#: ui/tabs/settings-tab.slint:83
+#: ui/tabs/settings-tab.slint:87
 msgctxt "SettingsTab"
 msgid "Prüfung fehlgeschlagen"
 msgstr "Check failed"
 
-#: ui/tabs/settings-tab.slint:83
+#: ui/tabs/settings-tab.slint:87
 msgctxt "SettingsTab"
 msgid "Update verfügbar"
 msgstr "Update available"
 
-#: ui/tabs/settings-tab.slint:83
+#: ui/tabs/settings-tab.slint:87
 msgctxt "SettingsTab"
 msgid "Keine neue Firmware"
 msgstr "No new firmware"
 
-#: ui/tabs/settings-tab.slint:90
+#: ui/tabs/settings-tab.slint:94
 msgctxt "SettingsTab"
 msgid "Der Update-Server war nicht erreichbar (keine Internetverbindung?). Bitte später erneut versuchen."
 msgstr "The update server was unreachable (no internet connection?). Please try again later."
 
-#: ui/tabs/settings-tab.slint:92
+#: ui/tabs/settings-tab.slint:96
 msgctxt "SettingsTab"
 msgid "Eine neuere Firmware ({}) ist verfügbar. Firmware-Updates werden von dieser App nicht unterstützt – bitte dafür die offizielle Creative-Software unter Windows verwenden."
 msgstr "A newer firmware ({}) is available. Firmware updates are not supported by this app -- please use the official Creative software on Windows for that."
 
-#: ui/tabs/settings-tab.slint:93
+#: ui/tabs/settings-tab.slint:97
 msgctxt "SettingsTab"
 msgid "Es ist keine neuere Firmware verfügbar."
 msgstr "No newer firmware is available."
 
-#: ui/tabs/settings-tab.slint:102
+#: ui/tabs/settings-tab.slint:106
 msgctxt "SettingsTab"
 msgid "OK"
 msgstr "OK"
 
-#: ui/tabs/settings-tab.slint:113
+#: ui/tabs/settings-tab.slint:117
 msgctxt "SettingsTab"
 msgid "Verbunden (USB 041e:329b)"
 msgstr "Connected (USB 041e:329b)"
 
-#: ui/tabs/settings-tab.slint:113
+#: ui/tabs/settings-tab.slint:117
 msgctxt "SettingsTab"
 msgid "Nicht verbunden"
 msgstr "Not connected"
 
-#: ui/tabs/settings-tab.slint:114
+#: ui/tabs/settings-tab.slint:118
 msgctxt "SettingsTab"
 msgid "S/N: {}"
 msgstr "S/N: {}"
 
-#: ui/tabs/settings-tab.slint:118
+#: ui/tabs/settings-tab.slint:122
 msgctxt "SettingsTab"
 msgid "Gerät zurücksetzen"
 msgstr "Reset device"
 
-#: ui/tabs/settings-tab.slint:119
+#: ui/tabs/settings-tab.slint:123
 msgctxt "SettingsTab"
 msgid "Nach Firmware-Update suchen"
 msgstr "Check for firmware update"
 
-#: ui/tabs/settings-tab.slint:120
+#: ui/tabs/settings-tab.slint:124
 msgctxt "SettingsTab"
 msgid "Firmware: {}"
 msgstr "Firmware: {}"
 
-#: ui/tabs/settings-tab.slint:124
+#: ui/tabs/settings-tab.slint:128
 msgctxt "SettingsTab"
 msgid "Version {}"
 msgstr "Version {}"
 
-#: ui/tabs/settings-tab.slint:133
+#: ui/tabs/settings-tab.slint:137
 msgctxt "SettingsTab"
 msgid "Energieeinsparung"
 msgstr "Power saving"
 
-#: ui/tabs/settings-tab.slint:138
+#: ui/tabs/settings-tab.slint:142
 msgctxt "SettingsTab"
 msgid "Sound Blaster Logo LED"
 msgstr "Sound Blaster Logo LED"
 
-#: ui/tabs/settings-tab.slint:146
+#: ui/tabs/settings-tab.slint:150
 msgctxt "SettingsTab"
 msgid "Anwendung"
 msgstr "Application"
 
-#: ui/tabs/settings-tab.slint:167
+#: ui/tabs/settings-tab.slint:171
 msgctxt "SettingsTab"
 msgid "Dark Mode"
 msgstr "Dark Mode"
 
-#: ui/tabs/settings-tab.slint:175
+#: ui/tabs/settings-tab.slint:179
 msgctxt "SettingsTab"
 msgid "Mit dem System starten"
 msgstr "Start with the system"
 
-#: ui/tabs/settings-tab.slint:178
+#: ui/tabs/settings-tab.slint:182
 msgctxt "SettingsTab"
 msgid "Beim Schließen"
 msgstr "When closing"
 
-#: ui/tabs/settings-tab.slint:199
+#: ui/tabs/settings-tab.slint:203
 msgctxt "SettingsTab"
 msgid "Schließen"
 msgstr "Close"
 
-#: ui/tabs/settings-tab.slint:215
+#: ui/tabs/settings-tab.slint:219
 msgctxt "SettingsTab"
 msgid "In den Tray minimieren"
 msgstr "Minimize to tray"
 
-#: ui/tabs/settings-tab.slint:231
+#: ui/tabs/settings-tab.slint:230
+msgctxt "SettingsTab"
+msgid "Sprache"
+msgstr "Language"
+
+#: ui/tabs/settings-tab.slint:233
+msgctxt "SettingsTab"
+msgid "Automatisch (System)"
+msgstr "Automatic (system)"
+
+#: ui/tabs/settings-tab.slint:243
 msgctxt "SettingsTab"
 msgid "Lautstärke-Synchronisierung"
 msgstr "Volume synchronization"
 
-#: ui/tabs/settings-tab.slint:235
+#: ui/tabs/settings-tab.slint:247
 msgctxt "SettingsTab"
 msgid "Wird nicht benötigt: dein System hält Gerät- und PC-Lautstärke bereits automatisch synchron, auch wenn diese App nicht läuft."
 msgstr "Not needed: your system already keeps device and PC volume in sync automatically, even when this app isn't running."
 
-#: ui/tabs/misc-tabs.slint:54
+#: ui/tabs/misc-tabs.slint:59
 msgctxt "ModiDecoderTab"
 msgid "Im Direct Mode erhalten Sie Audio in seiner reinsten Form direkt von der Quelle. Alle Audioeffekte werden nicht auf die Ausgabe angewendet."
 msgstr "In Direct Mode you get audio in its purest form straight from the source. No audio effects are applied to the output."
 
-#: ui/tabs/misc-tabs.slint:80
+#: ui/tabs/misc-tabs.slint:85
 msgctxt "ModiDecoderTab"
 msgid "Entwickelt, um Ihnen zu helfen, das zu hören, was Sie nicht sehen können, wie Schritte, Rede und Waffenwechsel."
 msgstr "Designed to help you hear what you can't see, like footsteps, speech, and weapon switches."
 
-#: ui/tabs/misc-tabs.slint:86
+#: ui/tabs/misc-tabs.slint:91
 msgctxt "ModiDecoderTab"
 msgid "Einige Audioeffekte werden nicht für die Ausgabe übernommen."
 msgstr "Some audio effects are not applied to the output."
 
-#: ui/tabs/misc-tabs.slint:92
+#: ui/tabs/misc-tabs.slint:97
 msgctxt "ModiDecoderTab"
 msgid "Zugriffstaste"
 msgstr "Access key"
 
-#: ui/tabs/misc-tabs.slint:101
+#: ui/tabs/misc-tabs.slint:106
 msgctxt "ModiDecoderTab"
 msgid "Um ein Hotkey zuzuweisen, drücken Sie die Taste auf der Tastatur mit der Kombination von Strg, Alt oder Shift."
 msgstr "To assign a hotkey, press the key on your keyboard together with Ctrl, Alt, or Shift."
 
-#: ui/tabs/misc-tabs.slint:106
+#: ui/tabs/misc-tabs.slint:111
 msgctxt "ModiDecoderTab"
 msgid "Klicken Sie, um den Tastaturanschlag zuzuweisen"
 msgstr "Click to assign the key combination"
 
-#: ui/tabs/misc-tabs.slint:117
+#: ui/tabs/misc-tabs.slint:122
 msgctxt "ModiDecoderTab"
 msgid "Decoder"
 msgstr "Decoder"
 
-#: ui/tabs/misc-tabs.slint:130
+#: ui/tabs/misc-tabs.slint:135
 msgctxt "ModiDecoderTab"
 msgid "Spielen Sie Ihre Dolby Digital Medien einfach mit dem integrierten Decoder."
 msgstr "Play your Dolby Digital media easily with the built-in decoder."
 
-#: ui/tabs/misc-tabs.slint:132
+#: ui/tabs/misc-tabs.slint:137
 msgctxt "ModiDecoderTab"
 msgid "Normal"
 msgstr "Normal"
 
-#: ui/tabs/misc-tabs.slint:132
+#: ui/tabs/misc-tabs.slint:137
 msgctxt "ModiDecoderTab"
 msgid "Voll"
 msgstr "Full"
 
-#: ui/tabs/misc-tabs.slint:132
+#: ui/tabs/misc-tabs.slint:137
 msgctxt "ModiDecoderTab"
 msgid "Nacht"
 msgstr "Night"
@@ -486,62 +496,62 @@ msgctxt "EqualizerTab"
 msgid "Eigenes 3"
 msgstr "Custom 3"
 
-#: ui/tabs/equalizer-tab.slint:235
+#: ui/tabs/equalizer-tab.slint:248
 msgctxt "EqualizerTab"
 msgid "Equalizer"
 msgstr "Equalizer"
 
-#: ui/tabs/equalizer-tab.slint:472
+#: ui/tabs/equalizer-tab.slint:485
 msgctxt "EqualizerTab"
 msgid "Vorverstärker"
 msgstr "Preamp"
 
-#: ui/tabs/equalizer-tab.slint:483
+#: ui/tabs/equalizer-tab.slint:496
 msgctxt "EqualizerTab"
 msgid "Bass"
 msgstr "Bass"
 
-#: ui/tabs/equalizer-tab.slint:494
+#: ui/tabs/equalizer-tab.slint:507
 msgctxt "EqualizerTab"
 msgid "Höhen"
 msgstr "Treble"
 
-#: ui/tabs/equalizer-tab.slint:507
+#: ui/tabs/equalizer-tab.slint:520
 msgctxt "EqualizerTab"
 msgid "EQ-Preset"
 msgstr "EQ preset"
 
-#: ui/tabs/equalizer-tab.slint:532
+#: ui/tabs/equalizer-tab.slint:546
 msgctxt "EqualizerTab"
 msgid "Speichern"
 msgstr "Save"
 
-#: ui/tabs/sound-mode-tab.slint:50
+#: ui/tabs/sound-mode-tab.slint:51
 msgctxt "SoundModeTab"
 msgid "Sound-Modus"
 msgstr "Sound Mode"
 
-#: ui/tabs/sound-mode-tab.slint:55
+#: ui/tabs/sound-mode-tab.slint:56
 msgctxt "SoundModeTab"
 msgid "Im Gerät"
 msgstr "On device"
 
-#: ui/tabs/sound-mode-tab.slint:87
+#: ui/tabs/sound-mode-tab.slint:88
 msgctxt "SoundModeTab"
 msgid "Kopfhörer"
 msgstr "Headphones"
 
-#: ui/tabs/sound-mode-tab.slint:101
+#: ui/tabs/sound-mode-tab.slint:102
 msgctxt "SoundModeTab"
 msgid "Lautsprecher"
 msgstr "Speakers"
 
-#: ui/tabs/sound-mode-tab.slint:164
+#: ui/tabs/sound-mode-tab.slint:165
 msgctxt "SoundModeTab"
 msgid "Aus"
 msgstr "Off"
 
-#: ui/tabs/sound-mode-tab.slint:224
+#: ui/tabs/sound-mode-tab.slint:225
 msgctxt "SoundModeTab"
 msgid "Equalizer"
 msgstr "Equalizer"

@@ -39,6 +39,7 @@ pub struct Settings {
     // USB-Capture unter Windows.
     pub sound_mode_preset_index: i32,
     pub eq_preset_index: i32,
+    pub language: i32,
 }
 
 impl Default for Settings {
@@ -64,6 +65,7 @@ impl Default for Settings {
             close_behavior: 0,
             sound_mode_preset_index: -1,
             eq_preset_index: -1,
+            language: 0,
         }
     }
 }
@@ -108,6 +110,7 @@ pub fn load() -> Settings {
             "logo_led_on" => s.logo_led_on = value == "1",
             "dark_mode_on" => s.dark_mode_on = value == "1",
             "close_behavior" => s.close_behavior = value.parse().unwrap_or(s.close_behavior),
+            "language" => s.language = value.parse().unwrap_or(s.language),
             "eq_preset_index" => {
                 s.eq_preset_index = value.parse().unwrap_or(s.eq_preset_index)
             }
@@ -128,7 +131,7 @@ pub fn save(s: &Settings) {
         .collect::<Vec<_>>()
         .join(",");
     let text = format!(
-        "ae_surround_on={}\nae_surround_level={}\nae_crystalizer_on={}\nae_crystalizer_level={}\nae_bass_on={}\nae_bass_level={}\nae_svm_on={}\nae_svm_level={}\nae_svm_mode={}\nae_dialog_on={}\nae_dialog_level={}\nae_eq_on={}\nae_eq_preamp={}\nae_eq_bands={}\npower_saving_on={}\nlogo_led_on={}\ndark_mode_on={}\nclose_behavior={}\nsound_mode_preset_index={}\neq_preset_index={}\n",
+        "ae_surround_on={}\nae_surround_level={}\nae_crystalizer_on={}\nae_crystalizer_level={}\nae_bass_on={}\nae_bass_level={}\nae_svm_on={}\nae_svm_level={}\nae_svm_mode={}\nae_dialog_on={}\nae_dialog_level={}\nae_eq_on={}\nae_eq_preamp={}\nae_eq_bands={}\npower_saving_on={}\nlogo_led_on={}\ndark_mode_on={}\nclose_behavior={}\nsound_mode_preset_index={}\neq_preset_index={}\nlanguage={}\n",
         s.ae_surround_on as i32,
         s.ae_surround_level,
         s.ae_crystalizer_on as i32,
@@ -149,6 +152,7 @@ pub fn save(s: &Settings) {
         s.close_behavior,
         s.sound_mode_preset_index,
         s.eq_preset_index,
+        s.language,
     );
     let path = config_path();
     if let Some(parent) = path.parent() {

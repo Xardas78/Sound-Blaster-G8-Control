@@ -19,6 +19,36 @@ use std::time::{Duration, Instant};
 
 slint::include_modules!();
 
+/// Sprachcode für Slints gebündelte Übersetzungen: Auswahl 1-3 fest, sonst
+/// Systemsprache (LANGUAGE/LC_ALL/LC_MESSAGES/LANG), unbekannt -> Englisch.
+fn language_code(index: i32) -> &'static str {
+    match index {
+        1 => "de",
+        2 => "en",
+        3 => "fr",
+        _ => {
+            for var in ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"] {
+                let Ok(value) = std::env::var(var) else { continue };
+                for part in value.split(':') {
+                    match part.split(['_', '.', '@']).next().unwrap_or("") {
+                        "de" => return "de",
+                        "fr" => return "fr",
+                        "en" => return "en",
+                        _ => {}
+                    }
+                }
+            }
+            "en"
+        }
+    }
+}
+
+fn apply_language(index: i32) {
+    if let Err(e) = slint::select_bundled_translation(language_code(index)) {
+        eprintln!("Sprache konnte nicht gesetzt werden: {e}");
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = AppWindow::new()?;
     ui.set_app_version(env!("CARGO_PKG_VERSION").into());
@@ -79,6 +109,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // für die meisten dieser Werte nicht zurücklesen können) längst
     // andere Werte hat. Volume Sync bewusst ausgenommen, siehe persist.rs.
     let settings = Rc::new(RefCell::new(persist::load()));
+    apply_language(settings.borrow().language);
+    ui.set_language_index(settings.borrow().language);
+    {
+        let settings = settings.clone();
+        ui.on_language_changed(move |index| {
+            apply_language(index);
+            let mut s = settings.borrow_mut();
+            s.language = index;
+            persist::save(&s);
+        });
+    }
     {
         let s = settings.borrow();
         ui.set_ae_surround_on(s.ae_surround_on);
