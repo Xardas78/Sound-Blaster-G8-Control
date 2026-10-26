@@ -1238,6 +1238,11 @@ Mitschnitte: `SB G8/von windows/2026-10-26-Wireshark-mitschnitte/` (`soundmodus 
   `systemd-run --user --unit='app-g8\x2dcontrol@test.service' g8-control` (ein reines `nohup` aus einer fremden Sitzung läuft
   unter deren App-ID). Live bestätigt (8 Aktivierungen, Taste überlebt Neustart). Nur KDE/GNOME mit Portal-Unterstützung;
   ohne Portal meldet die App "Globaler Hotkey nicht verfügbar" im Log und läuft normal weiter.
+- **Version 0.2.1** (Scout-Hotkey, EQ-Übertrag beim Ausgabewechsel, Hilfsskript). `packaging/g8-aussetzer-pruefen.sh [Tage]` listet die
+  USB-Neuanmeldungen der G8 über alle Systemstarts (`journalctl _TRANSPORT=kernel`; `journalctl -k` würde nur den aktuellen Start
+  durchsuchen, deshalb war die Basislinie "25" aus Issue #3 pro Start gezählt). Für Issue #3 gilt: Neuanmeldungen ohne Umstecken,
+  Neustart oder Direct-Mode-Wechsel sind Aussetzer. Beobachtung ab 2026-10-27 (vorher fast nur Test-Neuanmeldungen).
+
 - Noch offen: (#9 erledigt, siehe oben; war: getrennte EQ-Kurven je Ausgang, laut Capture reine App-Funktion), #10 (Scout-Hotkey, geplant über das
   KDE-GlobalShortcuts-Portal), #2, #3 (Beobachtung), Hinweis: der Lautsprecher-Tab-Audioqualität/"Standard festlegen" ist host-seitig.
 
