@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 slint = "1.8"
 hidapi = "2.6"
+alsa = "0.11"
 
 [build-dependencies]
 slint-build = "1.8"

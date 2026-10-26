@@ -5,6 +5,8 @@
 //! controls` verifiziert.
 
 use crate::proc_util::run_with_timeout;
+use alsa::mixer::{Mixer, Selem, SelemChannelId, SelemId};
+use std::cell::RefCell;
 use std::time::Duration;
 
 const CARD: &str = "USB1";
@@ -13,6 +15,70 @@ const CARD: &str = "USB1";
 // hängender Aufruf (z.B. bei einem PipeWire-USB-Stall, siehe HANDOFF.md)
 // den Thread und damit die komplette Lautstärke-Anzeige einfriert.
 const CMD_TIMEOUT: Duration = Duration::from_millis(500);
+
+const ENOENT: i32 = 2;
+
+thread_local! {
+    // Pro Thread eine dauerhafte ALSA-Verbindung (Mixer ist nicht Send): der
+    // 120ms-Poll-Thread liest, der UI-Thread schreibt. Statt pro Zugriff einen
+    // amixer-Prozess zu starten (Issue #8). Bei jedem ALSA-Fehler (z.B. Karte
+    // nach einer Neuanmeldung des G8 weg) wird sie verworfen und beim nächsten
+    // Zugriff neu geöffnet.
+    static MIXER: RefCell<Option<Mixer>> = const { RefCell::new(None) };
+}
+
+fn with_selem<T>(entity_id: i32, f: impl FnOnce(&Selem, bool, (i64, i64)) -> Result<T, alsa::Error>) -> Option<T> {
+    let name = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i))?;
+    let (simple, direction) = simple_name_and_direction(name)?;
+    let capture = direction == "capture";
+    MIXER.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        if slot.is_none() {
+            *slot = Mixer::new(&format!("hw:{CARD}"), false).ok();
+        }
+        let mixer = slot.as_ref()?;
+        let _ = mixer.handle_events();
+        let result = (|| {
+            let selem = mixer.find_selem(&SelemId::new(simple, 0)).ok_or_else(|| alsa::Error::new("find_selem", ENOENT))?;
+            let range = if capture { selem.get_capture_volume_range() } else { selem.get_playback_volume_range() };
+            f(&selem, capture, range)
+        })();
+        match result {
+            Ok(v) => Some(v),
+            Err(_) => {
+                *slot = None;
+                None
+            }
+        }
+    })
+}
+
+fn percent_to_raw(percent: f32, (min, max): (i64, i64)) -> i64 {
+    min + (percent.clamp(0.0, 100.0) / 100.0 * (max - min) as f32).round() as i64
+}
+
+fn raw_to_percent(raw: i64, (min, max): (i64, i64)) -> f32 {
+    if max <= min {
+        return 0.0;
+    }
+    (raw - min) as f32 / (max - min) as f32 * 100.0
+}
+
+fn write_levels(entity_id: i32, left_pct: f32, right_pct: f32) {
+    let ok = with_selem(entity_id, |selem, capture, range| {
+        let (l, r) = (percent_to_raw(left_pct, range), percent_to_raw(right_pct, range));
+        if capture {
+            selem.set_capture_volume(SelemChannelId::FrontLeft, l)?;
+            selem.set_capture_volume(SelemChannelId::FrontRight, r)
+        } else {
+            selem.set_playback_volume(SelemChannelId::FrontLeft, l)?;
+            selem.set_playback_volume(SelemChannelId::FrontRight, r)
+        }
+    });
+    if ok.is_none() {
+        eprintln!("Mixer: Schreiben von Entity {entity_id} fehlgeschlagen (Karte {CARD} nicht erreichbar?)");
+    }
+}
 
 /// Index = entity-id aus ui/tabs/mixer-tab.slint.
 const CONTROLS: [&str; 8] = [
@@ -126,20 +192,11 @@ fn simple_name_and_direction(full: &str) -> Option<(&str, &str)> {
 }
 
 pub fn set_level(entity_id: i32, percent: f32) {
-    let Some(&name) = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i)) else {
-        eprintln!("Unbekannte Mixer-Entity-ID {entity_id}");
-        return;
-    };
-    let Some((simple, direction)) = simple_name_and_direction(name) else {
-        eprintln!("Mixer-Control-Name nicht erkannt: {name}");
-        return;
-    };
     // Taper-Korrektur nur für den Lautsprecher-Regler (entity-id 0, siehe
-    // Kommentar oben bei TAPER_MIN_ALSA_PCT) – percent kommt hier als
-    // "gefühlter" Wert vom Slider, amixer braucht aber den rohen Wert.
+    // Kommentar oben bei TAPER_TABLE) – percent kommt hier als "gefühlter"
+    // Wert vom Slider, ALSA braucht aber den rohen Wert.
     let alsa_percent = if entity_id == 0 { taper_uncorrect(percent) } else { percent };
-    let alsa_percent = alsa_percent.clamp(0.0, 100.0) as i32;
-    run_amixer(&["sset", simple, direction, "--", &format!("{alsa_percent}%")]);
+    write_levels(entity_id, alsa_percent, alsa_percent);
 }
 
 /// Balance in Prozent, -100 (nur links) .. 0 (Mitte) .. 100 (nur rechts).
@@ -150,26 +207,12 @@ pub fn set_level(entity_id: i32, percent: f32) {
 /// Front-Left/Front-Right-Kanäle (auch die Mikrofoneingänge), Balance ist
 /// also für jede Mixer-Zeile technisch möglich.
 pub fn set_balance(entity_id: i32, level_percent: f32, balance: f32) {
-    let Some(&name) = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i)) else {
-        eprintln!("Unbekannte Mixer-Entity-ID {entity_id}");
-        return;
-    };
-    let Some((simple, direction)) = simple_name_and_direction(name) else {
-        eprintln!("Mixer-Control-Name nicht erkannt: {name}");
-        return;
-    };
     let alsa_percent = if entity_id == 0 { taper_uncorrect(level_percent) } else { level_percent };
     let alsa_percent = alsa_percent.clamp(0.0, 100.0);
     let balance = balance.clamp(-100.0, 100.0);
     let left = alsa_percent * if balance > 0.0 { 1.0 - balance / 100.0 } else { 1.0 };
     let right = alsa_percent * if balance < 0.0 { 1.0 + balance / 100.0 } else { 1.0 };
-    run_amixer(&[
-        "sset",
-        simple,
-        direction,
-        "--",
-        &format!("{}%,{}%", left.round() as i32, right.round() as i32),
-    ]);
+    write_levels(entity_id, left, right);
 }
 
 /// Jeder Pegel-Control aus CONTROLS hat eine gleichnamige "...Switch"-Control
@@ -209,53 +252,17 @@ pub fn set_capture_source(index: i32) {
 /// dasselbe Feature-Unit-Register wie unser Slider – ein Poll auf diese
 /// Funktion sieht also auch Änderungen, die am Gerät selbst gemacht wurden.
 pub fn get_level(entity_id: i32) -> Option<f32> {
-    let name = usize::try_from(entity_id).ok().and_then(|i| CONTROLS.get(i))?;
-    let (simple, direction) = simple_name_and_direction(name)?;
-
-    let out = run_with_timeout("amixer", &["-c", CARD, "sget", simple], CMD_TIMEOUT)?;
-    if !out.status.success() {
-        return None;
-    }
-    let text = String::from_utf8_lossy(&out.stdout);
-    // sget schreibt das Richtungswort großgeschrieben in die Wertzeile
-    // ("Front Left: Playback 128 [88%] ... Capture 48 [84%] ..."),
-    // simple_name_and_direction liefert die für sset nötige Kleinschreibung.
-    let mut capitalized = direction.to_string();
-    if let Some(first) = capitalized.get_mut(0..1) {
-        first.make_ascii_uppercase();
-    }
-    let alsa_pct = extract_percent(&text, &capitalized)?;
+    // MAXIMUM über beide Kanäle statt nur Front Left: set_balance() dämpft
+    // gezielt nur die leisere Seite, der unangetastete Kanal zeigt immer den
+    // wahren, vor der Balance gemeinten Pegel – ein reiner Left-Read würde bei
+    // aktiver Balance eine viel zu niedrige Anzeige liefern.
+    let alsa_pct = with_selem(entity_id, |selem, capture, range| {
+        let read = |ch| if capture { selem.get_capture_volume(ch) } else { selem.get_playback_volume(ch) };
+        let l = read(SelemChannelId::FrontLeft)?;
+        let r = read(SelemChannelId::FrontRight).unwrap_or(l);
+        Ok(raw_to_percent(l.max(r), range))
+    })?;
     Some(if entity_id == 0 { taper_correct(alsa_pct) } else { alsa_pct })
-}
-
-/// Sucht die Wertzeilen (z.B. "Front Left: Playback 128 [88%] [0.00dB]
-/// [off] Capture 48 [84%] [0.00dB] [on]" + eine gleichartige "Front
-/// Right"-Zeile) und liest den Prozentwert hinter dem gewünschten
-/// Richtungswort. Auf "%]" eingeschränkt, damit die vorherige "Capture
-/// channels: ..."-Zeile nicht fälschlich matcht.
-///
-/// Nimmt das MAXIMUM über beide Kanäle statt nur den ersten Treffer (früher
-/// immer "Front Left"): set_balance() dämpft gezielt nur die leisere Seite
-/// (siehe dort), der unangetastete Kanal zeigt also immer den wahren,
-/// vor der Balance gemeinten Pegel – ein reiner Left-Read würde bei
-/// aktiver Balance eine viel zu niedrige (im Extremfall 0%) Anzeige
-/// liefern, obwohl der tatsächlich hörbare Pegel stimmt.
-fn extract_percent(text: &str, direction: &str) -> Option<f32> {
-    let mut max: Option<f32> = None;
-    for line in text.lines() {
-        if !line.contains("%]") {
-            continue;
-        }
-        let Some(idx) = line.find(direction) else { continue };
-        let rest = &line[idx + direction.len()..];
-        let Some(start) = rest.find('[') else { continue };
-        let rest = &rest[start + 1..];
-        let Some(end) = rest.find('%') else { continue };
-        if let Ok(v) = rest[..end].trim().parse::<f32>() {
-            max = Some(max.map_or(v, |m: f32| m.max(v)));
-        }
-    }
-    max
 }
 
 /// Fallback für den Pro-Audio-Profil-Fall (siehe audio_profile.rs): dort
@@ -290,5 +297,23 @@ fn run_amixer(args: &[&str]) {
         }
         None => eprintln!("amixer nicht aufrufbar oder hängt fest ({args:?})"),
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Braucht die echte G8 (Karte USB1): `cargo test -- --ignored mixer_roundtrip`.
+    #[test]
+    #[ignore]
+    fn mixer_roundtrip() {
+        let before = get_level(1).expect("Line In Playback lesen");
+        set_level(1, 40.0);
+        let after = get_level(1).expect("Line In Playback nach Schreiben lesen");
+        set_level(1, before);
+        assert!((after - 40.0).abs() < 2.0, "erwartet ~40, gelesen {after}");
+        let restored = get_level(1).unwrap();
+        assert!((restored - before).abs() < 2.0, "Wiederherstellung: {before} -> {restored}");
     }
 }
